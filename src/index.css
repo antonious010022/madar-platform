@@ -1,0 +1,33 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/* ---------------------------------------------------------------------------
+   Design tokens & styles — exact preservation of the approved look:
+   bg paper: #FAF6ED   surface: #FFFFFF   ink: #22291F
+   teal (studio/primary): #10665A     ochre (hotwords/highlight): #B9791F
+   plum (draft/mystery): #4C3F63     line: #DED4BD
+--------------------------------------------------------------------------- */
+@import url('https://fonts.googleapis.com/css2?family=Tajawal:wght@400;500;700;900&family=Markazi+Text:wght@500;600;700&display=swap');
+
+body {
+  background: #FAF6ED;
+}
+
+.ts-root, .ts-root * { font-family: 'Tajawal', sans-serif; box-sizing: border-box; }
+.ts-display { font-family: 'Markazi Text', serif; }
+.ts-fade { animation: tsFade .3s ease; }
+@keyframes tsFade { from { opacity: 0; transform: translateY(4px);} to { opacity: 1; transform: translateY(0);} }
+@media (prefers-reduced-motion: reduce) { .ts-fade { animation: none; } }
+.ts-hotword { color: #B9791F; text-decoration: underline; text-decoration-style: dotted; text-underline-offset: 4px; cursor: pointer; font-weight: 700; position: relative; display: inline-block; }
+.ts-hotword.active { background: #F6E9D3; border-radius: 4px; padding: 0 3px; }
+.ts-scrollbar::-webkit-scrollbar { width: 6px; height: 6px; }
+.ts-scrollbar::-webkit-scrollbar-thumb { background: #DED4BD; border-radius: 4px; }
+.ts-input { border: 1px solid #DED4BD; border-radius: 12px; padding: 8px 12px; width: 100%; background: #fff; color: #22291F; outline: none; }
+.ts-input:focus { border-color: #10665A; }
+.ts-selectable { user-select: text; cursor: text; }
+.ts-selectable::selection { background: #F6E9D3; }
+.ts-richtext img { max-width: 100%; border-radius: 12px; margin: 12px 0; }
+.ts-richtext ul { list-style-type: disc; margin-right: 20px; }
+.ts-richtext ol { list-style-type: decimal; margin-right: 20px; }
+.ts-richtext blockquote { border-right: 4px solid #10665A; padding-right: 12px; margin: 10px 0; color: #5C5A4A; }
