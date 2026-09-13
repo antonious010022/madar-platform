@@ -68,8 +68,9 @@ export default function StudentLessonPage() {
     <div>
       <div className="bg-white px-6 py-3 border-b flex justify-between items-center" style={{ borderColor: "#DED4BD" }}>
         <button onClick={() => navigate("/student")} className="text-sm font-bold" style={{ color: "#10665A" }}>← العودة لقائمة الدروس</button>
-        <span className="text-xs" style={{ color: "#8A8570" }}>منصة الطالب التعليمية</span>
-      </div>
+<span className="text-xs font-medium" style={{ color: "#8A8570" }}>
+  {lesson?.title || "منصة الطالب التعليمية"}
+</span>      </div>
       <StudentView lesson={lesson} controlled={{ index: sceneIndex, setIndex: setSceneIndex }} />
       <Footer />
     </div>
