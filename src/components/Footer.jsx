@@ -4,7 +4,7 @@
 const PLATFORM_NAME = "منصة مَدَار";
 const PLATFORM_DESCRIPTION =
   "منصة تعليمية تفاعلية تقدّم الدروس بطريقة مبسطة، منظمة، وتفاعلية تساعد الطالب على الفهم والاستيعاب.";
-const CONTACT_EMAIL = "info@example.com"; // TODO: ضع البريد الإلكتروني الحقيقي هنا
+const CONTACT_EMAIL = "aantounyouss@gmail.com"; // TODO: ضع البريد الإلكتروني الحقيقي هنا
 const COPYRIGHT_TEXT =
   "© 2026 جميع الحقوق محفوظة بواسطة | Antonious Shenouda | " + PLATFORM_NAME;
 
