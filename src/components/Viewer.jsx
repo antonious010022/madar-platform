@@ -15,8 +15,7 @@ export function Pill({ children, tone = "teal" }) {
 }
 
 // ---------------------------------------------------------------------------
-// Image upload field — now uploads to Supabase Storage instead of storing a
-// permanent base64 string. `uploadFn(file)` must resolve to a public URL.
+// Image upload field
 // ---------------------------------------------------------------------------
 export function ImageUploadField({ value, onChange, label, uploadFn }) {
   const inputRef = useRef(null);
@@ -74,16 +73,17 @@ export function ImageUploadField({ value, onChange, label, uploadFn }) {
         />
       </div>
       {error && <p className="text-xs mt-1" style={{ color: "#C53030" }}>{error}</p>}
-      {value && <img src={value} alt="" className="mt-2 rounded-xl max-h-32 object-cover" />}
+      {value && <img src={value} alt="" className="mt-2 rounded-xl max-h-32 object-cover block" />}
     </div>
   );
 }
 
 // ---------------------------------------------------------------------------
-// Unified Hotword Text & Popup Handler (Desktop hover, Mobile tap)
+// Unified Hotword Text & Popup Renderer (نص متوهج طبيعي بدون مربع)
 // ---------------------------------------------------------------------------
 export function HotwordRenderer({ text, hotwords, onJumpToScene }) {
   const [activeHot, setActiveHot] = useState(null);
+  const [popPos, setPopPos] = useState({ top: 0, right: 0 });
   const containerRef = useRef(null);
 
   useEffect(() => {
@@ -96,57 +96,138 @@ export function HotwordRenderer({ text, hotwords, onJumpToScene }) {
     return () => window.removeEventListener("click", handleOutsideClick);
   }, []);
 
-  if (!hotwords || hotwords.length === 0) {
-    return <div className="ts-richtext" dangerouslySetInnerHTML={{ __html: text }} />;
+  let processedHtml = text || "";
+
+  if (hotwords && hotwords.length > 0) {
+    hotwords.forEach((hw) => {
+      if (!hw || !hw.text) return;
+      const escaped = hw.text.trim().replace(/[-\/\\^$*+?.()|[\]{}]/g, "\\$&");
+      if (!escaped) return;
+      const regex = new RegExp(`(?<!<[^>]*)${escaped}(?![^<]*>)`, "gi");
+      processedHtml = processedHtml.replace(
+        regex,
+        `<span class="ts-hotword-glow" data-hwid="${hw.id}">${hw.text}</span>`
+      );
+    });
   }
 
-  let processedHtml = text;
-  hotwords.forEach((hw) => {
-    if (!hw.text) return;
-    const escaped = hw.text.replace(/[-\/\\^$*+?.()|[\]{}]/g, "\\$&");
-    const regex = new RegExp(`(?![^<]+>)(` + escaped + `)(?!([^<]+>)*</)`, "g");
-    processedHtml = processedHtml.replace(regex, `<span class="ts-hotword-target" data-hwid="${hw.id}">$1</span>`);
-  });
+  const handleInteraction = (e, hwId) => {
+    if (!hwId || !hotwords) return;
+    const found = hotwords.find((h) => String(h.id) === String(hwId));
+    if (found) {
+      const rect = e.currentTarget.getBoundingClientRect();
+      const parentRect = containerRef.current.getBoundingClientRect();
+      
+      // حساب موقع ظهور البوكس بدقة بالنسبة للكلمة
+      setPopPos({
+        top: rect.bottom - parentRect.top + 8,
+        right: parentRect.right - rect.right,
+      });
+      setActiveHot(found);
+    }
+  };
 
   return (
-    <div
-      ref={containerRef}
-      className="ts-richtext relative"
-      onClick={(e) => {
-        const target = e.target.closest(".ts-hotword-target");
-        if (target) {
-          e.stopPropagation();
-          const hwId = target.getAttribute("data-hwid");
-          const found = hotwords.find((h) => h.id === hwId);
-          if (found) setActiveHot(found);
+    <div ref={containerRef} className="relative">
+      {/* تنسيق الكلمات التفاعلية بوهج ولون بدون مربعات أو خلفيات */}
+      <style>{`
+        .ts-richtext-content {
+          line-height: 1.8;
+          color: #22291F;
         }
-      }}
-      onMouseOver={(e) => {
-        const target = e.target.closest(".ts-hotword-target");
-        if (target) {
-          const hwId = target.getAttribute("data-hwid");
-          const found = hotwords.find((h) => h.id === hwId);
-          if (found) setActiveHot(found);
+        .ts-richtext-content .ts-hotword-glow {
+          font-size: inherit !important;
+          font-family: inherit !important;
+          font-weight: inherit !important;
+          color: #00796B !important;
+          background: transparent !important;
+          border: none !important;
+          padding: 0 !important;
+          margin: 0 !important;
+          text-decoration: underline !important;
+          text-decoration-style: dotted !important;
+          text-underline-offset: 4px !important;
+          cursor: pointer !important;
+          transition: all 0.2s ease-in-out !important;
+          text-shadow: 0 0 8px rgba(0, 150, 136, 0.35) !important;
         }
-      }}
-      dangerouslySetInnerHTML={{ __html: processedHtml }}
-    >
+        .ts-richtext-content .ts-hotword-glow:hover {
+          color: #004D40 !important;
+          text-shadow: 0 0 12px rgba(0, 150, 136, 0.75) !important;
+          text-decoration-style: solid !important;
+        }
+        .ts-richtext-content img {
+          display: block !important;
+          max-width: 100% !important;
+          height: auto !important;
+          margin: 16px auto !important;
+          border-radius: 16px !important;
+          box-shadow: 0 4px 12px rgba(0,0,0,0.08) !important;
+        }
+      `}</style>
+
+      <div
+        className="ts-richtext-content text-right"
+        onClick={(e) => {
+          const target = e.target.closest(".ts-hotword-glow");
+          if (target) {
+            e.stopPropagation();
+            handleInteraction(e, target.getAttribute("data-hwid"));
+          }
+        }}
+        onMouseOver={(e) => {
+          const target = e.target.closest(".ts-hotword-glow");
+          if (target) handleInteraction(e, target.getAttribute("data-hwid"));
+        }}
+        dangerouslySetInnerHTML={{ __html: processedHtml }}
+      />
+
+      {/* نافذة المنبثقة للصور والملاحظات عند التفاعل */}
       {activeHot && (
         <div
-          className="ts-fade absolute z-40 rounded-2xl p-4 shadow-2xl max-w-sm w-full mt-2"
-          style={{ background: "#FAF6ED", border: "2px solid #B9791F", right: 10 }}
+          className="ts-fade absolute z-50 rounded-2xl p-4 shadow-2xl max-w-sm w-full"
+          style={{
+            background: "#FAF6ED",
+            border: "2px solid #10665A",
+            top: `${popPos.top}px`,
+            right: `${Math.max(0, popPos.right)}px`,
+            boxShadow: "0 10px 25px -5px rgba(0, 0, 0, 0.2)",
+          }}
           onClick={(e) => e.stopPropagation()}
           onMouseLeave={() => setActiveHot(null)}
         >
           <div className="flex justify-between items-center mb-2 border-b pb-1" style={{ borderColor: "#DED4BD" }}>
-            <span className="font-bold text-base" style={{ color: "#8A5A15" }}>{activeHot.text}</span>
-            <button onClick={() => setActiveHot(null)} className="font-bold px-2 py-0.5 rounded" style={{ color: "#8A8570" }}>✕</button>
+            <span className="font-bold text-base" style={{ color: "#10665A" }}>{activeHot.text}</span>
+            <button
+              type="button"
+              onClick={() => setActiveHot(null)}
+              className="font-bold px-2 py-0.5 rounded"
+              style={{ color: "#8A8570" }}
+            >
+              ✕
+            </button>
           </div>
-          {activeHot.image && <img src={activeHot.image} alt={activeHot.text} className="rounded-xl mb-2 w-full object-cover max-h-48" />}
-          <p className="text-sm mb-2" style={{ color: "#22291F" }}>{activeHot.note}</p>
+
+          {activeHot.image && (
+            <img
+              src={activeHot.image}
+              alt={activeHot.text}
+              className="rounded-xl mb-2 w-full object-contain block border"
+              style={{ maxHeight: "280px", borderColor: "#DED4BD" }}
+            />
+          )}
+
+          {activeHot.note && (
+            <p className="text-sm mb-2" style={{ color: "#22291F" }}>{activeHot.note}</p>
+          )}
+
           {activeHot.linkSceneId && onJumpToScene && (
             <button
-              onClick={() => { onJumpToScene(activeHot.linkSceneId); setActiveHot(null); }}
+              type="button"
+              onClick={() => {
+                onJumpToScene(activeHot.linkSceneId);
+                setActiveHot(null);
+              }}
               className="text-xs px-3 py-1.5 rounded-xl text-white font-bold w-full"
               style={{ background: "#10665A" }}
             >
@@ -160,7 +241,7 @@ export function HotwordRenderer({ text, hotwords, onJumpToScene }) {
 }
 
 // ---------------------------------------------------------------------------
-// Mind Map Component (Interactive Tree in Viewer/Recording/Preview)
+// Mind Map Component
 // ---------------------------------------------------------------------------
 export function MindMapViewerNode({ node, depth = 0, onSelectNode, selectedNodeId }) {
   const [open, setOpen] = useState(depth < 2);
@@ -209,8 +290,7 @@ export function MindMapViewerNode({ node, depth = 0, onSelectNode, selectedNodeI
 }
 
 // ---------------------------------------------------------------------------
-// Unified Viewer (Live Preview, Recording Mode, Student Viewer) — one
-// component drives all three contexts, as required.
+// Student View Unified Component
 // ---------------------------------------------------------------------------
 export function StudentView({ lesson, embedded, controlled, isTeacherView = false }) {
   const [internalIndex, setInternalIndex] = useState(0);
@@ -275,7 +355,12 @@ export function StudentView({ lesson, embedded, controlled, isTeacherView = fals
         )}
 
         <div key={scene.id} className="ts-fade rounded-3xl p-6 sm:p-8 mb-6 shadow-sm bg-white" style={{ border: "1px solid #DED4BD" }}>
-          <h2 className="text-xl font-bold mb-4 pb-2 border-b" style={{ color: "#10665A", borderColor: "#DED4BD" }}>{scene.title}</h2>
+          <h2
+            className="text-xl font-bold mb-4 pb-2 border-b"
+            style={{ color: "#10665A", borderColor: "#DED4BD", fontFamily: scene.titleFont || "Amiri" }}
+          >
+            {scene.title}
+          </h2>
           <HotwordRenderer
             text={scene.text}
             hotwords={scene.hotwords}
@@ -337,7 +422,7 @@ export function StudentView({ lesson, embedded, controlled, isTeacherView = fals
                       <h4 className="font-bold text-base mb-1" style={{ color: "#22291F" }}>{item.title}</h4>
                       <p className="text-sm mb-2" style={{ color: "#5C5A4A" }}>{item.description}</p>
                       {item.location && <p className="text-xs font-semibold" style={{ color: "#B9791F" }}>📍 الموقع: {item.location}</p>}
-                      {item.image && <img src={item.image} alt={item.title} className="mt-2 rounded-xl max-h-40 object-cover w-full" />}
+                      {item.image && <img src={item.image} alt={item.title} className="mt-2 rounded-xl max-h-40 object-cover w-full block" />}
                     </div>
                   </div>
                 ))}

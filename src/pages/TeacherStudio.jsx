@@ -53,6 +53,7 @@ export default function TeacherStudioPage() {
           await updateLessonMeta(id, patch);
           setSaveStatus("saved");
         } catch (e) {
+          console.error("Lesson Save Error:", e);
           setSaveStatus("error");
         }
       }, AUTOSAVE_DELAY);
@@ -79,9 +80,23 @@ export default function TeacherStudioPage() {
     if (timers[sceneId]) clearTimeout(timers[sceneId]);
     timers[sceneId] = setTimeout(async () => {
       try {
-        await updateScene(sceneId, fullSceneState);
+        // تنقية البيانات وإرسال الأعمدة المتوافقة فقط مع جدول Supabase
+        const payloadToDB = {
+          title: fullSceneState.title || "",
+          text: fullSceneState.text || "",
+          order_index: fullSceneState.order_index ?? fullSceneState.orderIndex ?? 0,
+          quick_recall: fullSceneState.quickRecall || [],
+          hotwords: fullSceneState.hotwords || [],
+          mindmap: fullSceneState.mindmap || null,
+          timeline: fullSceneState.timeline || [],
+          questions: fullSceneState.questions || [],
+          presenter_notes: fullSceneState.presenterNotes || fullSceneState.presenter_notes || "",
+        };
+
+        await updateScene(sceneId, payloadToDB);
         setSaveStatus("saved");
       } catch (e) {
+        console.error("Scene Save Error Details:", e);
         setSaveStatus("error");
       }
     }, AUTOSAVE_DELAY);
@@ -161,6 +176,7 @@ export default function TeacherStudioPage() {
 
   return (
     <div className="ts-root" style={{ minHeight: "calc(100vh - 41px)", background: "#FAF6ED" }}>
+      {/* Header Bar */}
       <div className="flex items-center justify-between px-6 py-3 bg-white shadow-sm border-b flex-wrap gap-2" style={{ borderColor: "#DED4BD" }}>
         <div className="flex items-center gap-3 flex-wrap">
           <button onClick={() => navigate("/teacher")} className="text-xs font-bold" style={{ color: "#8A8570" }}>← مكتبة الدروس</button>
@@ -187,7 +203,7 @@ export default function TeacherStudioPage() {
         <div className="p-4 ts-scrollbar bg-white border-l" style={{ borderColor: "#DED4BD", overflowY: "auto" }}>
           <label className="block mb-3">
             <span className="block text-xs mb-1" style={{ color: "#8A8570" }}>عنوان الدرس</span>
-            <input className="ts-input text-xs" value={lesson.title} onChange={(e) => patchLesson({ title: e.target.value })} />
+            <input className="ts-input text-xs w-full" value={lesson.title} onChange={(e) => patchLesson({ title: e.target.value })} />
           </label>
           <div className="grid grid-cols-2 gap-2 mb-4">
             <select className="ts-input text-xs" value={lesson.stage} onChange={(e) => patchLesson({ stage: e.target.value }, { immediate: true })}>{STAGES.map((s) => <option key={s}>{s}</option>)}</select>
@@ -221,27 +237,77 @@ export default function TeacherStudioPage() {
         {scene && (
           <div key={scene.id} className="p-6 ts-scrollbar" style={{ overflowY: "auto" }}>
             <div className="max-w-2xl mx-auto">
-              <label className="block mb-4">
-                <span className="block text-xs font-bold mb-1" style={{ color: "#5C5A4A" }}>عنوان المشهد</span>
-                <input value={scene.title} onChange={(e) => patchScene(scene.id, { title: e.target.value })} className="ts-input text-sm font-bold" />
-              </label>
+              
+              {/* عنوان المشهد */}
+              <div className="mb-4">
+                <label className="block text-xs font-bold mb-1" style={{ color: "#5C5A4A" }}>عنوان المشهد</label>
+                <div className="flex gap-2 items-center">
+                  <input
+                    type="text"
+                    className="ts-input text-xs flex-1"
+                    style={{ width: "100%", padding: "8px 12px" }}
+                    value={scene.title || ""}
+                    onChange={(e) => patchScene(scene.id, { title: e.target.value })}
+                    placeholder="اكتب عنوان المشهد هنا..."
+                  />
+                  <select
+                    className="ts-input text-xs"
+                    style={{ width: "110px", flexShrink: 0 }}
+                    value={scene.titleFont || "Amiri"}
+                    onChange={(e) => patchScene(scene.id, { titleFont: e.target.value })}
+                  >
+                    <option value="Amiri">Amiri</option>
+                    <option value="Cairo">Cairo</option>
+                    <option value="Tajawal">Tajawal</option>
+                    <option value="Almarai">Almarai</option>
+                  </select>
+                </div>
+              </div>
 
+              {/* محتوى الشرح */}
               <label className="block mb-4">
                 <span className="block text-xs font-bold mb-1" style={{ color: "#5C5A4A" }}>محتوى الشرح (Rich Text Editor)</span>
-                <RichTextEditor value={scene.text} onChange={(html) => patchScene(scene.id, { text: html })} uploadFn={uploadFn} />
+                <RichTextEditor
+                  value={scene.text}
+                  onChange={(html) => patchScene(scene.id, { text: html })}
+                  uploadFn={uploadFn}
+                  onHotwordDetected={(hw) => {
+                    const existing = scene.hotwords || [];
+                    if (existing.some((h) => h.id === hw.id || h.text === hw.text)) return;
+                    patchScene(scene.id, {
+                      hotwords: [
+                        ...existing,
+                        {
+                          id: hw.id,
+                          text: hw.text,
+                          note: "",
+                          image: "",
+                          linkSceneId: "",
+                        },
+                      ],
+                    });
+                  }}
+                />
               </label>
 
+              {/* تذكّر سريع */}
               <div className="mb-4 p-4 rounded-2xl bg-white border" style={{ borderColor: "#DED4BD" }}>
                 <div className="flex justify-between items-center mb-2">
                   <span className="font-bold text-sm" style={{ color: "#10665A" }}>🧠 تذكّر سريع (Quick Recall)</span>
                   <label className="text-xs flex items-center gap-1">
-                    <input type="checkbox" checked={scene.quickRecallShow !== false} onChange={(e) => patchScene(scene.id, { quickRecallShow: e.target.checked })} />
+                    <input
+                      type="checkbox"
+                      checked={scene.quickRecallShow !== false}
+                      onChange={(e) => patchScene(scene.id, { quickRecallShow: e.target.checked })}
+                    />
                     إظهار للطالب
                   </label>
                 </div>
-                <p className="text-xs mb-2" style={{ color: "#8A8570" }}>اكتب كل نقطة في سطر مستقل (اضغط Enter للانتقال لسطر جديد)، وستظهر مرقّمة تلقائياً 1، 2، 3...</p>
+                <p className="text-xs mb-2" style={{ color: "#8A8570" }}>
+                  اكتب كل نقطة في سطر مستقل (اضغط Enter للانتقال لسطر جديد)، وستظهر مرقّمة تلقائياً 1، 2، 3...
+                </p>
                 <textarea
-                  className="ts-input text-xs mb-2"
+                  className="ts-input text-xs mb-2 w-full"
                   placeholder={"مثال:\nالتنافس الاستعماري بين إنجلترا وفرنسا\nموقع مصر الجغرافي الاستراتيجي"}
                   rows={5}
                   value={(scene.quickRecall || []).join("\n")}
@@ -250,11 +316,27 @@ export default function TeacherStudioPage() {
                 />
               </div>
 
+              {/* الكلمات التفاعلية */}
               <StudioHotwords
                 hotwords={scene.hotwords || []}
                 uploadFn={uploadFn}
-                onAdd={(hw) => patchScene(scene.id, { hotwords: [...(scene.hotwords || []), hw] })}
-                onRemove={(hwId) => patchScene(scene.id, { hotwords: (scene.hotwords || []).filter((h) => h.id !== hwId) })}
+                onAdd={(hw) => {
+                  const existing = scene.hotwords || [];
+                  if (existing.some((h) => h.text === hw.text)) return;
+                  patchScene(scene.id, { hotwords: [...existing, hw] });
+                }}
+                onRemove={(hwId) =>
+                  patchScene(scene.id, {
+                    hotwords: (scene.hotwords || []).filter((h) => h.id !== hwId),
+                  })
+                }
+                onUpdate={(hwId, data) =>
+                  patchScene(scene.id, {
+                    hotwords: (scene.hotwords || []).map((h) =>
+                      h.id === hwId ? { ...h, ...data } : h
+                    ),
+                  })
+                }
               />
 
               <MindMapStudioBuilder
@@ -267,19 +349,39 @@ export default function TeacherStudioPage() {
                 items={scene.timeline || []}
                 uploadFn={uploadFn}
                 onAdd={(item) => patchScene(scene.id, { timeline: [...(scene.timeline || []), item] })}
-                onEdit={(itemId, data) => patchScene(scene.id, { timeline: (scene.timeline || []).map((t) => (t.id === itemId ? { ...t, ...data } : t)) })}
-                onDelete={(itemId) => patchScene(scene.id, { timeline: (scene.timeline || []).filter((t) => t.id !== itemId) })}
+                onEdit={(itemId, data) =>
+                  patchScene(scene.id, {
+                    timeline: (scene.timeline || []).map((t) => (t.id === itemId ? { ...t, ...data } : t)),
+                  })
+                }
+                onDelete={(itemId) =>
+                  patchScene(scene.id, {
+                    timeline: (scene.timeline || []).filter((t) => t.id !== itemId),
+                  })
+                }
               />
 
               <QuestionStudioEditor
                 questions={scene.questions || []}
                 onAdd={(q) => patchScene(scene.id, { questions: [...(scene.questions || []), q] })}
-                onDelete={(qId) => patchScene(scene.id, { questions: (scene.questions || []).filter((q) => q.id !== qId) })}
+                onDelete={(qId) =>
+                  patchScene(scene.id, {
+                    questions: (scene.questions || []).filter((q) => q.id !== qId),
+                  })
+                }
               />
 
               <label className="block mb-4">
-                <span className="block text-xs font-bold mb-1" style={{ color: "#5C5A4A" }}>ملاحظات المُقدّم (خاصة بك أثناء التصوير)</span>
-                <textarea value={scene.presenterNotes || ""} onChange={(e) => patchScene(scene.id, { presenterNotes: e.target.value })} rows={2} className="ts-input text-xs" style={{ background: "#FDF9EE" }} />
+                <span className="block text-xs font-bold mb-1" style={{ color: "#5C5A4A" }}>
+                  ملاحظات المُقدّم (خاصة بك أثناء التصوير)
+                </span>
+                <textarea
+                  value={scene.presenterNotes || scene.presenter_notes || ""}
+                  onChange={(e) => patchScene(scene.id, { presenterNotes: e.target.value })}
+                  rows={2}
+                  className="ts-input text-xs w-full"
+                  style={{ background: "#FDF9EE" }}
+                />
               </label>
             </div>
           </div>

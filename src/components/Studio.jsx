@@ -1,53 +1,178 @@
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
+import { useEditor, EditorContent } from "@tiptap/react";
+import StarterKit from "@tiptap/starter-kit";
+import Underline from "@tiptap/extension-underline";
+import TextAlign from "@tiptap/extension-text-align";
+import { Color } from "@tiptap/extension-color";
+import { TextStyle } from "@tiptap/extension-text-style";
+import FontFamily from "@tiptap/extension-font-family";
+import Highlight from "@tiptap/extension-highlight";
+import Link from "@tiptap/extension-link";
+import Image from "@tiptap/extension-image";
+import { Table } from "@tiptap/extension-table";
+import { TableRow } from "@tiptap/extension-table-row";
+import { TableCell } from "@tiptap/extension-table-cell";
+import { TableHeader } from "@tiptap/extension-table-header";
 import { ImageUploadField } from "./Viewer";
 import { STAGES, GRADES, TERMS, uid } from "../lib/constants";
+import { Hotword } from "../lib/hotwordExtension";
 
 // ---------------------------------------------------------------------------
-// Rich Text Editor — same contentEditable approach as the approved
-// prototype (cursor-safe: only re-syncs the DOM when the value changes from
-// OUTSIDE, e.g. switching scenes). Image insertion now uploads to Supabase
-// Storage first and inserts the resulting URL, instead of a permanent
-// base64 blob.
+// Rich Text Editor — Tiptap-based, RTL-first.
+// Persists exactly as before: `onChange(html)` still hands back a plain HTML
+// string, so scene.text / contentHtml / autosave / Supabase / Viewer are all
+// unaffected — this component just produces richer HTML than before.
 // ---------------------------------------------------------------------------
-export function RichTextEditor({ value, onChange, uploadFn }) {
-  const editorRef = useRef(null);
-  const lastValueRef = useRef(null);
+
+// Tiptap's execCommand-era "fontSize" doesn't exist as a real command, so we
+// extend the existing `textStyle` mark with a `fontSize` attribute rendered
+// as inline CSS. This keeps the output as plain <span style="font-size:..">,
+// which any browser (including the student Viewer) renders natively.
+const FontSize = TextStyle.extend({
+  addAttributes() {
+    return {
+      ...this.parent?.(),
+      fontSize: {
+        default: null,
+        parseHTML: (el) => el.style.fontSize || null,
+        renderHTML: (attrs) => (attrs.fontSize ? { style: `font-size: ${attrs.fontSize}` } : {}),
+      },
+    };
+  },
+  addCommands() {
+    return {
+      setFontSize:
+        (fontSize) =>
+        ({ chain }) =>
+          chain().setMark("textStyle", { fontSize }).run(),
+      unsetFontSize:
+        () =>
+        ({ chain }) =>
+          chain().setMark("textStyle", { fontSize: null }).run(),
+    };
+  },
+});
+
+// Curated Arabic-first font list. The full 60-name wishlist would mean
+// downloading 60+ separate font families (huge payload for very little
+// day-to-day benefit) — this subset covers the popular/legible ones and is
+// fully wired up in index.css so every one of them actually renders,
+// instead of silently falling back to the system font.
+const FONT_FAMILIES = [
+  { label: "Tajawal (افتراضي)", value: "Tajawal" },
+  { label: "Cairo", value: "Cairo" },
+  { label: "Noto Sans Arabic", value: "Noto Sans Arabic" },
+  { label: "IBM Plex Sans Arabic", value: "IBM Plex Sans Arabic" },
+  { label: "Amiri", value: "Amiri" },
+  { label: "Changa", value: "Changa" },
+  { label: "El Messiri", value: "El Messiri" },
+  { label: "Readex Pro", value: "Readex Pro" },
+  { label: "Rubik", value: "Rubik" },
+  { label: "Alexandria", value: "Alexandria" },
+  { label: "Markazi Text", value: "'Markazi Text', serif" },
+  { label: "Noto Naskh Arabic", value: "Noto Naskh Arabic" },
+  { label: "Scheherazade New", value: "Scheherazade New" },
+  { label: "Reem Kufi", value: "Reem Kufi" },
+  { label: "Lalezar", value: "Lalezar" },
+  { label: "Mirza", value: "Mirza" },
+  { label: "Lateef", value: "Lateef" },
+  { label: "Harmattan", value: "Harmattan" },
+  { label: "Vazirmatn", value: "Vazirmatn" },
+  { label: "Baloo Bhaijaan 2", value: "Baloo Bhaijaan 2" },
+  { label: "Aref Ruqaa", value: "Aref Ruqaa" },
+  { label: "Katibeh", value: "Katibeh" },
+  { label: "Jomhuria", value: "Jomhuria" },
+  { label: "Kufam", value: "Kufam" },
+  { label: "Lemonada", value: "Lemonada" },
+  { label: "Mada", value: "Mada" },
+  { label: "Alkalami", value: "Alkalami" },
+  { label: "Gulzar", value: "Gulzar" },
+  { label: "Tahoma", value: "Tahoma, sans-serif" },
+  { label: "Arial", value: "Arial, sans-serif" },
+];
+
+const FONT_SIZES = [8, 9, 10, 11, 12, 14, 16, 18, 20, 22, 24, 26, 28, 32, 36];
+
+export function RichTextEditor({ value, onChange, uploadFn, onHotwordDetected }) {
   const [uploading, setUploading] = useState(false);
+  const [importing, setImporting] = useState(false);
+  const fileRef = useRef(null);
+  const importTxtRef = useRef(null);
+  const importDocxRef = useRef(null);
+
+  const onHotwordDetectedRef = useRef(onHotwordDetected);
+  useEffect(() => {
+    onHotwordDetectedRef.current = onHotwordDetected;
+  }, [onHotwordDetected]);
+
+  // Stable forever (empty deps) so the editor is never force-recreated —
+  // but it always calls whatever the LATEST onHotwordDetected is, via the
+  // ref above, avoiding a stale-closure bug.
+  const hotwordExtension = useMemo(
+    () =>
+      Hotword.configure({
+        onCreate: (hw) => {
+          if (onHotwordDetectedRef.current) onHotwordDetectedRef.current(hw);
+        },
+      }),
+    []
+  );
+
+  const editor = useEditor({
+    extensions: [
+      StarterKit.configure({ heading: { levels: [1, 2, 3, 4] } }),
+      Underline,
+      TextStyle,
+      FontSize,
+      FontFamily,
+      Color,
+      Highlight.configure({ multicolor: true }),
+      TextAlign.configure({ types: ["heading", "paragraph"] }),
+      Link.configure({
+        openOnClick: false,
+        autolink: true,
+        HTMLAttributes: { rel: "noopener noreferrer", class: "ts-link" },
+      }),
+      Table.configure({ resizable: true }),
+      TableRow,
+      TableHeader,
+      TableCell,
+      Image.configure({ inline: false }),
+      hotwordExtension,
+    ],
+    content: value || "",
+    onUpdate: ({ editor }) => onChange(editor.getHTML()),
+    editorProps: {
+      attributes: {
+        dir: "rtl",
+        class: "p-4 ts-scrollbar ts-selectable ts-richtext ts-editor-surface focus:outline-none min-h-[200px]",
+        style: "color: #22291F; line-height: 1.8;",
+      },
+    },
+  });
 
   useEffect(() => {
-    if (editorRef.current && value !== lastValueRef.current) {
-      editorRef.current.innerHTML = value || "";
-      lastValueRef.current = value;
-    }
-  }, [value]);
+    if (!editor) return;
+    const current = editor.getHTML();
+    if (value !== current) editor.commands.setContent(value || "", false);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [value, editor]);
 
-  const focusEditor = () => {
-    if (editorRef.current) editorRef.current.focus();
-  };
+  if (!editor) return null;
 
-  const handleInput = () => {
-    if (editorRef.current) {
-      const html = editorRef.current.innerHTML;
-      lastValueRef.current = html;
-      onChange(html);
-    }
-  };
+  const btnStyle = (isActive) => ({
+    background: isActive ? "#10665A" : "#FFFFFF",
+    color: isActive ? "#FAF6ED" : "#22291F",
+    border: `1px solid ${isActive ? "#10665A" : "#DED4BD"}`,
+  });
 
-  const format = (command, valueArg = null) => {
-    focusEditor();
-    document.execCommand(command, false, valueArg);
-    handleInput();
-  };
-
-  const insertImageFile = async (file) => {
-    if (!file) return;
+  const insertImage = async (file) => {
+    if (!file || !uploadFn) return;
     setUploading(true);
     try {
       const url = await uploadFn(file);
-      focusEditor();
-      document.execCommand("insertImage", false, url);
-      handleInput();
-    } catch (e) {
+      editor.chain().focus().setImage({ src: url }).run();
+    } catch {
       // eslint-disable-next-line no-alert
       alert("تعذر رفع الصورة، حاول مرة أخرى.");
     } finally {
@@ -55,53 +180,236 @@ export function RichTextEditor({ value, onChange, uploadFn }) {
     }
   };
 
+  const insertTable = () => {
+    // eslint-disable-next-line no-alert
+    const rows = parseInt(prompt("عدد الصفوف:", "3") || "0", 10);
+    // eslint-disable-next-line no-alert
+    const cols = parseInt(prompt("عدد الأعمدة:", "3") || "0", 10);
+    if (rows > 0 && cols > 0) {
+      editor.chain().focus().insertTable({ rows, cols, withHeaderRow: true }).run();
+    }
+  };
+
+  const setLink = () => {
+    const previous = editor.getAttributes("link").href || "";
+    // eslint-disable-next-line no-alert
+    const url = prompt("رابط الصفحة (اتركه فارغًا لإزالة الرابط):", previous);
+    if (url === null) return; // cancelled
+    if (url === "") {
+      editor.chain().focus().extendMarkRange("link").unsetLink().run();
+      return;
+    }
+    editor.chain().focus().extendMarkRange("link").setLink({ href: url, target: "_blank" }).run();
+  };
+
+  const importTxt = (file) => {
+    if (!file) return;
+    setImporting(true);
+    const reader = new FileReader();
+    reader.onload = () => {
+      const text = String(reader.result || "");
+      const html = text
+        .split(/\r?\n/)
+        .map((line) => `<p>${line.replace(/&/g, "&amp;").replace(/</g, "&lt;") || "<br>"}</p>`)
+        .join("");
+      editor.commands.setContent(html, true);
+      onChange(editor.getHTML());
+      setImporting(false);
+    };
+    reader.onerror = () => {
+      // eslint-disable-next-line no-alert
+      alert("تعذر قراءة الملف.");
+      setImporting(false);
+    };
+    reader.readAsText(file, "utf-8");
+  };
+
+  const importDocx = async (file) => {
+    if (!file) return;
+    setImporting(true);
+    try {
+      const mammoth = await import("mammoth");
+      const arrayBuffer = await file.arrayBuffer();
+      const result = await mammoth.convertToHtml({ arrayBuffer });
+      editor.commands.setContent(result.value || "<p></p>", true);
+      onChange(editor.getHTML());
+    } catch (e) {
+      // eslint-disable-next-line no-console
+      console.error(e);
+      // eslint-disable-next-line no-alert
+      alert("تعذر استيراد ملف Word. تأكد أن الملف بصيغة .docx سليمة.");
+    } finally {
+      setImporting(false);
+    }
+  };
+
   return (
     <div className="border rounded-2xl overflow-hidden bg-white" style={{ borderColor: "#DED4BD" }}>
-      <div className="flex flex-wrap gap-1 p-2 bg-[#FAF6ED] border-b" style={{ borderColor: "#DED4BD" }}>
-        <button type="button" onMouseDown={(e) => e.preventDefault()} onClick={() => format("bold")} className="px-2.5 py-1 rounded font-bold text-xs bg-white border border-[#DED4BD]">Bold</button>
-        <button type="button" onMouseDown={(e) => e.preventDefault()} onClick={() => format("italic")} className="px-2.5 py-1 rounded italic text-xs bg-white border border-[#DED4BD]">Italic</button>
-        <button type="button" onMouseDown={(e) => e.preventDefault()} onClick={() => format("underline")} className="px-2.5 py-1 rounded underline text-xs bg-white border border-[#DED4BD]">Underline</button>
-        <button type="button" onMouseDown={(e) => e.preventDefault()} onClick={() => format("insertUnorderedList")} className="px-2.5 py-1 rounded text-xs bg-white border border-[#DED4BD]">Bullet List</button>
-        <button type="button" onMouseDown={(e) => e.preventDefault()} onClick={() => format("insertOrderedList")} className="px-2.5 py-1 rounded text-xs bg-white border border-[#DED4BD]">Numbered List</button>
-        <button type="button" onMouseDown={(e) => e.preventDefault()} onClick={() => format("formatBlock", "<h3>")} className="px-2.5 py-1 rounded font-bold text-xs bg-white border border-[#DED4BD]">Heading</button>
-        <label className="px-2.5 py-1 rounded text-xs bg-white border border-[#DED4BD] cursor-pointer" onMouseDown={(e) => e.preventDefault()}>
-          {uploading ? "⏳ جاري الرفع..." : "🖼️ صورة من الجهاز"}
+      <div className="flex flex-col gap-1.5 p-2 bg-[#FAF6ED] border-b" style={{ borderColor: "#DED4BD" }}>
+        {/* Row 1: font family, size, color, highlight */}
+        <div className="flex flex-wrap items-center gap-1">
+          <select
+            className="text-xs rounded px-2 py-1 border bg-white"
+            style={{ borderColor: "#DED4BD", maxWidth: 150 }}
+            onChange={(e) => editor.chain().focus().setFontFamily(e.target.value).run()}
+            defaultValue=""
+          >
+            <option value="" disabled>الخط</option>
+            {FONT_FAMILIES.map((f) => (
+              <option key={f.value} value={f.value} style={{ fontFamily: f.value }}>{f.label}</option>
+            ))}
+          </select>
+
+          <select
+            className="text-xs rounded px-2 py-1 border bg-white"
+            style={{ borderColor: "#DED4BD", maxWidth: 70 }}
+            onChange={(e) => editor.chain().focus().setFontSize(e.target.value + "px").run()}
+            defaultValue=""
+          >
+            <option value="" disabled>الحجم</option>
+            {FONT_SIZES.map((s) => (
+              <option key={s} value={s}>{s}</option>
+            ))}
+          </select>
+
+          <span className="text-xs" style={{ color: "#5C5A4A" }}>لون الخط</span>
           <input
-            type="file"
-            accept="image/*"
-            className="hidden"
-            disabled={uploading}
-            onChange={(e) => {
-              const file = e.target.files && e.target.files[0];
-              insertImageFile(file);
-              e.target.value = "";
-            }}
+            type="color"
+            defaultValue="#22291F"
+            onChange={(e) => editor.chain().focus().setColor(e.target.value).run()}
+            className="w-7 h-7 rounded cursor-pointer border-0"
+            title="لون النص"
           />
-        </label>
+
+          <span className="text-xs" style={{ color: "#5C5A4A" }}>تمييز</span>
+          <input
+            type="color"
+            defaultValue="#F6E9D3"
+            onChange={(e) => editor.chain().focus().toggleHighlight({ color: e.target.value }).run()}
+            className="w-7 h-7 rounded cursor-pointer border-0"
+            title="لون خلفية التمييز"
+          />
+
+          <button
+            type="button"
+            onClick={() => editor.chain().focus().unsetAllMarks().clearNodes().run()}
+            className="px-2.5 py-1 rounded text-xs bg-white border border-[#DED4BD]"
+            title="مسح كل التنسيق عن النص المحدد"
+          >
+            🧹 مسح التنسيق
+          </button>
+        </div>
+
+        {/* Row 2: bold/italic/underline/strike + headings */}
+        <div className="flex flex-wrap items-center gap-1">
+          <button type="button" onClick={() => editor.chain().focus().toggleBold().run()} className="px-2.5 py-1 rounded font-bold text-xs" style={btnStyle(editor.isActive("bold"))} title="عريض (Ctrl+B)">B</button>
+          <button type="button" onClick={() => editor.chain().focus().toggleItalic().run()} className="px-2.5 py-1 rounded italic text-xs" style={btnStyle(editor.isActive("italic"))} title="مائل (Ctrl+I)">I</button>
+          <button type="button" onClick={() => editor.chain().focus().toggleUnderline().run()} className="px-2.5 py-1 rounded underline text-xs" style={btnStyle(editor.isActive("underline"))} title="تسطير (Ctrl+U)">U</button>
+          <button type="button" onClick={() => editor.chain().focus().toggleStrike().run()} className="px-2.5 py-1 rounded line-through text-xs" style={btnStyle(editor.isActive("strike"))} title="يتوسطه خط">S</button>
+
+          <span className="w-px h-5 mx-0.5" style={{ background: "#DED4BD" }} />
+
+          <select
+            className="text-xs rounded px-2 py-1 border bg-white"
+            style={{ borderColor: "#DED4BD" }}
+            onChange={(e) => {
+              const v = e.target.value;
+              if (v === "p") editor.chain().focus().setParagraph().run();
+              else editor.chain().focus().toggleHeading({ level: Number(v) }).run();
+            }}
+            value={
+              editor.isActive("heading", { level: 1 }) ? "1" :
+              editor.isActive("heading", { level: 2 }) ? "2" :
+              editor.isActive("heading", { level: 3 }) ? "3" :
+              editor.isActive("heading", { level: 4 }) ? "4" : "p"
+            }
+          >
+            <option value="p">نص عادي</option>
+            <option value="1">عنوان 1</option>
+            <option value="2">عنوان 2</option>
+            <option value="3">عنوان 3</option>
+            <option value="4">عنوان 4</option>
+          </select>
+        </div>
+
+        {/* Row 3: alignment, lists, indent */}
+        <div className="flex flex-wrap items-center gap-1">
+          <button type="button" onClick={() => editor.chain().focus().setTextAlign("right").run()} className="px-2.5 py-1 rounded text-xs" style={btnStyle(editor.isActive({ textAlign: "right" }))} title="محاذاة يمين">يمين</button>
+          <button type="button" onClick={() => editor.chain().focus().setTextAlign("center").run()} className="px-2.5 py-1 rounded text-xs" style={btnStyle(editor.isActive({ textAlign: "center" }))} title="محاذاة وسط">وسط</button>
+          <button type="button" onClick={() => editor.chain().focus().setTextAlign("left").run()} className="px-2.5 py-1 rounded text-xs" style={btnStyle(editor.isActive({ textAlign: "left" }))} title="محاذاة يسار">يسار</button>
+          <button type="button" onClick={() => editor.chain().focus().setTextAlign("justify").run()} className="px-2.5 py-1 rounded text-xs" style={btnStyle(editor.isActive({ textAlign: "justify" }))} title="ضبط">ضبط</button>
+
+          <span className="w-px h-5 mx-0.5" style={{ background: "#DED4BD" }} />
+
+          <button type="button" onClick={() => editor.chain().focus().toggleBulletList().run()} className="px-2.5 py-1 rounded text-xs" style={btnStyle(editor.isActive("bulletList"))}>• قائمة</button>
+          <button type="button" onClick={() => editor.chain().focus().toggleOrderedList().run()} className="px-2.5 py-1 rounded text-xs" style={btnStyle(editor.isActive("orderedList"))}>1. قائمة</button>
+          <button type="button" onClick={() => editor.chain().focus().sinkListItem("listItem").run()} className="px-2.5 py-1 rounded text-xs bg-white border border-[#DED4BD]" title="زيادة المسافة البادئة">⇤ زحاف</button>
+          <button type="button" onClick={() => editor.chain().focus().liftListItem("listItem").run()} className="px-2.5 py-1 rounded text-xs bg-white border border-[#DED4BD]" title="إنقاص المسافة البادئة">⇥ إلغاء زحاف</button>
+        </div>
+
+        {/* Row 4: link, table, image, import, undo/redo */}
+        <div className="flex flex-wrap items-center gap-1">
+          <button type="button" onClick={setLink} className="px-2.5 py-1 rounded text-xs" style={btnStyle(editor.isActive("link"))} title="إدراج/تعديل رابط">🔗 رابط</button>
+          <button type="button" onClick={() => editor.chain().focus().extendMarkRange("link").unsetLink().run()} className="px-2 py-1 rounded text-xs bg-white border border-[#DED4BD]" title="حذف الرابط">إزالة الرابط</button>
+
+          <span className="w-px h-5 mx-0.5" style={{ background: "#DED4BD" }} />
+
+          <button type="button" onClick={insertTable} className="px-2.5 py-1 rounded text-xs bg-white border border-[#DED4BD]">📊 جدول</button>
+          <button type="button" onClick={() => editor.chain().focus().addColumnAfter().run()} className="px-2 py-1 rounded text-xs bg-white border border-[#DED4BD]">+عمود</button>
+          <button type="button" onClick={() => editor.chain().focus().deleteColumn().run()} className="px-2 py-1 rounded text-xs bg-white border border-[#DED4BD]" style={{ color: "#C53030" }}>-عمود</button>
+          <button type="button" onClick={() => editor.chain().focus().addRowAfter().run()} className="px-2 py-1 rounded text-xs bg-white border border-[#DED4BD]">+صف</button>
+          <button type="button" onClick={() => editor.chain().focus().deleteRow().run()} className="px-2 py-1 rounded text-xs bg-white border border-[#DED4BD]" style={{ color: "#C53030" }}>-صف</button>
+          <button type="button" onClick={() => editor.chain().focus().toggleHeaderRow().run()} className="px-2 py-1 rounded text-xs bg-white border border-[#DED4BD]">صف عناوين</button>
+          <button type="button" onClick={() => editor.chain().focus().deleteTable().run()} className="px-2 py-1 rounded text-xs bg-white border border-[#DED4BD]" style={{ color: "#C53030" }}>حذف الجدول</button>
+
+          <span className="w-px h-5 mx-0.5" style={{ background: "#DED4BD" }} />
+
+          <button type="button" onClick={() => fileRef.current?.click()} className="px-2.5 py-1 rounded text-xs bg-white border border-[#DED4BD]">
+            {uploading ? "⏳ جاري الرفع..." : "🖼️ صورة"}
+          </button>
+          <input ref={fileRef} type="file" accept="image/*" className="hidden" onChange={(e) => { insertImage(e.target.files?.[0]); e.target.value = ""; }} />
+
+          <button type="button" onClick={() => importTxtRef.current?.click()} className="px-2.5 py-1 rounded text-xs bg-white border border-[#DED4BD]">
+            {importing ? "⏳ جاري الاستيراد..." : "📄 استيراد TXT"}
+          </button>
+          <input ref={importTxtRef} type="file" accept=".txt,text/plain" className="hidden" onChange={(e) => { importTxt(e.target.files?.[0]); e.target.value = ""; }} />
+
+          <button type="button" onClick={() => importDocxRef.current?.click()} className="px-2.5 py-1 rounded text-xs bg-white border border-[#DED4BD]">
+            {importing ? "⏳ جاري الاستيراد..." : "📝 استيراد Word"}
+          </button>
+          <input ref={importDocxRef} type="file" accept=".docx" className="hidden" onChange={(e) => { importDocx(e.target.files?.[0]); e.target.value = ""; }} />
+
+          <span className="w-px h-5 mx-0.5" style={{ background: "#DED4BD" }} />
+
+          <button type="button" onClick={() => editor.chain().focus().undo().run()} className="px-2.5 py-1 rounded text-xs bg-white border border-[#DED4BD]" title="تراجع (Ctrl+Z)">↩ تراجع</button>
+          <button type="button" onClick={() => editor.chain().focus().redo().run()} className="px-2.5 py-1 rounded text-xs bg-white border border-[#DED4BD]" title="إعادة (Ctrl+Y)">↪ إعادة</button>
+        </div>
       </div>
-      <div
-        ref={editorRef}
-        contentEditable
-        suppressContentEditableWarning
-        onInput={handleInput}
-        className="p-4 ts-scrollbar ts-selectable ts-richtext"
-        style={{ minHeight: 180, outline: "none", color: "#22291F" }}
-      />
+
+      <EditorContent editor={editor} />
     </div>
   );
 }
 
-export function StudioHotwords({ hotwords, onAdd, onRemove, uploadFn }) {
+// ---------------------------------------------------------------------------
+// Hotwords panel — كلمتان تنشئان كلمة تفاعلية الآن:
+// 1) تلقائيًا أثناء الكتابة: *الحملة الفرنسية* (يديرها Hotword extension).
+// 2) يدويًا: تحديد نص موجود من المعاينة بالأسفل والضغط على الزر هنا.
+// الاثنان يكتبان في نفس مصفوفة scene.hotwords، بدون تكرار لنفس النص.
+// ---------------------------------------------------------------------------
+export function StudioHotwords({ hotwords, onAdd, onRemove, onUpdate, uploadFn }) {
   const [selectedText, setSelectedText] = useState("");
   const [note, setNote] = useState("");
   const [image, setImage] = useState("");
   const [linkSceneId] = useState("");
+  const [editingId, setEditingId] = useState(null);
 
   const handleCaptureSelection = () => {
     const sel = window.getSelection();
     if (sel && !sel.isCollapsed) {
       const text = sel.toString().trim();
       if (text) {
+        setEditingId(null);
         setSelectedText(text);
         setNote("");
         setImage("");
@@ -109,10 +417,19 @@ export function StudioHotwords({ hotwords, onAdd, onRemove, uploadFn }) {
     }
   };
 
+  const startEditing = (hw) => {
+    setSelectedText("");
+    setEditingId(hw.id);
+    setNote(hw.note || "");
+    setImage(hw.image || "");
+  };
+
   return (
     <div className="mb-6 p-4 rounded-2xl bg-white border" style={{ borderColor: "#DED4BD" }}>
       <h3 className="font-bold text-base mb-2" style={{ color: "#10665A" }}>✨ الكلمات التفاعلية (Hotwords)</h3>
-      <p className="text-xs mb-3" style={{ color: "#5C5A4A" }}>حدد أي نص من معاينة الدرس بالأسفل أو من محتوى الشرح، ثم اضغط هنا لإضافته ككلمة تفاعلية:</p>
+      <p className="text-xs mb-3" style={{ color: "#5C5A4A" }}>
+        اكتب <b>*الكلمة*</b> داخل محتوى الشرح فتتحول تلقائيًا لكلمة تفاعلية، أو حدد أي نص من المعاينة بالأسفل واضغط الزر هنا لإضافته يدويًا:
+      </p>
 
       <div className="flex gap-2 mb-3">
         <button type="button" onMouseDown={(e) => e.preventDefault()} onClick={handleCaptureSelection} className="px-3 py-1.5 rounded-xl text-xs font-bold text-white" style={{ background: "#10665A" }}>
@@ -122,7 +439,7 @@ export function StudioHotwords({ hotwords, onAdd, onRemove, uploadFn }) {
 
       {selectedText && (
         <div className="ts-fade p-3 rounded-xl mb-3" style={{ background: "#F6E9D3", border: "1px solid #B9791F" }}>
-          <p className="font-bold text-sm mb-2" style={{ color: "#8A5A15" }}>النصر المختصر: «{selectedText}»</p>
+          <p className="font-bold text-sm mb-2" style={{ color: "#8A5A15" }}>النص المحدد: «{selectedText}»</p>
           <input className="ts-input text-sm mb-2" placeholder="الشرح أو التعريف الإضافي..." value={note} onChange={(e) => setNote(e.target.value)} />
           <ImageUploadField value={image} onChange={setImage} label="صورة توضيحية (اختياري)" uploadFn={uploadFn} />
           <div className="flex gap-2">
@@ -145,10 +462,37 @@ export function StudioHotwords({ hotwords, onAdd, onRemove, uploadFn }) {
         </div>
       )}
 
+      {editingId && (
+        <div className="ts-fade p-3 rounded-xl mb-3" style={{ background: "#E4F0EC", border: "1px solid #10665A" }}>
+          <p className="font-bold text-sm mb-2" style={{ color: "#0E5348" }}>
+            تعديل شرح: «{hotwords.find((h) => h.id === editingId)?.text}»
+          </p>
+          <input className="ts-input text-sm mb-2" placeholder="الشرح أو التعريف الإضافي..." value={note} onChange={(e) => setNote(e.target.value)} />
+          <ImageUploadField value={image} onChange={setImage} label="صورة توضيحية (اختياري)" uploadFn={uploadFn} />
+          <div className="flex gap-2">
+            <button
+              type="button"
+              onClick={() => {
+                if (onUpdate) onUpdate(editingId, { note: note.trim(), image });
+                setEditingId(null);
+                setNote("");
+                setImage("");
+              }}
+              className="px-4 py-1.5 rounded-lg text-xs font-bold text-white"
+              style={{ background: "#10665A" }}
+            >
+              حفظ التعديل
+            </button>
+            <button type="button" onClick={() => setEditingId(null)} className="px-3 py-1.5 rounded-lg text-xs" style={{ color: "#8A8570" }}>إلغاء</button>
+          </div>
+        </div>
+      )}
+
       <div className="flex flex-wrap gap-2">
         {hotwords.map((hw) => (
           <span key={hw.id} className="text-xs px-3 py-1.5 rounded-xl flex items-center gap-2 border" style={{ background: "#FAF6ED", borderColor: "#DED4BD", color: "#8A5A15" }}>
-            <b>{hw.text}</b>
+            <button type="button" onClick={() => startEditing(hw)} className="font-bold" title="تعديل الشرح/الصورة">{hw.text}</button>
+            {!hw.note && !hw.image && <span title="أضف شرح أو صورة لهذه الكلمة" style={{ color: "#B9791F" }}>⚠️</span>}
             <button type="button" onClick={() => onRemove(hw.id)} style={{ color: "#C53030", fontWeight: "bold" }}>×</button>
           </span>
         ))}

@@ -1,3 +1,4 @@
+@import url('https://fonts.googleapis.com/css2?family=Tajawal:wght@400;500;700;900&family=Cairo:wght@400;600;700&family=Noto+Sans+Arabic:wght@400;600;700&family=IBM+Plex+Sans+Arabic:wght@400;600;700&family=Amiri:wght@400;700&family=Changa:wght@400;600;700&family=El+Messiri:wght@400;600;700&family=Readex+Pro:wght@400;600;700&family=Rubik:wght@400;600;700&family=Alexandria:wght@400;600;700&family=Markazi+Text:wght@400;500;600;700&family=Noto+Naskh+Arabic:wght@400;700&family=Scheherazade+New:wght@400;700&family=Reem+Kufi:wght@400;700&family=Lalezar&family=Mirza:wght@400;700&family=Lateef:wght@400;700&family=Harmattan:wght@400;700&family=Vazirmatn:wght@400;700&family=Baloo+Bhaijaan+2:wght@400;700&family=Aref+Ruqaa:wght@400;700&family=Katibeh&family=Jomhuria&family=Kufam:wght@400;700&family=Lemonada:wght@400;700&family=Mada:wght@400;700&family=Alkalami&family=Gulzar&family=Handjet:wght@400;700&family=Rakkas&family=Zain:wght@400;700&family=Noto+Nastaliq+Urdu:wght@400;700&family=Marhey:wght@400;700&family=Beiruti:wght@400;700&family=Fustat:wght@400;700&family=Qahiri&family=Alan+Sans:wght@400;700&family=Cascadia+Code:wght@400;700&family=Badeen+Display&family=Playpen+Sans+Arabic:wght@400;700&family=Ruwudu:wght@400;700&family=Estedad:wght@400;700&family=Oi&family=Vibes&family=Alyamama:wght@400;700&family=Cascadia+Mono:wght@400;700&family=Blaka&family=Parastoo:wght@400;700&family=Blaka+Hollow&display=swap');
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
@@ -8,19 +9,24 @@
    teal (studio/primary): #10665A     ochre (hotwords/highlight): #B9791F
    plum (draft/mystery): #4C3F63     line: #DED4BD
 --------------------------------------------------------------------------- */
-@import url('https://fonts.googleapis.com/css2?family=Tajawal:wght@400;500;700;900&family=Markazi+Text:wght@500;600;700&display=swap');
-
 body {
   background: #FAF6ED;
 }
-
 .ts-root, .ts-root * { font-family: 'Tajawal', sans-serif; box-sizing: border-box; }
 .ts-display { font-family: 'Markazi Text', serif; }
+
+/* Default content font: rich-text areas (editor surface + student Viewer)
+   default to Amiri unless a run of text has an explicit font-family mark
+   applied by the user — that inline style always wins over this rule. */
+.ts-richtext, .ts-richtext *, .ProseMirror, .ProseMirror * { font-family: 'Amiri', serif; }
 .ts-fade { animation: tsFade .3s ease; }
 @keyframes tsFade { from { opacity: 0; transform: translateY(4px);} to { opacity: 1; transform: translateY(0);} }
 @media (prefers-reduced-motion: reduce) { .ts-fade { animation: none; } }
-.ts-hotword { color: #B9791F; text-decoration: underline; text-decoration-style: dotted; text-underline-offset: 4px; cursor: pointer; font-weight: 700; position: relative; display: inline-block; }
-.ts-hotword.active { background: #F6E9D3; border-radius: 4px; padding: 0 3px; }
+.ts-hotword, .ts-hotword-target { color: #B9791F; text-decoration: underline; text-decoration-style: dotted; text-underline-offset: 4px; cursor: pointer; font-weight: 700; position: relative; display: inline-block; }
+.ts-hotword.active, .ts-hotword-target.active { background: #F6E9D3; border-radius: 4px; padding: 0 3px; }
+.ts-richtext h1 { font-size: 1.8em; font-weight: 800; margin: 14px 0 8px; color: #22291F; }
+.ts-richtext h2 { font-size: 1.5em; font-weight: 800; margin: 12px 0 8px; color: #22291F; }
+.ts-richtext h3 { font-size: 1.25em; font-weight: 800; margin: 10px 0 6px; color: #22291F; }
 .ts-scrollbar::-webkit-scrollbar { width: 6px; height: 6px; }
 .ts-scrollbar::-webkit-scrollbar-thumb { background: #DED4BD; border-radius: 4px; }
 .ts-input { border: 1px solid #DED4BD; border-radius: 12px; padding: 8px 12px; width: 100%; background: #fff; color: #22291F; outline: none; }
@@ -31,3 +37,38 @@ body {
 .ts-richtext ul { list-style-type: disc; margin-right: 20px; }
 .ts-richtext ol { list-style-type: decimal; margin-right: 20px; }
 .ts-richtext blockquote { border-right: 4px solid #10665A; padding-right: 12px; margin: 10px 0; color: #5C5A4A; }
+
+/* Links produced by the editor's Link extension — must look obviously clickable */
+.ts-richtext a, .ProseMirror a { color: #10665A; text-decoration: underline; font-weight: 600; }
+
+/* Tables — shared rules for both the editor surface and the student Viewer.
+   The wrapper scrolls horizontally on narrow screens instead of overflowing
+   the page or squeezing columns unreadably small. */
+.ts-richtext table, .ProseMirror table {
+  border-collapse: collapse;
+  width: 100%;
+  margin: 12px 0;
+  table-layout: fixed;
+}
+/* No wrapper div exists around tables in the saved HTML, so the scroll
+   behavior lives on the table element itself — this keeps wide tables from
+   overflowing the page or squeezing unreadably small on mobile. */
+.ts-richtext table { display: block; max-width: 100%; overflow-x: auto; -webkit-overflow-scrolling: touch; }
+.ts-richtext td, .ts-richtext th, .ProseMirror td, .ProseMirror th {
+  border: 1px solid #DED4BD;
+  padding: 8px 12px;
+  min-width: 80px;
+  text-align: right;
+}
+.ts-richtext th, .ProseMirror th { background: #10665A; color: #FAF6ED; font-weight: 700; }
+.ts-richtext tr:nth-child(even) td, .ProseMirror tr:nth-child(even) td { background: #F3F0E7; }
+
+/* Editor surface itself (Tiptap ProseMirror root) */
+.ProseMirror { outline: none; }
+.ProseMirror p.is-editor-empty:first-child::before {
+  content: attr(data-placeholder);
+  color: #B4AE99;
+  float: right;
+  pointer-events: none;
+  height: 0;
+}

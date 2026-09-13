@@ -35,15 +35,14 @@ export async function signOutTeacher() {
 
 // ===========================================================================
 // Row <-> app-shape mapping
-// The UI (unchanged from the approved prototype) expects camelCase scene
-// fields like `presenterNotes`, `quickRecallShow`, `quickRecall`. Postgres
-// columns are snake_case. These two mappers are the only place that
-// translates between them.
+// The UI expects camelCase scene fields like `presenterNotes`, `quickRecallShow`,
+// `quickRecall`. Postgres columns are snake_case.
 // ===========================================================================
 function sceneRowToApp(row) {
   return {
     id: row.id,
     title: row.title,
+    titleFont: row.title_font || null,
     text: row.text,
     presenterNotes: row.presenter_notes,
     quickRecallShow: row.quick_recall_show,
@@ -55,18 +54,26 @@ function sceneRowToApp(row) {
   };
 }
 
+// تحويل كائن المشهد (أو جزء منه) إلى تنسيق Postgres snake_case مع استبعاد القيم غير المحددة (undefined)
 function sceneAppToRow(scene) {
-  return {
-    title: scene.title,
-    text: scene.text,
-    presenter_notes: scene.presenterNotes,
-    quick_recall_show: scene.quickRecallShow,
-    quick_recall: scene.quickRecall,
-    hotwords: scene.hotwords,
-    mindmap: scene.mindmap,
-    timeline: scene.timeline,
-    questions: scene.questions,
-  };
+  const row = {};
+
+  if (scene.title !== undefined) row.title = scene.title;
+  if (scene.titleFont !== undefined) row.title_font = scene.titleFont || null;
+  if (scene.title_font !== undefined) row.title_font = scene.title_font;
+  if (scene.text !== undefined) row.text = scene.text;
+  if (scene.presenterNotes !== undefined) row.presenter_notes = scene.presenterNotes;
+  if (scene.presenter_notes !== undefined) row.presenter_notes = scene.presenter_notes;
+  if (scene.quickRecallShow !== undefined) row.quick_recall_show = scene.quickRecallShow;
+  if (scene.quick_recall_show !== undefined) row.quick_recall_show = scene.quick_recall_show;
+  if (scene.quickRecall !== undefined) row.quick_recall = scene.quickRecall;
+  if (scene.quick_recall !== undefined) row.quick_recall = scene.quick_recall;
+  if (scene.hotwords !== undefined) row.hotwords = scene.hotwords;
+  if (scene.mindmap !== undefined) row.mindmap = scene.mindmap;
+  if (scene.timeline !== undefined) row.timeline = scene.timeline;
+  if (scene.questions !== undefined) row.questions = scene.questions;
+
+  return row;
 }
 
 function lessonRowToApp(row, scenes) {
@@ -89,8 +96,6 @@ function lessonRowToApp(row, scenes) {
 // LESSONS
 // ===========================================================================
 
-// Teacher's own library — every status, own lessons only (RLS enforces this
-// server-side regardless, this query just mirrors it).
 export async function listOwnLessons(ownerId) {
   const { data, error } = await supabase
     .from("lessons")
@@ -101,9 +106,6 @@ export async function listOwnLessons(ownerId) {
   return data.map((row) => lessonRowToApp(row));
 }
 
-// Student platform — published only. RLS also enforces this, so even if this
-// query were tampered with client-side, Draft/ReadyToRecord rows never come
-// back for an unauthenticated request.
 export async function listPublishedLessons() {
   const { data, error } = await supabase
     .from("lessons")
@@ -135,6 +137,7 @@ export async function getLessonWithScenes(id) {
 function defaultScenePayload(title) {
   return {
     title,
+    title_font: null,
     text: "<p>محتوى الدرس التمهيدي...</p>",
     presenter_notes: "",
     quick_recall_show: true,
@@ -179,14 +182,10 @@ export async function updateLessonMeta(id, patch) {
 }
 
 export async function deleteLesson(id) {
-  // scenes cascade-delete via the FK's `on delete cascade`
   const { error } = await supabase.from("lessons").delete().eq("id", id);
   if (error) throw error;
 }
 
-// Deep-regenerate every nested id (mindmap tree, hotwords, timeline,
-// questions) so a duplicated lesson is fully independent — editing the copy
-// never touches the original (requirement: Lesson Independence).
 function regenerateMindmapIds(node) {
   return {
     ...node,
@@ -218,6 +217,7 @@ export async function duplicateLesson(id, ownerId) {
     lesson_id: newLessonRow.id,
     order_index: index,
     title: scene.title,
+    title_font: scene.titleFont || null,
     text: scene.text,
     presenter_notes: scene.presenterNotes,
     quick_recall_show: scene.quickRecallShow,
@@ -237,8 +237,6 @@ export async function duplicateLesson(id, ownerId) {
 // ===========================================================================
 // SCENES
 // ===========================================================================
-// Imports a full lesson bundle (metadata + scenes with rich content) in one
-// go — used only by the dev-only "import demo data" action in the library.
 export async function importLessonBundle(ownerId, bundle) {
   const { data: lessonRow, error: lessonErr } = await supabase
     .from("lessons")
@@ -260,6 +258,7 @@ export async function importLessonBundle(ownerId, bundle) {
     lesson_id: lessonRow.id,
     order_index: index,
     title: scene.title,
+    title_font: scene.titleFont || scene.title_font || null,
     text: scene.text,
     presenter_notes: scene.presenter_notes || "",
     quick_recall_show: scene.quickRecallShow !== false,
@@ -287,8 +286,16 @@ export async function createScene(lessonId, orderIndex, title = "مشهد جدي
 }
 
 export async function updateScene(id, sceneAppPatch) {
-  const { error } = await supabase.from("scenes").update(sceneAppToRow(sceneAppPatch)).eq("id", id);
-  if (error) throw error;
+  const payload = sceneAppToRow(sceneAppPatch);
+  
+  // إذا لم يحتوي التعديل على أي حقل للرفع، نلغي العملية لتجنب استعلام فارغ
+  if (Object.keys(payload).length === 0) return;
+
+  const { error } = await supabase.from("scenes").update(payload).eq("id", id);
+  if (error) {
+    console.error("Supabase updateScene error:", error);
+    throw error;
+  }
 }
 
 export async function deleteScene(id) {
@@ -302,10 +309,16 @@ export async function deleteScene(id) {
 export async function uploadLessonImage(file, lessonId) {
   const ext = (file.name.split(".").pop() || "jpg").toLowerCase();
   const path = `${lessonId}/${uid("img")}.${ext}`;
+  
+  // الحاوية المعرفة في مشروعك باسم lesson-images
+  const bucketName = "lesson-images";
+
   const { error } = await supabase.storage
-    .from("lesson-images")
+    .from(bucketName)
     .upload(path, file, { cacheControl: "3600", upsert: false });
+    
   if (error) throw error;
-  const { data } = supabase.storage.from("lesson-images").getPublicUrl(path);
+  
+  const { data } = supabase.storage.from(bucketName).getPublicUrl(path);
   return data.publicUrl;
 }
