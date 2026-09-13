@@ -357,7 +357,7 @@ export default function StudentPlatform() {
     />
   </div>
   <div className="md-badge">منصة مَدَار</div>
-  <h1>مرحباً بك في رحلة التعلم</h1>
+  <h1>مرحباً بك في منصة مَدَار</h1>
   <p>استكشف الدراسات الاجتماعية بأسلوب تفاعلي ومرئي عصري</p>
 </header>
 
