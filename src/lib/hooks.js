@@ -1,13 +1,69 @@
 import { useEffect, useRef, useState, useCallback } from "react";
-import { getSession, onAuthStateChange } from "./db";
+import { supabase } from "./supabaseClient";
+import { getSession, onAuthStateChange, recoverSessionFromUrl } from "./db";
 
-export function useTeacherAuth() {
-  const [session, setSession] = useState(undefined); // undefined = loading, null = signed out
+/**
+ * Shared auth hook (teacher + student).
+ * session: undefined = loading | null = guest | object = logged in
+ *
+ * Google OAuth returns with ?code= on the URL. We must exchange that into a
+ * persisted session before rendering "guest", and keep listening so refresh works.
+ */
+export function useAuth() {
+  const [session, setSession] = useState(undefined);
+  const initDone = useRef(false);
 
   useEffect(() => {
     let mounted = true;
-    getSession().then((s) => mounted && setSession(s));
-    const unsubscribe = onAuthStateChange((s) => mounted && setSession(s));
+
+    const apply = (s) => {
+      if (mounted) setSession(s ?? null);
+    };
+
+    // Subscribe immediately so SIGNED_IN / TOKEN_REFRESHED / INITIAL_SESSION are not missed
+    const unsubscribe = onAuthStateChange((s) => apply(s));
+
+    (async () => {
+      if (initDone.current) return;
+      initDone.current = true;
+      try {
+        // 1) OAuth return: exchange ?code= / read hash tokens
+        const recovered = await recoverSessionFromUrl();
+        if (recovered) {
+          apply(recovered);
+          return;
+        }
+
+        // 2) Storage
+        const existing = await getSession();
+        if (existing) {
+          apply(existing);
+          return;
+        }
+
+        // 3) Brief retry — client init / detectSessionInUrl may still be in flight
+        await new Promise((r) => setTimeout(r, 150));
+        const again = await getSession();
+        if (again) {
+          apply(again);
+          return;
+        }
+
+        // 4) getUser validates JWT against server (more reliable after OAuth)
+        const { data: userData } = await supabase.auth.getUser();
+        if (userData?.user) {
+          const { data: sessData } = await supabase.auth.getSession();
+          apply(sessData?.session ?? null);
+          return;
+        }
+
+        apply(null);
+      } catch (e) {
+        console.error("useAuth init:", e);
+        apply(null);
+      }
+    })();
+
     return () => {
       mounted = false;
       unsubscribe();
@@ -17,9 +73,10 @@ export function useTeacherAuth() {
   return session;
 }
 
-// Debounces a value-saving callback (used for autosave). Returns a `save`
-// function that always fires against the *latest* args, plus a status
-// string: 'idle' | 'saving' | 'saved' | 'error'.
+export function useTeacherAuth() {
+  return useAuth();
+}
+
 export function useAutosave(saveFn, delay = 800) {
   const [status, setStatus] = useState("idle");
   const timerRef = useRef(null);
@@ -33,7 +90,6 @@ export function useAutosave(saveFn, delay = 800) {
       await saveFn(...args);
       setStatus("saved");
     } catch (e) {
-      // eslint-disable-next-line no-console
       console.error(e);
       setStatus("error");
     }

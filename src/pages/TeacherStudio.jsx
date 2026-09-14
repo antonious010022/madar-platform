@@ -9,7 +9,7 @@ import {
   QuestionStudioEditor,
 } from "../components/Studio";
 import { STAGES, GRADES, TERMS, STATUSES, statusMeta, uid } from "../lib/constants";
-import { getLessonWithScenes, updateLessonMeta, updateScene, createScene, deleteScene, uploadLessonImage } from "../lib/db";
+import { getLessonWithScenes, updateLessonMeta, updateScene, createScene, deleteScene, uploadLessonImage, extractYouTubeId, SCENE_TYPES } from "../lib/db";
 
 const AUTOSAVE_DELAY = 800;
 
@@ -19,6 +19,8 @@ export default function TeacherStudioPage() {
 
   const [lesson, setLesson] = useState(null); // null = loading, false = not found
   const [selectedSceneId, setSelectedSceneId] = useState(null);
+  const [showTypePicker, setShowTypePicker] = useState(false);
+  const [addSceneError, setAddSceneError] = useState("");
   const [recording, setRecording] = useState(false);
   const [recIndex, setRecIndex] = useState(0);
   const [showPreview, setShowPreview] = useState(true);
@@ -44,34 +46,65 @@ export default function TeacherStudioPage() {
   const uploadFn = useCallback((file) => uploadLessonImage(file, id), [id]);
 
   // ---- Debounced autosave: lesson metadata ---------------------------------
+  // Accumulates lesson-meta patches so a later title save does not drop youtubeUrl, etc.
+  const pendingLessonPatchRef = useRef({});
+
+  const flushLessonSave = useCallback(async () => {
+    const patch = pendingLessonPatchRef.current;
+    if (!patch || Object.keys(patch).length === 0) return;
+    pendingLessonPatchRef.current = {};
+    setSaveStatus("saving");
+    try {
+      await updateLessonMeta(id, patch);
+      setSaveStatus("saved");
+    } catch (e) {
+      console.error("Lesson Save Error:", e);
+      // put back so retry can work
+      pendingLessonPatchRef.current = { ...patch, ...pendingLessonPatchRef.current };
+      setSaveStatus("error");
+    }
+  }, [id]);
+
   const scheduleLessonSave = useCallback(
     (patch) => {
+      pendingLessonPatchRef.current = { ...pendingLessonPatchRef.current, ...patch };
       setSaveStatus("saving");
       if (lessonTimerRef.current) clearTimeout(lessonTimerRef.current);
-      lessonTimerRef.current = setTimeout(async () => {
-        try {
-          await updateLessonMeta(id, patch);
-          setSaveStatus("saved");
-        } catch (e) {
-          console.error("Lesson Save Error:", e);
-          setSaveStatus("error");
-        }
+      lessonTimerRef.current = setTimeout(() => {
+        flushLessonSave();
       }, AUTOSAVE_DELAY);
     },
-    [id]
+    [flushLessonSave]
   );
 
   const patchLesson = (patch, { immediate } = {}) => {
     setLesson((prev) => ({ ...prev, ...patch }));
     if (immediate) {
-      setSaveStatus("saving");
-      updateLessonMeta(id, patch)
-        .then(() => setSaveStatus("saved"))
-        .catch(() => setSaveStatus("error"));
+      // merge into pending then flush now so concurrent fields are not lost
+      pendingLessonPatchRef.current = { ...pendingLessonPatchRef.current, ...patch };
+      if (lessonTimerRef.current) {
+        clearTimeout(lessonTimerRef.current);
+        lessonTimerRef.current = null;
+      }
+      flushLessonSave();
     } else {
       scheduleLessonSave(patch);
     }
   };
+
+  // Flush pending lesson meta (e.g. youtubeUrl) on unmount / navigation away
+  useEffect(() => {
+    return () => {
+      if (lessonTimerRef.current) clearTimeout(lessonTimerRef.current);
+      const patch = pendingLessonPatchRef.current;
+      if (patch && Object.keys(patch).length > 0) {
+        // fire-and-forget; component is unmounting
+        updateLessonMeta(id, patch).catch(() => {});
+        pendingLessonPatchRef.current = {};
+      }
+    };
+  }, [id]);
+
 
   // ---- Debounced autosave: per-scene content --------------------------------
   const scheduleSceneSave = useCallback((sceneId, fullSceneState) => {
@@ -91,6 +124,10 @@ export default function TeacherStudioPage() {
           timeline: fullSceneState.timeline || [],
           questions: fullSceneState.questions || [],
           presenter_notes: fullSceneState.presenterNotes || fullSceneState.presenter_notes || "",
+          sceneType: fullSceneState.sceneType || fullSceneState.scene_type || "EXPLANATION",
+          titleFont: fullSceneState.titleFont || fullSceneState.title_font || null,
+          quickRecallShow: fullSceneState.quickRecallShow,
+          isMembersOnly: !!(fullSceneState.isMembersOnly || fullSceneState.is_members_only),
         };
 
         await updateScene(sceneId, payloadToDB);
@@ -118,11 +155,24 @@ export default function TeacherStudioPage() {
     };
   }, []);
 
-  const addScene = async () => {
-    const orderIndex = lesson.scenes.length;
-    const newScene = await createScene(id, orderIndex, "مشهد جديد");
-    setLesson((prev) => ({ ...prev, scenes: [...prev.scenes, newScene] }));
-    setSelectedSceneId(newScene.id);
+  const addScene = async (sceneType = "EXPLANATION") => {
+    setAddSceneError("");
+    setShowTypePicker(false);
+    try {
+      const orderIndex = lesson.scenes.length;
+      const newScene = await createScene(id, orderIndex, undefined, sceneType);
+      setLesson((prev) => ({ ...prev, scenes: [...prev.scenes, newScene] }));
+      setSelectedSceneId(newScene.id);
+    } catch (e) {
+      console.error("addScene failed:", e);
+      const msg = (e?.message || "").toLowerCase();
+      if (msg.includes("scene_type") || msg.includes("migration")) {
+        setAddSceneError("تعذر إضافة المشهد. نفّذ migration_scene_types.sql في Supabase ثم أعد المحاولة.");
+      } else {
+        setAddSceneError("تعذر إضافة المشهد. تحقق من الاتصال وحاول مرة أخرى.");
+      }
+      setSaveStatus("error");
+    }
   };
 
   const removeScene = async (sceneId) => {
@@ -168,7 +218,7 @@ export default function TeacherStudioPage() {
       <div className="ts-root flex items-center justify-center" style={{ height: "calc(100vh - 41px)", background: "#0E1712", overflow: "hidden" }}>
         <button onClick={() => setRecording(false)} className="fixed top-14 left-5 px-4 py-2 rounded-xl text-xs z-50 shadow-lg" style={{ background: "rgba(255,255,255,0.2)", color: "#FAF6ED" }}>خروج من التصوير (Esc)</button>
         <div className="ts-fade w-full h-full overflow-y-auto">
-          <StudentView lesson={lesson} embedded controlled={{ index: recIndex, setIndex: setRecIndex }} isTeacherView />
+          <StudentView lesson={lesson} embedded controlled={{ index: recIndex, setIndex: setRecIndex }} isTeacherView recordingMode />
         </div>
       </div>
     );
@@ -212,6 +262,21 @@ export default function TeacherStudioPage() {
             <input className="ts-input text-xs" value={lesson.subject} onChange={(e) => patchLesson({ subject: e.target.value })} placeholder="المادة" />
           </div>
 
+          <label className="block mb-4">
+            <span className="block text-xs mb-1 font-bold" style={{ color: "#8A8570" }}>فيديو الدرس (YouTube — اختياري)</span>
+            <input className="ts-input text-xs w-full" type="url" placeholder="https://www.youtube.com/watch?v=..."
+              value={lesson.youtubeUrl || ""}
+              onChange={(e) => patchLesson({ youtubeUrl: e.target.value })}
+              onBlur={(e) => patchLesson({ youtubeUrl: (e.target.value || "").trim() }, { immediate: true })}
+            />
+            {lesson.youtubeUrl && !extractYouTubeId(lesson.youtubeUrl) && (
+              <p className="text-[11px] mt-1" style={{ color: "#C53030" }}>أدخل رابط YouTube صحيحًا.</p>
+            )}
+            {lesson.youtubeUrl && extractYouTubeId(lesson.youtubeUrl) && (
+              <p className="text-[11px] mt-1" style={{ color: "#0E5348" }}>✓ سيتم عرض الفيديو للطالب</p>
+            )}
+          </label>
+
           <p className="text-xs font-bold mb-2" style={{ color: "#8A8570" }}>مشاهد الدرس (Scenes)</p>
           {lesson.scenes.map((s) => (
             <div
@@ -224,13 +289,39 @@ export default function TeacherStudioPage() {
                 color: "#22291F",
               }}
             >
-              <span className="truncate">{s.title}</span>
+              <span className="truncate">
+                {(s.isMembersOnly || s.is_members_only) ? "🔒 " : ""}
+                {(SCENE_TYPES.find((x) => x.key === (s.sceneType || s.scene_type)) || {}).icon || ""} {s.title}
+              </span>
               {lesson.scenes.length > 1 && (
                 <button type="button" onClick={(e) => { e.stopPropagation(); removeScene(s.id); }} style={{ color: "#C53030" }}>×</button>
               )}
             </div>
           ))}
-          <button type="button" onClick={addScene} className="w-full mt-2 py-2 rounded-xl text-xs font-bold" style={{ background: "#EAE6F1", color: "#4C3F63" }}>+ إضافة مشهد جديد</button>
+          {addSceneError && (
+            <p className="text-[11px] mb-2" style={{ color: "#C53030" }}>{addSceneError}</p>
+          )}
+          {!showTypePicker ? (
+            <button type="button" onClick={() => setShowTypePicker(true)} className="w-full mt-2 py-2 rounded-xl text-xs font-bold" style={{ background: "#EAE6F1", color: "#4C3F63" }}>+ إضافة مشهد جديد</button>
+          ) : (
+            <div className="mt-2 p-2 rounded-xl border" style={{ borderColor: "#DED4BD", background: "#FAF6ED" }}>
+              <p className="text-[11px] font-bold mb-2" style={{ color: "#5C5A4A" }}>نوع المشهد:</p>
+              <div className="flex flex-col gap-1.5">
+                {SCENE_TYPES.map((st) => (
+                  <button
+                    key={st.key}
+                    type="button"
+                    onClick={() => addScene(st.key)}
+                    className="w-full text-right px-2.5 py-2 rounded-lg text-xs font-bold"
+                    style={{ background: "#FFFFFF", border: "1px solid #DED4BD", color: "#22291F" }}
+                  >
+                    {st.icon} {st.label}
+                  </button>
+                ))}
+                <button type="button" onClick={() => setShowTypePicker(false)} className="text-[11px] mt-1" style={{ color: "#8A8570" }}>إلغاء</button>
+              </div>
+            </div>
+          )}
         </div>
 
         {/* Scene Editor Content */}
@@ -264,9 +355,61 @@ export default function TeacherStudioPage() {
                 </div>
               </div>
 
-              {/* محتوى الشرح */}
+
+
+
+              {/* النوع الأساسي + صلاحية الوصول */}
+              <div className="mb-4 flex flex-col gap-3">
+                <div className="flex flex-wrap items-center gap-2">
+                  <span className="text-xs font-bold" style={{ color: "#8A8570" }}>النوع الأساسي:</span>
+                  <select
+                    className="ts-input text-xs"
+                    style={{ width: "auto" }}
+                    value={scene.sceneType || scene.scene_type || "EXPLANATION"}
+                    onChange={(e) => patchScene(scene.id, { sceneType: e.target.value })}
+                  >
+                    {SCENE_TYPES.map((st) => (
+                      <option key={st.key} value={st.key}>{st.icon} {st.label}</option>
+                    ))}
+                  </select>
+                </div>
+                <div className="flex flex-wrap items-center gap-3">
+                  <span className="text-xs font-bold" style={{ color: "#8A8570" }}>المحتوى:</span>
+                  <label className="text-xs flex items-center gap-1 cursor-pointer">
+                    <input
+                      type="radio"
+                      name={`access-${scene.id}`}
+                      checked={!(scene.isMembersOnly || scene.is_members_only)}
+                      onChange={() => patchScene(scene.id, { isMembersOnly: false })}
+                    />
+                    🌍 متاح للجميع
+                  </label>
+                  <label className="text-xs flex items-center gap-1 cursor-pointer">
+                    <input
+                      type="radio"
+                      name={`access-${scene.id}`}
+                      checked={!!(scene.isMembersOnly || scene.is_members_only)}
+                      onChange={() => patchScene(scene.id, { isMembersOnly: true })}
+                    />
+                    🔒 حصري للأعضاء
+                  </label>
+                </div>
+              </div>
+
+              {(() => {
+                const st = scene.sceneType || scene.scene_type || "EXPLANATION";
+                const isFull = st === "EXPLANATION";
+                const showExpl = isFull;
+                const showQR = isFull || st === "QUICK_RECALL";
+                const showMM = isFull || st === "MIND_MAP";
+                const showTL = isFull || st === "TIMELINE";
+                const showQ = isFull || st === "QUESTIONS";
+                return (
+                  <>
+              {showExpl && (
+              <>
               <label className="block mb-4">
-                <span className="block text-xs font-bold mb-1" style={{ color: "#5C5A4A" }}>محتوى الشرح (Rich Text Editor)</span>
+                <span className="block text-xs font-bold mb-1" style={{ color: "#5C5A4A" }}>📝 محتوى الشرح (Rich Text)</span>
                 <RichTextEditor
                   value={scene.text}
                   onChange={(html) => patchScene(scene.id, { text: html })}
@@ -277,46 +420,12 @@ export default function TeacherStudioPage() {
                     patchScene(scene.id, {
                       hotwords: [
                         ...existing,
-                        {
-                          id: hw.id,
-                          text: hw.text,
-                          note: "",
-                          image: "",
-                          linkSceneId: "",
-                        },
+                        { id: hw.id, text: hw.text, note: "", image: "", linkSceneId: "" },
                       ],
                     });
                   }}
                 />
               </label>
-
-              {/* تذكّر سريع */}
-              <div className="mb-4 p-4 rounded-2xl bg-white border" style={{ borderColor: "#DED4BD" }}>
-                <div className="flex justify-between items-center mb-2">
-                  <span className="font-bold text-sm" style={{ color: "#10665A" }}>🧠 تذكّر سريع (Quick Recall)</span>
-                  <label className="text-xs flex items-center gap-1">
-                    <input
-                      type="checkbox"
-                      checked={scene.quickRecallShow !== false}
-                      onChange={(e) => patchScene(scene.id, { quickRecallShow: e.target.checked })}
-                    />
-                    إظهار للطالب
-                  </label>
-                </div>
-                <p className="text-xs mb-2" style={{ color: "#8A8570" }}>
-                  اكتب كل نقطة في سطر مستقل (اضغط Enter للانتقال لسطر جديد)، وستظهر مرقّمة تلقائياً 1، 2، 3...
-                </p>
-                <textarea
-                  className="ts-input text-xs mb-2 w-full"
-                  placeholder={"مثال:\nالتنافس الاستعماري بين إنجلترا وفرنسا\nموقع مصر الجغرافي الاستراتيجي"}
-                  rows={5}
-                  value={(scene.quickRecall || []).join("\n")}
-                  onChange={(e) => patchScene(scene.id, { quickRecall: e.target.value.split("\n") })}
-                  onBlur={(e) => patchScene(scene.id, { quickRecall: e.target.value.split("\n").map((x) => x.trimEnd()) })}
-                />
-              </div>
-
-              {/* الكلمات التفاعلية */}
               <StudioHotwords
                 hotwords={scene.hotwords || []}
                 uploadFn={uploadFn}
@@ -338,13 +447,57 @@ export default function TeacherStudioPage() {
                   })
                 }
               />
+              <label className="block mb-4">
+                <span className="block text-xs font-bold mb-1" style={{ color: "#5C5A4A" }}>
+                  ملاحظات المُقدّم (خاصة بك أثناء التصوير)
+                </span>
+                <textarea
+                  value={scene.presenterNotes || scene.presenter_notes || ""}
+                  onChange={(e) => patchScene(scene.id, { presenterNotes: e.target.value })}
+                  rows={2}
+                  className="ts-input text-xs w-full"
+                  style={{ background: "#FDF9EE" }}
+                />
+              </label>
+              </>
+              )}
 
+              {showQR && (
+              <div className="mb-4 p-4 rounded-2xl bg-white border" style={{ borderColor: "#DED4BD" }}>
+                <div className="flex justify-between items-center mb-2">
+                  <span className="font-bold text-sm" style={{ color: "#10665A" }}>🧠 تذكّر سريع</span>
+                  <label className="text-xs flex items-center gap-1">
+                    <input
+                      type="checkbox"
+                      checked={scene.quickRecallShow !== false}
+                      onChange={(e) => patchScene(scene.id, { quickRecallShow: e.target.checked })}
+                    />
+                    إظهار للطالب
+                  </label>
+                </div>
+                <p className="text-xs mb-2" style={{ color: "#8A8570" }}>
+                  اكتب كل نقطة في سطر مستقل. اتركه فارغًا إن لم تحتاجه.
+                </p>
+                <textarea
+                  className="ts-input text-xs mb-2 w-full"
+                  placeholder={"مثال:\nنقطة 1\nنقطة 2"}
+                  rows={4}
+                  value={(scene.quickRecall || []).join("\n")}
+                  onChange={(e) => patchScene(scene.id, { quickRecall: e.target.value.split("\n") })}
+                  onBlur={(e) => patchScene(scene.id, { quickRecall: e.target.value.split("\n").map((x) => x.trimEnd()) })}
+                />
+              </div>
+              )}
+
+              {showMM && (
               <MindMapStudioBuilder
-                mindmap={scene.mindmap || { id: uid("mm"), label: "العنوان الرئيسي", description: "", children: [] }}
+                mindmap={scene.mindmap || { id: uid("mm"), label: "", description: "", children: [] }}
                 scenes={lesson.scenes}
                 onChange={(map) => patchScene(scene.id, { mindmap: map })}
               />
+              )}
 
+              {showTL && (
               <TimelineStudioEditor
                 items={scene.timeline || []}
                 uploadFn={uploadFn}
@@ -360,29 +513,28 @@ export default function TeacherStudioPage() {
                   })
                 }
               />
+              )}
 
+              {showQ && (
               <QuestionStudioEditor
                 questions={scene.questions || []}
                 onAdd={(q) => patchScene(scene.id, { questions: [...(scene.questions || []), q] })}
+                onUpdate={(qId, data) =>
+                  patchScene(scene.id, {
+                    questions: (scene.questions || []).map((q) => (q.id === qId ? { ...q, ...data } : q)),
+                  })
+                }
                 onDelete={(qId) =>
                   patchScene(scene.id, {
                     questions: (scene.questions || []).filter((q) => q.id !== qId),
                   })
                 }
               />
+              )}
+                  </>
+                );
+              })()}
 
-              <label className="block mb-4">
-                <span className="block text-xs font-bold mb-1" style={{ color: "#5C5A4A" }}>
-                  ملاحظات المُقدّم (خاصة بك أثناء التصوير)
-                </span>
-                <textarea
-                  value={scene.presenterNotes || scene.presenter_notes || ""}
-                  onChange={(e) => patchScene(scene.id, { presenterNotes: e.target.value })}
-                  rows={2}
-                  className="ts-input text-xs w-full"
-                  style={{ background: "#FDF9EE" }}
-                />
-              </label>
             </div>
           </div>
         )}

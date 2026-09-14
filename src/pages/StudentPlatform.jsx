@@ -1,7 +1,9 @@
 import { useEffect, useMemo, useState } from "react";
 import { useNavigate } from "react-router-dom";
-import { listPublishedLessons } from "../lib/db";
+import { listPublishedLessons, signOut } from "../lib/db";
+import { useAuth } from "../lib/hooks";
 import Footer from "../components/Footer";
+import AuthModal, { GuestWelcomeBanner, LetterAvatar } from "../components/AuthModal";
 
 /* ============================================================================
    مَدَار — Student Platform (Global Premium Redesign)
@@ -270,9 +272,12 @@ function StepRow({ number, done, active, label, children }) {
 --------------------------------------------------------------------------- */
 export default function StudentPlatform() {
   const navigate = useNavigate();
+  const session = useAuth();
   const pointer = usePointerParallax();
   const [lessons, setLessons] = useState(null);
   const [error, setError] = useState("");
+  const [authOpen, setAuthOpen] = useState(false);
+  const [menuOpen, setMenuOpen] = useState(false);
 
   const [selectedStage, setSelectedStage] = useState("");
   const [selectedGrade, setSelectedGrade] = useState("");
@@ -328,8 +333,34 @@ export default function StudentPlatform() {
     !!selectedSubject,
   ];
 
+  const studentName =
+    session?.user?.user_metadata?.full_name ||
+    session?.user?.user_metadata?.name ||
+    session?.user?.email?.split("@")[0] ||
+    "طالب";
+
   return (
     <div className="md-platform">
+      <div className="flex justify-end items-center px-4 sm:px-6 py-2 relative z-20" style={{ background: "transparent" }}>
+        {session === undefined ? null : session ? (
+          <div className="relative">
+            <button type="button" onClick={() => setMenuOpen((v) => !v)}
+              className="flex items-center gap-2 rounded-full py-1 px-2 bg-white/90 shadow-sm" style={{ border: "1px solid #DED4BD" }}>
+              <LetterAvatar name={studentName} email={session.user?.email} size={28} />
+              <span className="text-xs font-bold hidden sm:inline" style={{ color: "#22291F" }}>{studentName}</span>
+            </button>
+            {menuOpen && (
+              <div className="absolute left-0 mt-2 w-48 rounded-2xl bg-white shadow-lg py-2 z-50 dir-rtl text-right" style={{ border: "1px solid #DED4BD" }}>
+                <button type="button" className="w-full text-right px-4 py-2 text-xs" style={{ color: "#C53030" }}
+                  onClick={async () => { setMenuOpen(false); try { await signOut(); } catch (_) {} }}>تسجيل الخروج</button>
+              </div>
+            )}
+          </div>
+        ) : (
+          <button type="button" onClick={() => setAuthOpen(true)}
+            className="text-xs font-bold px-3 py-1.5 rounded-xl text-white shadow-sm" style={{ background: "#10665A" }}>تسجيل الدخول</button>
+        )}
+      </div>
       {/* Background layers */}
       <div
         className="md-bg-layer"
@@ -536,6 +567,8 @@ export default function StudentPlatform() {
 
       <HistoryFrieze />
       <Footer />
+      <GuestWelcomeBanner session={session} />
+      <AuthModal open={authOpen} onClose={() => setAuthOpen(false)} />
 
       {/* Global Styles for this page */}
       <style>{`
@@ -631,6 +664,8 @@ export default function StudentPlatform() {
      ========================= */
   .md-platform {
     min-height: 100vh;
+    display: flex;
+    flex-direction: column;
     background:
       radial-gradient(
         circle at 50% -8%,
@@ -666,7 +701,7 @@ export default function StudentPlatform() {
     z-index: 2;
     max-width: 920px;
     margin: 0 auto;
-    padding: 48px 20px 120px; /* مساحة إضافية عشان الفوتر الثابت */
+    padding: 48px 20px 48px;
   }
 
   /* =========================
@@ -1344,7 +1379,7 @@ export default function StudentPlatform() {
      FOOTER — ثابت من تحت
      ========================= */
   .md-footer {
-    position: fixed;
+    position: relative;
     bottom: 0;
     left: 0;
     right: 0;

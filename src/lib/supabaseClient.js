@@ -10,4 +10,17 @@ if (!url || !anonKey) {
   );
 }
 
-export const supabase = createClient(url, anonKey);
+/**
+ * Single shared Supabase client for the whole app (teacher + student).
+ * Explicit auth options so OAuth redirect (PKCE / implicit) is detected
+ * and the session is persisted across full page reloads.
+ */
+export const supabase = createClient(url || "", anonKey || "", {
+  auth: {
+    persistSession: true,
+    autoRefreshToken: true,
+    detectSessionInUrl: true,
+    flowType: "pkce",
+    storage: typeof window !== "undefined" ? window.localStorage : undefined,
+  },
+});

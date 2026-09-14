@@ -1,4 +1,6 @@
 import React, { useEffect, useRef, useState, useCallback, useMemo } from "react";
+import { extractYouTubeId } from "../lib/db";
+import AuthModal, { RegistrationGate } from "./AuthModal";
 
 // ---------------------------------------------------------------------------
 // Pill Tag Component
@@ -533,6 +535,116 @@ export function QuestionItem({ q }) {
 }
 
 // ---------------------------------------------------------------------------
+// Info tip (ⓘ)
+// ---------------------------------------------------------------------------
+function InfoTip({ text, label }) {
+  const [open, setOpen] = useState(false);
+  const ref = useRef(null);
+  useEffect(() => {
+    if (!open) return;
+    const onDoc = (e) => { if (ref.current && !ref.current.contains(e.target)) setOpen(false); };
+    const onKey = (e) => { if (e.key === "Escape") setOpen(false); };
+    document.addEventListener("click", onDoc);
+    document.addEventListener("keydown", onKey);
+    return () => { document.removeEventListener("click", onDoc); document.removeEventListener("keydown", onKey); };
+  }, [open]);
+  return (
+    <span className="relative inline-flex" ref={ref}>
+      <button type="button" className="inline-flex items-center justify-center w-5 h-5 rounded-full text-xs font-bold"
+        style={{ background: "#EAE6F1", color: "#4C3F63" }} aria-label={label || "معلومة"} aria-expanded={open}
+        onClick={(e) => { e.stopPropagation(); setOpen((v) => !v); }}>ⓘ</button>
+      {open && (
+        <span role="tooltip" className="absolute z-20 top-full mt-1 right-0 w-56 sm:w-64 p-3 rounded-xl text-xs shadow-md"
+          style={{ background: "#22291F", color: "#FAF6ED" }}>{text}</span>
+      )}
+    </span>
+  );
+}
+
+function YouTubePlayer({ videoId }) {
+  const [show, setShow] = useState(false);
+  if (!videoId) return null;
+  return (
+    <div className="mb-6 rounded-3xl overflow-hidden bg-black shadow-sm" style={{ border: "1px solid #DED4BD" }}>
+      {!show ? (
+        <button type="button" onClick={() => setShow(true)}
+          className="relative w-full flex items-center justify-center cursor-pointer"
+          style={{ aspectRatio: "16 / 9", background: "#0E1712" }} aria-label="تشغيل فيديو الدرس">
+          <img src={`https://i.ytimg.com/vi/${videoId}/hqdefault.jpg`} alt="" className="absolute inset-0 w-full h-full object-cover opacity-70" loading="lazy" />
+          <span className="relative z-10 w-14 h-14 rounded-full flex items-center justify-center text-white text-2xl shadow-lg"
+            style={{ background: "rgba(16, 102, 90, 0.92)" }}>▶</span>
+        </button>
+      ) : (
+        <div className="w-full" style={{ aspectRatio: "16 / 9" }}>
+          <iframe title="فيديو الدرس" src={`https://www.youtube-nocookie.com/embed/${videoId}?rel=0&modestbranding=1`}
+            className="w-full h-full" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+            allowFullScreen loading="lazy" style={{ border: 0 }} />
+        </div>
+      )}
+    </div>
+  );
+}
+
+function buildFullMindMap(scenes) {
+  if (!Array.isArray(scenes) || scenes.length === 0) return null;
+  const children = [];
+  for (const s of scenes) {
+    const mm = s.mindmap;
+    if (mm && mm.label) children.push({ ...mm, id: mm.id || `scene-mm-${s.id}`, label: mm.label || s.title, children: mm.children || [] });
+  }
+  if (children.length === 0) return null;
+  if (children.length === 1) return children[0];
+  return { id: "full-mm-root", label: "الخريطة الذهنية الكاملة", description: "أهم أفكار جميع أجزاء الدرس", children };
+}
+
+function buildFullTimeline(scenes) {
+  if (!Array.isArray(scenes)) return [];
+  const items = []; const seen = new Set();
+  for (const s of scenes) {
+    for (const t of s.timeline || []) {
+      const key = `${t.date || ""}|${t.title || ""}|${t.id || ""}`;
+      if (seen.has(key)) continue;
+      seen.add(key);
+      items.push({ ...t, _sceneTitle: s.title });
+    }
+  }
+  return items;
+}
+
+
+function resolveSceneType(scene) {
+  if (!scene) return "EXPLANATION";
+  if (scene.sceneType) return scene.sceneType;
+  if (scene.scene_type) return scene.scene_type;
+  // Old published scenes without type: composite / legacy
+  return "LEGACY";
+}
+
+/** Scene locked for guest if marked members-only. Feature-level gates still apply inside public scenes. */
+function isSceneMembersOnly(scene) {
+  return !!(scene && (scene.isMembersOnly || scene.is_members_only));
+}
+
+function isSceneLockedForGuest(scene, { requireAuthForTools, session, isTeacherView }) {
+  if (!requireAuthForTools || session || isTeacherView) return false;
+  return isSceneMembersOnly(scene);
+}
+
+function buildFullQuestions(scenes) {
+  if (!Array.isArray(scenes)) return [];
+  const items = []; const seen = new Set();
+  for (const s of scenes) {
+    for (const q of s.questions || []) {
+      const key = q.id || `${q.prompt}|${q.type}`;
+      if (seen.has(key)) continue;
+      seen.add(key);
+      items.push(q);
+    }
+  }
+  return items;
+}
+
+// ---------------------------------------------------------------------------
 // Student View Unified Component
 // ---------------------------------------------------------------------------
 export function StudentView({
@@ -540,6 +652,10 @@ export function StudentView({
   embedded = false,
   controlled,
   isTeacherView = false,
+  requireAuthForTools = false,
+  session = null,
+  onAuthSuccess,
+  recordingMode = false,
 }) {
   const [internalIndex, setInternalIndex] = useState(0);
   const activeIndex = controlled ? controlled.index : internalIndex;
@@ -548,10 +664,58 @@ export function StudentView({
   const [showMap, setShowMap] = useState(true);
   const [showTimeline, setShowTimeline] = useState(true);
   const [selectedMindNode, setSelectedMindNode] = useState(null);
+  const [showFullMap, setShowFullMap] = useState(true);
+  const [showFullTimeline, setShowFullTimeline] = useState(true);
+  const [gateOpen, setGateOpen] = useState(false);
+  const [gateFeature, setGateFeature] = useState("");
+  const [authOpen, setAuthOpen] = useState(false);
+  const [pendingFeature, setPendingFeature] = useState(null);
+
+  const sceneCount = Array.isArray(lesson?.scenes) ? lesson.scenes.length : 0;
+  const isFinalReview = false; // removed: no automatic Final Review virtual step
+
+  const youtubeId = useMemo(
+    () => extractYouTubeId(lesson?.youtubeUrl || lesson?.youtube_url || ""),
+    [lesson?.youtubeUrl, lesson?.youtube_url]
+  );
+  const fullMindMap = useMemo(() => buildFullMindMap(lesson?.scenes), [lesson?.scenes]);
+  const fullTimeline = useMemo(() => buildFullTimeline(lesson?.scenes), [lesson?.scenes]);
+  const fullQuestions = useMemo(() => buildFullQuestions(lesson?.scenes), [lesson?.scenes]);
 
   useEffect(() => {
     setSelectedMindNode(null);
   }, [activeIndex, lesson?.id]);
+
+  useEffect(() => {
+    if (session && pendingFeature) {
+      const pf = pendingFeature;
+      setPendingFeature(null); setGateOpen(false); setAuthOpen(false);
+      if (typeof pf === "string" && pf.startsWith("scene-")) {
+        const idx = parseInt(pf.replace("scene-", ""), 10);
+        if (!Number.isNaN(idx)) setActiveIndex(idx);
+      }
+    }
+  }, [session, pendingFeature, lesson?.scenes?.length, setActiveIndex]);
+
+  const requestTool = useCallback((featureKey, featureLabel) => {
+    if (!requireAuthForTools || session || isTeacherView) return true;
+    setGateFeature(featureLabel); setPendingFeature(featureKey); setGateOpen(true);
+    return false;
+  }, [requireAuthForTools, session, isTeacherView]);
+
+  const authOpts = { requireAuthForTools, session, isTeacherView };
+  const tryOpenScene = useCallback((i) => {
+    const max = (lesson?.scenes?.length || 1) - 1;
+    const idx = Math.max(0, Math.min(i, max));
+    const s = lesson?.scenes?.[idx];
+    if (s && isSceneLockedForGuest(s, { requireAuthForTools, session, isTeacherView })) {
+      setGateFeature(s.title || "هذا المشهد");
+      setPendingFeature(`scene-${idx}`);
+      setGateOpen(true);
+      return;
+    }
+    setActiveIndex(idx);
+  }, [lesson?.scenes, requireAuthForTools, session, isTeacherView, setActiveIndex]);
 
   if (!lesson || !Array.isArray(lesson.scenes) || lesson.scenes.length === 0) {
     return (
@@ -561,8 +725,8 @@ export function StudentView({
     );
   }
 
-  const sceneIndex = Math.min(activeIndex, lesson.scenes.length - 1);
-  const scene = lesson.scenes[sceneIndex];
+  const sceneIndex = sceneCount > 0 ? Math.min(Math.max(0, activeIndex), sceneCount - 1) : 0;
+  const scene = lesson?.scenes ? lesson.scenes[sceneIndex] : null;
 
   if (!scene) {
     return (
@@ -572,19 +736,23 @@ export function StudentView({
     );
   }
 
-  const quickRecallItems = (scene.quickRecall || []).filter(
-    (item) => item && typeof item === "string" && item.trim() !== ""
-  );
+  const quickRecallItems = scene
+    ? (scene.quickRecall || []).filter((item) => item && typeof item === "string" && item.trim() !== "")
+    : [];
 
-  const isQuickRecallVisible = 
-    scene.quickRecallShow !== false && 
-    scene.quickRecallShow !== "false";
+  const isQuickRecallVisible =
+    scene && scene.quickRecallShow !== false && scene.quickRecallShow !== "false";
+
+  const sceneContentLocked =
+    !!scene && isSceneLockedForGuest(scene, { requireAuthForTools, session, isTeacherView });
+  const finalLocked = false;
+
     
   return (
     <div
       className="ts-root ts-scrollbar dir-rtl text-right"
       style={{
-        minHeight: embedded ? "100%" : "100vh",
+        minHeight: embedded ? "100%" : undefined,
         background: "#FAF6ED",
         overflowY: "auto",
       }}
@@ -621,26 +789,43 @@ export function StudentView({
 
         {/* أزرار التنقل بين المشاهد */}
         <div className="flex flex-wrap gap-2 justify-center mb-6">
-          {lesson.scenes.map((s, i) => (
+          {lesson.scenes.map((s, i) => {
+            const locked = isSceneMembersOnly(s) && requireAuthForTools && !session && !isTeacherView;
+            return (
             <button
               type="button"
               key={s.id || `scene-btn-${i}`}
-              onClick={() => setActiveIndex(i)}
+              onClick={() => tryOpenScene(i)}
               className="px-4 py-2 rounded-2xl text-sm font-bold transition-all shadow-sm cursor-pointer"
               style={{
                 background: i === activeIndex ? "#10665A" : "#FFFFFF",
                 color: i === activeIndex ? "#FAF6ED" : "#22291F",
-                border:
-                  "1px solid " + (i === activeIndex ? "#10665A" : "#DED4BD"),
+                border: "1px solid " + (i === activeIndex ? "#10665A" : "#DED4BD"),
               }}
             >
-              {s.title}
+              {(isSceneMembersOnly(s) && requireAuthForTools && !session && !isTeacherView) ? "🔒 " : (isSceneMembersOnly(s) ? "🔒 " : "")}{i + 1}. {s.title}
             </button>
-          ))}
+            );
+          })}
+
         </div>
 
-        {/* ملاحظات المعلم/المقدم */}
-        {isTeacherView && scene.presenterNotes && (
+        {youtubeId && !recordingMode && sceneIndex === 0 && !sceneContentLocked && <YouTubePlayer videoId={youtubeId} />}
+
+        {sceneContentLocked && (
+          <div className="rounded-3xl p-8 mb-6 text-center shadow-sm bg-white" style={{ border: "1px solid #DED4BD" }}>
+            <p className="text-3xl mb-2">🔒</p>
+            <p className="font-black text-lg mb-2" style={{ color: "#10665A" }}>هذا المحتوى متاح للأعضاء فقط</p>
+            <p className="text-sm mb-4" style={{ color: "#5C5A4A" }}>سجّل دخولك واستمتع بكل مميزات مَدَار مجانًا بالكامل.</p>
+            <button type="button" onClick={() => setAuthOpen(true)}
+              className="px-5 py-2.5 rounded-2xl text-sm font-bold text-white" style={{ background: "#10665A" }}>
+              تسجيل الدخول / إنشاء حساب
+            </button>
+          </div>
+        )}
+
+
+        {!sceneContentLocked && scene && isTeacherView && scene.presenterNotes && (
           <div
             className="rounded-2xl p-4 mb-4"
             style={{ background: "#FDF9EE", border: "1px solid #B9791F" }}
@@ -655,7 +840,7 @@ export function StudentView({
         )}
 
         {/* التذكر السريع */}
-        {isQuickRecallVisible && quickRecallItems.length > 0 && (
+        {!sceneContentLocked && scene && isQuickRecallVisible && quickRecallItems.length > 0 && (
           <div
             className="rounded-2xl p-4 mb-5 quick-recall-hidden"
             style={{ background: "#E4F0EC", border: "1px solid #10665A" }}
@@ -675,6 +860,7 @@ export function StudentView({
         )}
 
         {/* محتوى المشهد الرئيسي */}
+        {!sceneContentLocked && scene && scene.text && String(scene.text).replace(/<[^>]+>/g, "").trim() && (
         <div
           key={scene.id || activeIndex}
           className="ts-fade rounded-3xl p-6 sm:p-8 mb-6 shadow-sm bg-white"
@@ -701,9 +887,10 @@ export function StudentView({
             }}
           />
         </div>
+        )}
 
         {/* الخريطة الذهنية */}
-        {scene.mindmap && scene.mindmap.label && (
+        {!sceneContentLocked && scene && scene.mindmap && scene.mindmap.label && (
           <div
             className="rounded-3xl p-6 mb-6 shadow-sm bg-white"
             style={{ border: "1px solid #DED4BD" }}
@@ -769,7 +956,7 @@ export function StudentView({
         )}
 
         {/* الشريط الزمني */}
-        {Array.isArray(scene.timeline) && scene.timeline.length > 0 && (
+        {!sceneContentLocked && scene && Array.isArray(scene.timeline) && scene.timeline.length > 0 && (
           <div
             className="rounded-3xl p-6 mb-6 shadow-sm bg-white"
             style={{ border: "1px solid #DED4BD" }}
@@ -835,7 +1022,7 @@ export function StudentView({
         )}
 
         {/* قسم الأسئلة والتحقق من الفهم */}
-        {Array.isArray(scene.questions) && scene.questions.length > 0 && (
+        {!sceneContentLocked && scene && Array.isArray(scene.questions) && scene.questions.length > 0 && (
           <div
             className="rounded-3xl p-6 mb-6 shadow-sm bg-white"
             style={{ border: "1px solid #DED4BD" }}
@@ -850,7 +1037,27 @@ export function StudentView({
             </div>
           </div>
         )}
+
+        {scene && (
+          <div className="flex justify-between gap-3 mb-4 flex-wrap">
+            <button type="button" onClick={() => activeIndex > 0 && tryOpenScene(activeIndex - 1)} disabled={activeIndex <= 0}
+              className="px-5 py-2.5 rounded-2xl text-sm font-bold disabled:opacity-40" style={{ background: "#EAE6F1", color: "#4C3F63" }}>← السابق</button>
+            <button type="button" onClick={() => tryOpenScene(sceneIndex + 1)}
+              disabled={sceneIndex >= sceneCount - 1}
+              className="px-5 py-2.5 rounded-2xl text-sm font-bold text-white disabled:opacity-40" style={{ background: "#10665A" }}>
+              {sceneIndex >= sceneCount - 1 ? "نهاية الدرس" : "التالي →"}
+            </button>
+          </div>
+        )}
       </div>
+
+      <RegistrationGate open={gateOpen} featureLabel={gateFeature}
+        onClose={() => { setGateOpen(false); setPendingFeature(null); }}
+        onRequestAuth={() => { setGateOpen(false); setAuthOpen(true); }} />
+      <AuthModal open={authOpen} onClose={() => setAuthOpen(false)}
+        onSuccess={(s) => { onAuthSuccess?.(s); setAuthOpen(false); }}
+        title="🔒 هذا المحتوى متاح للأعضاء فقط"
+        subtitle="سجّل دخولك واستمتع بكل مميزات مَدَار مجانًا بالكامل." />
     </div>
   );
 }

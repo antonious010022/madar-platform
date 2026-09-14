@@ -662,22 +662,59 @@ export function TimelineStudioEditor({ items, onAdd, onEdit, onDelete, uploadFn 
   );
 }
 
-export function QuestionStudioEditor({ questions, onAdd, onDelete }) {
+export function QuestionStudioEditor({ questions, onAdd, onUpdate, onDelete }) {
   const [type, setType] = useState("mcq");
   const [prompt, setPrompt] = useState("");
   const [options, setOptions] = useState(["", "", "", ""]);
   const [correctIndex, setCorrectIndex] = useState(0);
   const [explanation, setExplanation] = useState("");
   const [modelAnswer, setModelAnswer] = useState("");
+  const [editingId, setEditingId] = useState(null);
 
-  const handleAdd = () => {
-    if (!prompt.trim()) return;
-    if (type === "mcq") {
-      onAdd({ id: uid("q"), type, prompt, options: options.filter((o) => o.trim()), correctIndex, explanation });
+  const resetForm = () => {
+    setPrompt("");
+    setExplanation("");
+    setModelAnswer("");
+    setOptions(["", "", "", ""]);
+    setCorrectIndex(0);
+    setType("mcq");
+    setEditingId(null);
+  };
+
+  const startEdit = (q) => {
+    setEditingId(q.id);
+    setType(q.type || "mcq");
+    setPrompt(q.prompt || "");
+    setExplanation(q.explanation || "");
+    setModelAnswer(q.modelAnswer || "");
+    if (q.type === "mcq") {
+      const opts = [...(q.options || [])];
+      while (opts.length < 4) opts.push("");
+      setOptions(opts.slice(0, 4));
+      setCorrectIndex(typeof q.correctIndex === "number" ? q.correctIndex : 0);
     } else {
-      onAdd({ id: uid("q"), type, prompt, modelAnswer });
+      setOptions(["", "", "", ""]);
+      setCorrectIndex(0);
     }
-    setPrompt(""); setExplanation(""); setModelAnswer("");
+  };
+
+  const handleSave = () => {
+    if (!prompt.trim()) return;
+    const payload =
+      type === "mcq"
+        ? { type, prompt: prompt.trim(), options: options.filter((o) => o.trim()), correctIndex, explanation }
+        : { type, prompt: prompt.trim(), modelAnswer };
+    if (editingId) {
+      if (typeof onUpdate === "function") {
+        onUpdate(editingId, payload);
+      } else {
+        // fallback: delete+add would change id — prefer onUpdate
+        onAdd({ id: editingId, ...payload });
+      }
+    } else {
+      onAdd({ id: uid("q"), ...payload });
+    }
+    resetForm();
   };
 
   return (
@@ -718,15 +755,25 @@ export function QuestionStudioEditor({ questions, onAdd, onDelete }) {
         <textarea className="ts-input text-sm mb-3" placeholder="الإجابة النموذجية..." value={modelAnswer} onChange={(e) => setModelAnswer(e.target.value)} rows={2} />
       )}
 
-      <button type="button" onClick={handleAdd} className="px-4 py-2 rounded-xl text-xs font-bold text-white mb-4" style={{ background: "#10665A" }}>
-        + إضافة السؤال للمشهد
-      </button>
+      <div className="flex flex-wrap gap-2 mb-4">
+        <button type="button" onClick={handleSave} className="px-4 py-2 rounded-xl text-xs font-bold text-white" style={{ background: "#10665A" }}>
+          {editingId ? "💾 حفظ التعديلات" : "+ إضافة السؤال للمشهد"}
+        </button>
+        {editingId && (
+          <button type="button" onClick={resetForm} className="px-3 py-2 rounded-xl text-xs font-bold" style={{ color: "#8A8570" }}>
+            إلغاء التعديل
+          </button>
+        )}
+      </div>
 
       <div className="flex flex-col gap-2">
         {questions.map((q) => (
-          <div key={q.id} className="flex justify-between items-center p-3 rounded-xl border bg-[#FAF6ED]" style={{ borderColor: "#DED4BD" }}>
-            <span className="font-bold text-sm" style={{ color: "#22291F" }}>{q.prompt}</span>
-            <button type="button" onClick={() => onDelete(q.id)} className="text-xs px-2 py-1 rounded" style={{ color: "#C53030" }}>حذف</button>
+          <div key={q.id} className="flex justify-between items-center gap-2 p-3 rounded-xl border bg-[#FAF6ED]" style={{ borderColor: editingId === q.id ? "#10665A" : "#DED4BD" }}>
+            <span className="font-bold text-sm flex-1" style={{ color: "#22291F" }}>{q.prompt}</span>
+            <div className="flex gap-1 shrink-0">
+              <button type="button" onClick={() => startEdit(q)} className="text-xs px-2 py-1 rounded font-bold" style={{ color: "#10665A" }}>✏️ تعديل</button>
+              <button type="button" onClick={() => onDelete(q.id)} className="text-xs px-2 py-1 rounded" style={{ color: "#C53030" }}>🗑 حذف</button>
+            </div>
           </div>
         ))}
       </div>

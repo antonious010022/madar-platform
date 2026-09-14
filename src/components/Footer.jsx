@@ -38,14 +38,12 @@ function IconLink({ href, label, children }) {
 export default function Footer() {
   return (
     <footer
-      className="fixed bottom-0 left-0 right-0 z-50 w-full"
+      className="w-full mt-auto"
       style={{
-        background: "rgba(255, 255, 255, 0.97)",
+        background: "#FFFFFF",
         color: "#8A8570",
         borderTop: "0.5px solid #DED4BD",
-        backdropFilter: "blur(10px)",
-        WebkitBackdropFilter: "blur(10px)",
-        boxShadow: "0 -3px 12px rgba(6, 59, 52, 0.05)",
+
       }}
     >
       <div className="max-w-7xl mx-auto px-4 sm:px-6 py-1.5">
