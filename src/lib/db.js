@@ -79,6 +79,47 @@ function cleanOAuthParamsFromUrl() {
   }
 }
 
+
+/** Roles: student | teacher | admin. Default student if no profile row. */
+export async function getMyRole() {
+  const { data: userData, error: userErr } = await supabase.auth.getUser();
+  if (userErr || !userData?.user) return null;
+  const uid = userData.user.id;
+
+  const { data, error } = await supabase
+    .from("profiles")
+    .select("role")
+    .eq("id", uid)
+    .maybeSingle();
+  if (error) {
+    console.warn("getMyRole:", error.message, "uid=", uid);
+    return "student";
+  }
+  if (!data) {
+    console.warn("getMyRole: no profile row for", uid);
+    return "student";
+  }
+  return data.role || "student";
+}
+
+export async function isStaffUser() {
+  // Prefer DB function (security definer) — works even if client RLS is strict
+  try {
+    const { data, error } = await supabase.rpc("is_staff");
+    if (!error && data === true) return true;
+    if (!error && data === false) {
+      // fall through to role read for clearer debugging
+    } else if (error) {
+      console.warn("is_staff rpc:", error.message);
+    }
+  } catch (e) {
+    console.warn("is_staff rpc failed:", e);
+  }
+
+  const role = await getMyRole();
+  return role === "teacher" || role === "admin";
+}
+
 export function onAuthStateChange(callback) {
   const { data } = supabase.auth.onAuthStateChange((event, session) => {
     callback(session ?? null, event);
@@ -230,6 +271,8 @@ function lessonRowToApp(row, scenes) {
     description: row.description,
     status: row.status,
     youtubeUrl: row.youtube_url || "",
+    journeyConfig: row.journey_config && typeof row.journey_config === "object" ? row.journey_config : {},
+    sortOrder: row.sort_order ?? 0,
     updatedAt: row.updated_at,
     scenes: scenes ? scenes.map(sceneRowToApp) : undefined,
   };
@@ -319,6 +362,10 @@ export const SCENE_TYPES = [
 
 
 export async function createLesson(ownerId, meta) {
+  if (!(await isStaffUser())) {
+    throw new Error("ليس لديك صلاحية لإنشاء دروس.");
+  }
+
   const { data: lessonRow, error: lessonErr } = await supabase
     .from("lessons")
     .insert({
@@ -359,6 +406,10 @@ export async function createLesson(ownerId, meta) {
 }
 
 export async function updateLessonMeta(id, patch) {
+  if (!(await isStaffUser())) {
+    throw new Error("ليس لديك صلاحية لتعديل الدروس.");
+  }
+
   // Only allow known lesson columns — prevents accidental camelCase / extra keys from breaking the update
   const allowed = {};
   if (patch.title !== undefined) allowed.title = patch.title;
@@ -480,6 +531,10 @@ export async function importLessonBundle(ownerId, bundle) {
 }
 
 export async function createScene(lessonId, orderIndex, title, sceneType = "EXPLANATION") {
+  if (!(await isStaffUser())) {
+    throw new Error("ليس لديك صلاحية لإضافة مشاهد.");
+  }
+
   const type = sceneType || "EXPLANATION";
   const payload = defaultScenePayload(title || defaultTitleForType(type), type);
   // Build insert carefully: drop title_font if DB rejects it (handled by retry below)
@@ -528,6 +583,10 @@ export async function createScene(lessonId, orderIndex, title, sceneType = "EXPL
 }
 
 export async function updateScene(id, sceneAppPatch) {
+  if (!(await isStaffUser())) {
+    throw new Error("ليس لديك صلاحية لتعديل المشاهد.");
+  }
+
   const payload = sceneAppToRow(sceneAppPatch);
   
   // إذا لم يحتوي التعديل على أي حقل للرفع، نلغي العملية لتجنب استعلام فارغ
@@ -541,6 +600,10 @@ export async function updateScene(id, sceneAppPatch) {
 }
 
 export async function deleteScene(id) {
+  if (!(await isStaffUser())) {
+    throw new Error("ليس لديك صلاحية لحذف المشاهد.");
+  }
+
   const { error } = await supabase.from("scenes").delete().eq("id", id);
   if (error) throw error;
 }
@@ -563,4 +626,172 @@ export async function uploadLessonImage(file, lessonId) {
   
   const { data } = supabase.storage.from(bucketName).getPublicUrl(path);
   return data.publicUrl;
+}
+
+// ===========================================================================
+// CURRICULUM / TEMPLATES / PLATFORM CONTENT (data-driven)
+// ===========================================================================
+
+export async function listCurriculumNodes() {
+  const { data, error } = await supabase
+    .from("curriculum_nodes")
+    .select("*")
+    .order("sort_order", { ascending: true });
+  if (error) throw error;
+  return (data || []).map((r) => ({
+    id: r.id,
+    kind: r.kind,
+    name: r.name,
+    parentId: r.parent_id,
+    sortOrder: r.sort_order,
+    isActive: r.is_active,
+  }));
+}
+
+export async function saveCurriculumNode(node) {
+  const row = {
+    kind: node.kind,
+    name: node.name,
+    parent_id: node.parentId || null,
+    sort_order: node.sortOrder ?? 0,
+    is_active: node.isActive !== false,
+  };
+  if (node.id) {
+    const { data, error } = await supabase.from("curriculum_nodes").update(row).eq("id", node.id).select().single();
+    if (error) throw error;
+    return data;
+  }
+  const { data, error } = await supabase.from("curriculum_nodes").insert(row).select().single();
+  if (error) throw error;
+  return data;
+}
+
+export async function deleteCurriculumNode(id) {
+  const { error } = await supabase.from("curriculum_nodes").delete().eq("id", id);
+  if (error) throw error;
+}
+
+export async function listCompletionTemplates() {
+  const { data, error } = await supabase
+    .from("completion_templates")
+    .select("*")
+    .order("sort_order", { ascending: true });
+  if (error) throw error;
+  return data || [];
+}
+
+export async function saveCompletionTemplate(tpl) {
+  const row = {
+    key: tpl.key,
+    label: tpl.label || "",
+    title: tpl.title || "",
+    body: tpl.body || "",
+    is_active: tpl.is_active !== false,
+    sort_order: tpl.sort_order ?? 0,
+  };
+  if (tpl.id) {
+    const { data, error } = await supabase.from("completion_templates").update(row).eq("id", tpl.id).select().single();
+    if (error) throw error;
+    return data;
+  }
+  const { data, error } = await supabase.from("completion_templates").insert(row).select().single();
+  if (error) throw error;
+  return data;
+}
+
+export async function listPlatformPages() {
+  const { data, error } = await supabase.from("platform_pages").select("*").order("sort_order");
+  if (error) throw error;
+  return data || [];
+}
+
+export async function getPlatformPageBySlug(slug) {
+  const { data, error } = await supabase.from("platform_pages").select("*").eq("slug", slug).maybeSingle();
+  if (error) throw error;
+  return data;
+}
+
+export async function savePlatformPage(page) {
+  const row = {
+    slug: page.slug,
+    title: page.title || "",
+    body: page.body || "",
+    is_visible: page.is_visible !== false,
+    sort_order: page.sort_order ?? 0,
+  };
+  if (page.id) {
+    const { data, error } = await supabase.from("platform_pages").update(row).eq("id", page.id).select().single();
+    if (error) throw error;
+    return data;
+  }
+  const { data, error } = await supabase.from("platform_pages").insert(row).select().single();
+  if (error) throw error;
+  return data;
+}
+
+export async function listFooterLinks() {
+  const { data, error } = await supabase
+    .from("platform_footer_links")
+    .select("*")
+    .eq("is_visible", true)
+    .order("sort_order");
+  if (error) throw error;
+  return data || [];
+}
+
+export async function listAllFooterLinks() {
+  const { data, error } = await supabase.from("platform_footer_links").select("*").order("sort_order");
+  if (error) throw error;
+  return data || [];
+}
+
+export async function saveFooterLink(link) {
+  const row = {
+    label: link.label || "",
+    page_slug: link.page_slug || null,
+    external_url: link.external_url || null,
+    is_visible: link.is_visible !== false,
+    sort_order: link.sort_order ?? 0,
+  };
+  if (link.id) {
+    const { data, error } = await supabase.from("platform_footer_links").update(row).eq("id", link.id).select().single();
+    if (error) throw error;
+    return data;
+  }
+  const { data, error } = await supabase.from("platform_footer_links").insert(row).select().single();
+  if (error) throw error;
+  return data;
+}
+
+export async function getBrandSettings() {
+  const { data, error } = await supabase.from("platform_settings").select("value").eq("key", "brand").maybeSingle();
+  if (error) throw error;
+  return data?.value || { name: "مَدَار", description: "", contactEmail: "" };
+}
+
+export async function saveBrandSettings(value) {
+  const { error } = await supabase.from("platform_settings").upsert({
+    key: "brand",
+    value,
+    updated_at: new Date().toISOString(),
+  });
+  if (error) throw error;
+}
+
+/** Default journey: sequential scenes only (no forced final review). */
+export function defaultJourneyConfig(sceneCount) {
+  return {
+    completionAfterSceneIndex: null, // null = none; 0-based index after which to show card
+    completionTemplateKey: "none",
+    includeAggregatedReview: false,
+  };
+}
+
+export async function updateLessonJourney(lessonId, journeyConfig) {
+  if (!(await isStaffUser())) throw new Error("ليس لديك صلاحية.");
+  const { error } = await supabase
+    .from("lessons")
+    .update({ journey_config: journeyConfig || {}, updated_at: new Date().toISOString() })
+    .eq("id", lessonId);
+  if (error) throw error;
 }

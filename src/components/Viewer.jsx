@@ -656,10 +656,24 @@ export function StudentView({
   session = null,
   onAuthSuccess,
   recordingMode = false,
+  journey = null,
 }) {
   const [internalIndex, setInternalIndex] = useState(0);
-  const activeIndex = controlled ? controlled.index : internalIndex;
-  const setActiveIndex = controlled ? controlled.setIndex : setInternalIndex;
+  const hasJourney = !!journey && !isTeacherView;
+  const activeIndex = hasJourney
+    ? (journey.view === "final" || journey.view === "done" ? (journey.sceneCount || 0) : (journey.currentScene ?? 0))
+    : controlled
+      ? controlled.index
+      : internalIndex;
+  const setActiveIndex = hasJourney
+    ? (i) => {
+        if (typeof i === "number" && i >= 0 && i < (journey.sceneCount || 0)) {
+          journey.setCurrentScene?.(i);
+        }
+      }
+    : controlled
+      ? controlled.setIndex
+      : setInternalIndex;
 
   const [showMap, setShowMap] = useState(true);
   const [showTimeline, setShowTimeline] = useState(true);
@@ -672,7 +686,11 @@ export function StudentView({
   const [pendingFeature, setPendingFeature] = useState(null);
 
   const sceneCount = Array.isArray(lesson?.scenes) ? lesson.scenes.length : 0;
-  const isFinalReview = false; // removed: no automatic Final Review virtual step
+  const isCompletionStep = hasJourney && journey.view === "completion";
+  const isFinalReview = hasJourney
+    ? journey.view === "final"
+    : false;
+  const isLessonDone = hasJourney && (!!journey.lessonCompleted || journey.view === "done");
 
   const youtubeId = useMemo(
     () => extractYouTubeId(lesson?.youtubeUrl || lesson?.youtube_url || ""),
@@ -704,9 +722,30 @@ export function StudentView({
   }, [requireAuthForTools, session, isTeacherView]);
 
   const authOpts = { requireAuthForTools, session, isTeacherView };
+  const isSceneUnlocked = useCallback((i) => {
+    if (isTeacherView || !hasJourney) return true;
+    const unlocked = journey.unlockedScenes || [0];
+    return unlocked.includes(i);
+  }, [isTeacherView, hasJourney, journey]);
+
+  const isSceneCompleted = useCallback((i) => {
+    if (!hasJourney) return false;
+    return (journey.completedScenes || []).includes(i);
+  }, [hasJourney, journey]);
+
   const tryOpenScene = useCallback((i) => {
-    const max = (lesson?.scenes?.length || 1) - 1;
+    // Final review virtual step
+    if (hasJourney && i >= sceneCount) {
+      if (isTeacherView || journey.finalReviewUnlocked || (journey.completedScenes || []).length >= sceneCount) {
+        journey.openFinalReview?.();
+      }
+      return;
+    }
+    const max = Math.max(0, sceneCount - 1);
     const idx = Math.max(0, Math.min(i, max));
+    if (hasJourney && !isTeacherView && !isSceneUnlocked(idx)) {
+      return; // locked future scene
+    }
     const s = lesson?.scenes?.[idx];
     if (s && isSceneLockedForGuest(s, { requireAuthForTools, session, isTeacherView })) {
       setGateFeature(s.title || "هذا المشهد");
@@ -715,7 +754,7 @@ export function StudentView({
       return;
     }
     setActiveIndex(idx);
-  }, [lesson?.scenes, requireAuthForTools, session, isTeacherView, setActiveIndex]);
+  }, [lesson?.scenes, requireAuthForTools, session, isTeacherView, setActiveIndex, hasJourney, journey, sceneCount, isSceneUnlocked]);
 
   if (!lesson || !Array.isArray(lesson.scenes) || lesson.scenes.length === 0) {
     return (
@@ -725,10 +764,14 @@ export function StudentView({
     );
   }
 
-  const sceneIndex = sceneCount > 0 ? Math.min(Math.max(0, activeIndex), sceneCount - 1) : 0;
-  const scene = lesson?.scenes ? lesson.scenes[sceneIndex] : null;
+  const sceneIndex = isFinalReview
+    ? sceneCount
+    : sceneCount > 0
+      ? Math.min(Math.max(0, activeIndex), sceneCount - 1)
+      : 0;
+  const scene = !isFinalReview && !isCompletionStep && lesson?.scenes ? lesson.scenes[sceneIndex] : null;
 
-  if (!scene) {
+  if (!isFinalReview && !isCompletionStep && !scene) {
     return (
       <div className="p-8 text-center text-right dir-rtl" style={{ color: "#8A8570" }}>
         المشهد غير موجود.
@@ -787,30 +830,102 @@ export function StudentView({
           )}
         </div>
 
-        {/* أزرار التنقل بين المشاهد */}
-        <div className="flex flex-wrap gap-2 justify-center mb-6">
+
+        {/* فيديو الدرس — ثابت أعلى الرحلة (مستوى الدرس) */}
+        {youtubeId && !recordingMode && !sceneContentLocked && (
+          <div className="mb-6">
+            <p className="text-xs font-bold mb-2 text-center" style={{ color: "#8A8570" }}>🎥 فيديو الدرس</p>
+            <YouTubePlayer videoId={youtubeId} />
+          </div>
+        )}
+
+        {/* رحلة الدرس */}
+        <div className="mb-6">
+          {sceneCount > 0 && (
+            <div className="text-center mb-3">
+              <p className="text-xs font-bold" style={{ color: "#8A8570" }}>
+                {isLessonDone
+                  ? "🎉 تم إكمال الدرس"
+                  : isFinalReview
+                    ? "المراجعة النهائية"
+                    : `تقدّم الرحلة · المشهد ${sceneIndex + 1} من ${sceneCount}`}
+              </p>
+              {hasJourney && sceneCount > 0 && (
+                <p className="text-[11px] mt-1" style={{ color: "#8A8570" }}>
+                  مشاهد مكتملة {(journey.completedScenes || []).length}/{sceneCount}
+                </p>
+              )}
+            </div>
+          )}
+          <div className="flex flex-wrap gap-2 justify-center">
           {lesson.scenes.map((s, i) => {
-            const locked = isSceneMembersOnly(s) && requireAuthForTools && !session && !isTeacherView;
+            const done = hasJourney ? isSceneCompleted(i) : i < activeIndex;
+            const current = !isFinalReview && i === sceneIndex;
+            const unlocked = isTeacherView || !hasJourney || isSceneUnlocked(i);
+            const mark = done ? "✓ " : current ? "● " : unlocked ? "○ " : "○ ";
+            const lock = !unlocked ? "🔒 " : (isSceneMembersOnly(s) && requireAuthForTools && !session && !isTeacherView ? "🔒 " : "");
             return (
             <button
               type="button"
               key={s.id || `scene-btn-${i}`}
               onClick={() => tryOpenScene(i)}
-              className="px-4 py-2 rounded-2xl text-sm font-bold transition-all shadow-sm cursor-pointer"
+              disabled={!unlocked && !isTeacherView}
+              className="px-4 py-2 rounded-2xl text-sm font-bold transition-all shadow-sm"
               style={{
-                background: i === activeIndex ? "#10665A" : "#FFFFFF",
-                color: i === activeIndex ? "#FAF6ED" : "#22291F",
-                border: "1px solid " + (i === activeIndex ? "#10665A" : "#DED4BD"),
+                background: current ? "#10665A" : done ? "#E4F0EC" : "#FFFFFF",
+                color: current ? "#FAF6ED" : "#22291F",
+                border: "1px solid " + (current ? "#10665A" : done ? "#10665A" : "#DED4BD"),
+                opacity: unlocked || isTeacherView ? 1 : 0.55,
+                cursor: unlocked || isTeacherView ? "pointer" : "not-allowed",
               }}
             >
-              {(isSceneMembersOnly(s) && requireAuthForTools && !session && !isTeacherView) ? "🔒 " : (isSceneMembersOnly(s) ? "🔒 " : "")}{i + 1}. {s.title}
+              {lock}{mark}{i + 1}. {s.title}
             </button>
             );
           })}
-
+          {hasJourney && journey.journeyConfig?.includeAggregatedReview && (
+            <button
+              type="button"
+              onClick={() => tryOpenScene(sceneCount)}
+              disabled={!isTeacherView && !journey.finalReviewUnlocked && (journey.completedScenes || []).length < sceneCount}
+              className="px-4 py-2 rounded-2xl text-sm font-bold transition-all shadow-sm"
+              style={{
+                background: isFinalReview ? "#10665A" : "#FFFFFF",
+                color: isFinalReview ? "#FAF6ED" : "#22291F",
+                border: "1px solid " + (isFinalReview ? "#10665A" : "#DED4BD"),
+                opacity: (journey.finalReviewUnlocked || (journey.completedScenes || []).length >= sceneCount || isTeacherView) ? 1 : 0.55,
+                cursor: (journey.finalReviewUnlocked || (journey.completedScenes || []).length >= sceneCount || isTeacherView) ? "pointer" : "not-allowed",
+              }}
+            >
+              {(journey.finalReviewUnlocked || (journey.completedScenes || []).length >= sceneCount || isTeacherView) ? "🧠 " : "🔒 "}المراجعة النهائية
+            </button>
+          )}
+          </div>
+          <p className="text-center text-[11px] mt-2" style={{ color: "#8A8570" }}>
+            ✓ مكتمل · ● الحالي · ○ متاح · 🔒 مقفل — أكمل المشهد لفتح التالي
+          </p>
         </div>
 
-        {youtubeId && !recordingMode && sceneIndex === 0 && !sceneContentLocked && <YouTubePlayer videoId={youtubeId} />}
+        {isCompletionStep && hasJourney && (
+          <div className="rounded-3xl p-8 mb-6 text-center bg-white shadow-sm" style={{ border: "1px solid #10665A" }}>
+            <p className="text-3xl mb-3">🎉</p>
+            <p className="font-black text-lg mb-2" style={{ color: "#10665A" }}>
+              {(journey.completionTitle) || "تم إكمال هذا الجزء"}
+            </p>
+            <p className="text-sm mb-6" style={{ color: "#5C5A4A" }}>
+              {(journey.completionBody) || "أحسنت — يمكنك المتابعة للخطوة التالية."}
+            </p>
+            <button
+              type="button"
+              onClick={() => journey.dismissCompletion?.()}
+              className="px-6 py-3 rounded-2xl text-sm font-bold text-white"
+              style={{ background: "#10665A" }}
+            >
+              التالي →
+            </button>
+          </div>
+        )}
+
 
         {sceneContentLocked && (
           <div className="rounded-3xl p-8 mb-6 text-center shadow-sm bg-white" style={{ border: "1px solid #DED4BD" }}>
@@ -1038,14 +1153,135 @@ export function StudentView({
           </div>
         )}
 
-        {scene && (
-          <div className="flex justify-between gap-3 mb-4 flex-wrap">
-            <button type="button" onClick={() => activeIndex > 0 && tryOpenScene(activeIndex - 1)} disabled={activeIndex <= 0}
-              className="px-5 py-2.5 rounded-2xl text-sm font-bold disabled:opacity-40" style={{ background: "#EAE6F1", color: "#4C3F63" }}>← السابق</button>
-            <button type="button" onClick={() => tryOpenScene(sceneIndex + 1)}
-              disabled={sceneIndex >= sceneCount - 1}
-              className="px-5 py-2.5 rounded-2xl text-sm font-bold text-white disabled:opacity-40" style={{ background: "#10665A" }}>
-              {sceneIndex >= sceneCount - 1 ? "نهاية الدرس" : "التالي →"}
+        {/* أزرار التنقل + إكمال المشهد */}
+        {!isFinalReview && scene && !sceneContentLocked && (
+          <div className="flex flex-col gap-3 mb-4">
+            {hasJourney && !isTeacherView && (
+              <button
+                type="button"
+                onClick={() => {
+                  if (isSceneCompleted(sceneIndex)) {
+                    // already done — advance if next unlocked
+                    if (sceneIndex + 1 < sceneCount) tryOpenScene(sceneIndex + 1);
+                    else tryOpenScene(sceneCount);
+                    return;
+                  }
+                  journey.completeScene?.();
+                }}
+                className="w-full px-5 py-3 rounded-2xl text-sm font-bold text-white"
+                style={{ background: isSceneCompleted(sceneIndex) ? "#0E5348" : "#10665A" }}
+              >
+                {isSceneCompleted(sceneIndex)
+                  ? (sceneIndex + 1 < sceneCount ? "✓ مكتمل — الانتقال للتالي" : "✓ مكتمل — المراجعة النهائية")
+                  : "✓ أكمل المشهد"}
+              </button>
+            )}
+            <div className="flex justify-between gap-3 flex-wrap">
+              <button
+                type="button"
+                onClick={() => tryOpenScene(sceneIndex - 1)}
+                disabled={sceneIndex <= 0}
+                className="px-5 py-2.5 rounded-2xl text-sm font-bold disabled:opacity-40"
+                style={{ background: "#EAE6F1", color: "#4C3F63" }}
+              >
+                ← السابق
+              </button>
+              <button
+                type="button"
+                onClick={() => {
+                  if (hasJourney && !isTeacherView) {
+                    if (!isSceneUnlocked(sceneIndex + 1) && sceneIndex + 1 < sceneCount) return;
+                    if (sceneIndex + 1 >= sceneCount) {
+                      tryOpenScene(sceneCount);
+                      return;
+                    }
+                  }
+                  tryOpenScene(sceneIndex + 1);
+                }}
+                disabled={
+                  hasJourney && !isTeacherView
+                    ? sceneIndex + 1 < sceneCount
+                      ? !isSceneUnlocked(sceneIndex + 1)
+                      : !(journey.finalReviewUnlocked || (journey.completedScenes || []).length >= sceneCount)
+                    : sceneIndex >= sceneCount - 1
+                }
+                className="px-5 py-2.5 rounded-2xl text-sm font-bold text-white disabled:opacity-40"
+                style={{ background: "#10665A" }}
+              >
+                {sceneIndex + 1 >= sceneCount ? "المراجعة النهائية →" : "التالي →"}
+              </button>
+            </div>
+          </div>
+        )}
+
+        {/* المراجعة النهائية */}
+        {isFinalReview && !sceneContentLocked && (
+          <div className="space-y-6 mb-6">
+            {isLessonDone && (
+              <div className="rounded-3xl p-6 text-center bg-white shadow-sm" style={{ border: "1px solid #10665A" }}>
+                <p className="text-3xl mb-2">🎉</p>
+                <p className="font-black text-lg" style={{ color: "#10665A" }}>تم إكمال الدرس</p>
+                <p className="text-sm mt-1" style={{ color: "#5C5A4A" }}>أحسنت — أنهيت رحلة هذا الدرس على مَدَار.</p>
+              </div>
+            )}
+            <div className="rounded-3xl p-5 bg-white shadow-sm" style={{ border: "1px solid #DED4BD" }}>
+              <h3 className="font-bold text-lg mb-3" style={{ color: "#10665A" }}>🧠 المراجعة النهائية</h3>
+              <p className="text-xs mb-4" style={{ color: "#8A8570" }}>ملخص من كل مشاهد الدرس: خريطة ذهنية وخط زمني وأسئلة.</p>
+              {fullMindMap && fullMindMap.label && (
+                <div className="mb-6">
+                  <p className="font-bold text-sm mb-2" style={{ color: "#0E5348" }}>الخريطة الذهنية الكاملة</p>
+                  <MindMapViewerNode
+                    node={fullMindMap}
+                    onSelectNode={(node) => setSelectedMindNode(node)}
+                    selectedNodeId={selectedMindNode?.id}
+                  />
+                </div>
+              )}
+              {Array.isArray(fullTimeline) && fullTimeline.length > 0 && (
+                <div className="mb-6">
+                  <p className="font-bold text-sm mb-2" style={{ color: "#0E5348" }}>الخط الزمني الكامل</p>
+                  <div className="flex flex-col gap-3">
+                    {fullTimeline.map((item, idx) => (
+                      <div key={item.id || `ft-${idx}`} className="p-3 rounded-xl" style={{ background: "#FAF6ED", border: "1px solid #DED4BD" }}>
+                        <p className="font-bold text-xs" style={{ color: "#10665A" }}>{item.date}</p>
+                        <p className="text-sm font-bold" style={{ color: "#22291F" }}>{item.title}</p>
+                        {item.description && <p className="text-xs mt-1" style={{ color: "#5C5A4A" }}>{item.description}</p>}
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
+              {Array.isArray(fullQuestions) && fullQuestions.length > 0 && (
+                <div className="mb-4">
+                  <p className="font-bold text-sm mb-2" style={{ color: "#0E5348" }}>أسئلة المراجعة</p>
+                  <div className="flex flex-col gap-3">
+                    {fullQuestions.map((q, idx) => (
+                      <QuestionItem key={q.id || `fq-${idx}`} q={q} />
+                    ))}
+                  </div>
+                </div>
+              )}
+              {!fullMindMap?.label && !(fullTimeline || []).length && !(fullQuestions || []).length && (
+                <p className="text-sm" style={{ color: "#8A8570" }}>لا توجد عناصر مراجعة مجمّعة بعد — أضف محتوى في المشاهد من الاستوديو.</p>
+              )}
+            </div>
+            {hasJourney && !isTeacherView && !isLessonDone && (
+              <button
+                type="button"
+                onClick={() => journey.completeFinalReview?.()}
+                className="w-full px-5 py-3 rounded-2xl text-sm font-bold text-white"
+                style={{ background: "#10665A" }}
+              >
+                ✓ إنهاء المراجعة وإكمال الدرس
+              </button>
+            )}
+            <button
+              type="button"
+              onClick={() => tryOpenScene(Math.max(0, sceneCount - 1))}
+              className="w-full px-5 py-2.5 rounded-2xl text-sm font-bold"
+              style={{ background: "#EAE6F1", color: "#4C3F63" }}
+            >
+              ← العودة لآخر مشهد
             </button>
           </div>
         )}

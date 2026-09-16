@@ -8,8 +8,20 @@ import {
   TimelineStudioEditor,
   QuestionStudioEditor,
 } from "../components/Studio";
-import { STAGES, GRADES, TERMS, STATUSES, statusMeta, uid } from "../lib/constants";
-import { getLessonWithScenes, updateLessonMeta, updateScene, createScene, deleteScene, uploadLessonImage, extractYouTubeId, SCENE_TYPES } from "../lib/db";
+import { STATUSES, statusMeta, uid } from "../lib/constants";
+import {
+  getLessonWithScenes,
+  updateLessonMeta,
+  updateScene,
+  createScene,
+  deleteScene,
+  uploadLessonImage,
+  extractYouTubeId,
+  SCENE_TYPES,
+  listCurriculumNodes,
+  listCompletionTemplates,
+  updateLessonJourney,
+} from "../lib/db";
 
 const AUTOSAVE_DELAY = 800;
 
@@ -25,17 +37,21 @@ export default function TeacherStudioPage() {
   const [recIndex, setRecIndex] = useState(0);
   const [showPreview, setShowPreview] = useState(true);
   const [saveStatus, setSaveStatus] = useState("saved"); // saving | saved | error
+  const [curriculumNodes, setCurriculumNodes] = useState([]);
+  const [completionTemplates, setCompletionTemplates] = useState([]);
 
   const lessonTimerRef = useRef(null);
   const sceneTimersRef = useRef({});
 
   useEffect(() => {
     let mounted = true;
-    getLessonWithScenes(id)
-      .then((data) => {
+    Promise.all([getLessonWithScenes(id), listCurriculumNodes().catch(() => []), listCompletionTemplates().catch(() => [])])
+      .then(([data, nodes, tpls]) => {
         if (!mounted) return;
         setLesson(data);
         setSelectedSceneId(data.scenes[0]?.id || null);
+        setCurriculumNodes(nodes || []);
+        setCompletionTemplates(tpls || []);
       })
       .catch(() => mounted && setLesson(false));
     return () => {
@@ -255,11 +271,103 @@ export default function TeacherStudioPage() {
             <span className="block text-xs mb-1" style={{ color: "#8A8570" }}>عنوان الدرس</span>
             <input className="ts-input text-xs w-full" value={lesson.title} onChange={(e) => patchLesson({ title: e.target.value })} />
           </label>
+          <p className="text-[11px] mb-2 font-bold" style={{ color: "#8A8570" }}>
+            المسار: {[lesson.stage, lesson.grade, lesson.term, lesson.subject].filter(Boolean).join(" / ") || "—"}
+          </p>
           <div className="grid grid-cols-2 gap-2 mb-4">
-            <select className="ts-input text-xs" value={lesson.stage} onChange={(e) => patchLesson({ stage: e.target.value }, { immediate: true })}>{STAGES.map((s) => <option key={s}>{s}</option>)}</select>
-            <select className="ts-input text-xs" value={lesson.grade} onChange={(e) => patchLesson({ grade: e.target.value }, { immediate: true })}>{GRADES.map((s) => <option key={s}>{s}</option>)}</select>
-            <select className="ts-input text-xs" value={lesson.term} onChange={(e) => patchLesson({ term: e.target.value }, { immediate: true })}>{TERMS.map((s) => <option key={s}>{s}</option>)}</select>
-            <input className="ts-input text-xs" value={lesson.subject} onChange={(e) => patchLesson({ subject: e.target.value })} placeholder="المادة" />
+            <select className="ts-input text-xs" value={lesson.stage || ""} onChange={(e) => patchLesson({ stage: e.target.value }, { immediate: true })}>
+              <option value="">المرحلة</option>
+              {curriculumNodes.filter((n) => n.kind === "stage").map((n) => <option key={n.id} value={n.name}>{n.name}</option>)}
+              {lesson.stage && !curriculumNodes.some((n) => n.kind === "stage" && n.name === lesson.stage) && (
+                <option value={lesson.stage}>{lesson.stage}</option>
+              )}
+            </select>
+            <select className="ts-input text-xs" value={lesson.grade || ""} onChange={(e) => patchLesson({ grade: e.target.value }, { immediate: true })}>
+              <option value="">الصف</option>
+              {curriculumNodes.filter((n) => n.kind === "grade").map((n) => <option key={n.id} value={n.name}>{n.name}</option>)}
+              {lesson.grade && !curriculumNodes.some((n) => n.kind === "grade" && n.name === lesson.grade) && (
+                <option value={lesson.grade}>{lesson.grade}</option>
+              )}
+            </select>
+            <select className="ts-input text-xs" value={lesson.term || ""} onChange={(e) => patchLesson({ term: e.target.value }, { immediate: true })}>
+              <option value="">الترم</option>
+              {curriculumNodes.filter((n) => n.kind === "term").map((n) => <option key={n.id} value={n.name}>{n.name}</option>)}
+              {lesson.term && !curriculumNodes.some((n) => n.kind === "term" && n.name === lesson.term) && (
+                <option value={lesson.term}>{lesson.term}</option>
+              )}
+            </select>
+            <select className="ts-input text-xs" value={lesson.subject || ""} onChange={(e) => patchLesson({ subject: e.target.value }, { immediate: true })}>
+              <option value="">القسم / المادة</option>
+              {curriculumNodes.filter((n) => n.kind === "subject").map((n) => <option key={n.id} value={n.name}>{n.name}</option>)}
+              {lesson.subject && !curriculumNodes.some((n) => n.kind === "subject" && n.name === lesson.subject) && (
+                <option value={lesson.subject}>{lesson.subject}</option>
+              )}
+            </select>
+          </div>
+
+          {/* إعداد رحلة الدرس */}
+          <div className="mb-4 p-3 rounded-xl" style={{ background: "#FAF6ED", border: "1px solid #DED4BD" }}>
+            <p className="text-xs font-bold mb-2" style={{ color: "#10665A" }}>رحلة الدرس</p>
+            <label className="block text-[11px] mb-1" style={{ color: "#8A8570" }}>إظهار إشعار الإكمال بعد</label>
+            <select
+              className="ts-input text-xs w-full mb-2"
+              value={
+                lesson.journeyConfig?.completionAfterSceneIndex === null ||
+                lesson.journeyConfig?.completionAfterSceneIndex === undefined
+                  ? ""
+                  : String(lesson.journeyConfig.completionAfterSceneIndex)
+              }
+              onChange={async (e) => {
+                const v = e.target.value;
+                const cfg = {
+                  ...(lesson.journeyConfig || {}),
+                  completionAfterSceneIndex: v === "" ? null : Number(v),
+                  completionTemplateKey: lesson.journeyConfig?.completionTemplateKey || "lesson_done",
+                };
+                setLesson((prev) => ({ ...prev, journeyConfig: cfg }));
+                try {
+                  await updateLessonJourney(lesson.id, cfg);
+                  setSaveStatus("saved");
+                } catch {
+                  setSaveStatus("error");
+                }
+              }}
+            >
+              <option value="">بدون إشعار</option>
+              {(lesson.scenes || []).map((s, i) => (
+                <option key={s.id || i} value={i}>بعد المشهد {i + 1}: {s.title || "بدون عنوان"}</option>
+              ))}
+            </select>
+            <label className="block text-[11px] mb-1" style={{ color: "#8A8570" }}>نوع الرسالة</label>
+            <select
+              className="ts-input text-xs w-full"
+              value={lesson.journeyConfig?.completionTemplateKey || "none"}
+              onChange={async (e) => {
+                const cfg = {
+                  ...(lesson.journeyConfig || {}),
+                  completionTemplateKey: e.target.value,
+                };
+                setLesson((prev) => ({ ...prev, journeyConfig: cfg }));
+                try {
+                  await updateLessonJourney(lesson.id, cfg);
+                  setSaveStatus("saved");
+                } catch {
+                  setSaveStatus("error");
+                }
+              }}
+            >
+              {(completionTemplates.length
+                ? completionTemplates
+                : [
+                    { key: "none", label: "بدون إشعار" },
+                    { key: "lesson_done", label: "تم إكمال الدرس" },
+                    { key: "review_done", label: "تم إكمال المراجعة" },
+                    { key: "quiz_done", label: "تم إكمال الاختبار" },
+                  ]
+              ).map((tpl) => (
+                <option key={tpl.key} value={tpl.key}>{tpl.label || tpl.key}</option>
+              ))}
+            </select>
           </div>
 
           <label className="block mb-4">

@@ -5,6 +5,21 @@ import { useAuth } from "../lib/hooks";
 import Footer from "../components/Footer";
 import AuthModal, { GuestWelcomeBanner, LetterAvatar } from "../components/AuthModal";
 
+const PROGRESS_KEY = "ts_student_progress_v2";
+
+function readLocalProgress() {
+  try {
+    const raw = localStorage.getItem(PROGRESS_KEY);
+    if (!raw) return null;
+    const parsed = JSON.parse(raw);
+    if (!parsed || !parsed.lessonId) return null;
+    return parsed;
+  } catch {
+    return null;
+  }
+}
+
+
 /* ============================================================================
    مَدَار — Student Platform (Global Premium Redesign)
    الهوية: فضاء هادئ + جغرافيا + استكشاف
@@ -333,6 +348,58 @@ export default function StudentPlatform() {
     !!selectedSubject,
   ];
 
+  const localProgress = useMemo(() => readLocalProgress(), [lessons]);
+  const continueLesson = useMemo(() => {
+    if (!lessons || !localProgress?.lessonId) return null;
+    const lesson = lessons.find((l) => String(l.id) === String(localProgress.lessonId));
+    if (!lesson) return null;
+    const sceneIdx =
+      typeof localProgress.currentScene === "number"
+        ? localProgress.currentScene
+        : typeof localProgress.sceneIndex === "number"
+          ? localProgress.sceneIndex
+          : 0;
+    const done = !!localProgress.lessonCompleted;
+    return { lesson, sceneIdx, done };
+  }, [lessons, localProgress]);
+  const progressBySubject = useMemo(() => {
+    if (!lessons || !lessons.length) return [];
+    // group published lessons by subject (within optional filters)
+    const base = filteredLessons.length ? filteredLessons : lessons;
+    const map = {};
+    for (const l of base) {
+      const sub = l.subject || "أخرى";
+      map[sub] = map[sub] || { subject: sub, total: 0, completed: 0 };
+      map[sub].total += 1;
+    }
+    // completed from local progress only for current continue lesson if marked done
+    // and scan v2 storage for lessonCompleted when same lessonId matches
+    try {
+      const raw = localStorage.getItem(PROGRESS_KEY);
+      if (raw) {
+        const parsed = JSON.parse(raw);
+        if (parsed?.lessonCompleted && parsed.lessonId) {
+          const L = base.find((x) => String(x.id) === String(parsed.lessonId));
+          if (L) {
+            const sub = L.subject || "أخرى";
+            if (map[sub]) map[sub].completed = Math.min(map[sub].total, (map[sub].completed || 0) + 1);
+          }
+        }
+      }
+    } catch (_) {}
+    return Object.values(map).sort((a, b) => a.subject.localeCompare(b.subject, "ar"));
+  }, [lessons, filteredLessons]);
+
+  const recentLessons = useMemo(() => {
+    if (!lessons || !lessons.length) return [];
+    const sorted = [...lessons].sort((a, b) => {
+      const ta = a.updatedAt || a.updated_at || "";
+      const tb = b.updatedAt || b.updated_at || "";
+      return String(tb).localeCompare(String(ta));
+    });
+    return sorted.slice(0, 4);
+  }, [lessons]);
+
   const studentName =
     session?.user?.user_metadata?.full_name ||
     session?.user?.user_metadata?.name ||
@@ -387,20 +454,104 @@ export default function StudentPlatform() {
       className="md-hero-logo"
     />
   </div>
-  <div className="md-badge">منصة مَدَار</div>
-  <h1>مرحباً بك في منصة مَدَار</h1>
-  <p>استكشف الدراسات الاجتماعية بأسلوب تفاعلي ومرئي عصري</p>
+  <div className="md-badge">منصة تعليمية</div>
+  <h1>مَدَار — تعلّم بوضوح</h1>
+  <p>رحلة تعليمية منظمة: فهم المحتوى، ربط الأفكار، المراجعة، ثم التحقق من فهمك — بأسلوب تفاعلي ومرئي.</p>
 </header>
 
+        {/* لوحة متابعة بسيطة من البيانات المحلية + الدروس المنشورة */}
+        {lessons && lessons.length > 0 && (
+          <section className="md-dashboard mb-6" aria-label="متابعة التعلم">
+            {continueLesson && (
+              <div
+                className="rounded-2xl p-4 mb-4 bg-white shadow-sm flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3"
+                style={{ border: "1px solid #DED4BD" }}
+              >
+                <div>
+                  <p className="text-[11px] font-bold mb-1" style={{ color: "#8A8570" }}>متابعة التعلم</p>
+                  <p className="font-black text-sm" style={{ color: "#10665A" }}>{continueLesson.lesson.title}</p>
+                  <p className="text-xs mt-1" style={{ color: "#5C5A4A" }}>
+                    {continueLesson.done
+                      ? "مكتمل ✓"
+                      : `آخر موضع: المشهد ${continueLesson.sceneIdx + 1}`}
+                    {continueLesson.lesson.subject ? ` · ${continueLesson.lesson.subject}` : ""}
+                  </p>
+                </div>
+                <button
+                  type="button"
+                  onClick={() => navigate(`/student/lesson/${continueLesson.lesson.id}`)}
+                  className="px-4 py-2.5 rounded-xl text-xs font-bold text-white shrink-0"
+                  style={{ background: "#10665A" }}
+                >
+                  متابعة الدرس ←
+                </button>
+              </div>
+            )}
+            {recentLessons.length > 0 && (
+              <div>
+                <p className="text-xs font-bold mb-2" style={{ color: "#8A8570" }}>أحدث الدروس المنشورة</p>
+                <div className="flex flex-wrap gap-2">
+                  {recentLessons.map((l) => (
+                    <button
+                      key={l.id}
+                      type="button"
+                      onClick={() => navigate(`/student/lesson/${l.id}`)}
+                      className="text-xs font-bold px-3 py-2 rounded-xl bg-white"
+                      style={{ border: "1px solid #DED4BD", color: "#22291F" }}
+                    >
+                      {l.title}
+                    </button>
+                  ))}
+                </div>
+              </div>
+            )}
+          
+            {progressBySubject.length > 0 && (
+              <div className="mt-4">
+                <p className="text-xs font-bold mb-2" style={{ color: "#8A8570" }}>تقدّم الأقسام (من الدروس المنشورة)</p>
+                <div className="grid sm:grid-cols-2 gap-2">
+                  {progressBySubject.map((row) => {
+                    const pct = row.total ? Math.round((row.completed / row.total) * 100) : 0;
+                    return (
+                      <div key={row.subject} className="rounded-xl p-3 bg-white text-xs" style={{ border: "1px solid #DED4BD" }}>
+                        <p className="font-bold" style={{ color: "#10665A" }}>{row.subject}</p>
+                        <p style={{ color: "#5C5A4A" }}>{row.completed} / {row.total} دروس مكتملة · متبقي {Math.max(0, row.total - row.completed)}</p>
+                        <div className="mt-2 h-1.5 rounded-full" style={{ background: "#E4F0EC" }}>
+                          <div className="h-full rounded-full" style={{ width: pct + "%", background: "#10665A" }} />
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+              </div>
+            )}
+</section>
+        )}
+
         {error && (
-          <div className="md-alert error">
-            <span>⚠</span> {error}
+          <div className="md-alert error flex flex-wrap items-center justify-between gap-3">
+            <span><span>⚠</span> {error}</span>
+            <button
+              type="button"
+              className="text-xs font-bold px-3 py-1.5 rounded-lg"
+              style={{ background: "#10665A", color: "#fff" }}
+              onClick={() => {
+                setError("");
+                setLessons(null);
+                listPublishedLessons()
+                  .then(setLessons)
+                  .catch(() => setError("تعذر تحميل الدروس. تحقق من الاتصال وحاول مرة أخرى."));
+              }}
+            >
+              إعادة المحاولة
+            </button>
           </div>
         )}
 
         {lessons === null && !error && (
           <div className="md-loading">
             <CompassSpinner />
+            <p className="text-sm mt-3 font-medium" style={{ color: "#8A8570" }}>جاري تجهيز مسارك التعليمي...</p>
           </div>
         )}
 
@@ -414,7 +565,7 @@ export default function StudentPlatform() {
               label="المرحلة الدراسية"
             >
               {availableStages.length === 0 ? (
-                <p className="md-empty">لا توجد دروس منشورة حالياً.</p>
+                <p className="md-empty">لا توجد دروس منشورة حالياً. عد لاحقاً أو جرّب تصفية أخرى.</p>
               ) : (
                 <div className="md-chips">
                   {availableStages.map((st) => (
@@ -444,7 +595,7 @@ export default function StudentPlatform() {
                 label="الصف الدراسي"
               >
                 {availableGrades.length === 0 ? (
-                  <p className="md-empty">لا توجد صفوف دراسية منشورة لهذه المرحلة حالياً.</p>
+                  <p className="md-empty">لا توجد صفوف متاحة لهذه المرحلة حالياً.</p>
                 ) : (
                   <div className="md-chips">
                     {availableGrades.map((g) => (

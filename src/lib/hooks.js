@@ -1,13 +1,10 @@
 import { useEffect, useRef, useState, useCallback } from "react";
 import { supabase } from "./supabaseClient";
-import { getSession, onAuthStateChange, recoverSessionFromUrl } from "./db";
+import { getSession, onAuthStateChange, recoverSessionFromUrl, isStaffUser } from "./db";
 
 /**
  * Shared auth hook (teacher + student).
  * session: undefined = loading | null = guest | object = logged in
- *
- * Google OAuth returns with ?code= on the URL. We must exchange that into a
- * persisted session before rendering "guest", and keep listening so refresh works.
  */
 export function useAuth() {
   const [session, setSession] = useState(undefined);
@@ -20,28 +17,24 @@ export function useAuth() {
       if (mounted) setSession(s ?? null);
     };
 
-    // Subscribe immediately so SIGNED_IN / TOKEN_REFRESHED / INITIAL_SESSION are not missed
     const unsubscribe = onAuthStateChange((s) => apply(s));
 
     (async () => {
       if (initDone.current) return;
       initDone.current = true;
       try {
-        // 1) OAuth return: exchange ?code= / read hash tokens
         const recovered = await recoverSessionFromUrl();
         if (recovered) {
           apply(recovered);
           return;
         }
 
-        // 2) Storage
         const existing = await getSession();
         if (existing) {
           apply(existing);
           return;
         }
 
-        // 3) Brief retry — client init / detectSessionInUrl may still be in flight
         await new Promise((r) => setTimeout(r, 150));
         const again = await getSession();
         if (again) {
@@ -49,7 +42,6 @@ export function useAuth() {
           return;
         }
 
-        // 4) getUser validates JWT against server (more reliable after OAuth)
         const { data: userData } = await supabase.auth.getUser();
         if (userData?.user) {
           const { data: sessData } = await supabase.auth.getSession();
@@ -75,6 +67,36 @@ export function useAuth() {
 
 export function useTeacherAuth() {
   return useAuth();
+}
+
+/** true if teacher/admin, false if not, undefined while checking */
+export function useStaffStatus(session) {
+  const [staff, setStaff] = useState(undefined);
+
+  useEffect(() => {
+    let mounted = true;
+    if (session === undefined) {
+      setStaff(undefined);
+      return undefined;
+    }
+    if (!session) {
+      setStaff(false);
+      return undefined;
+    }
+    setStaff(undefined);
+    isStaffUser()
+      .then((ok) => {
+        if (mounted) setStaff(!!ok);
+      })
+      .catch(() => {
+        if (mounted) setStaff(false);
+      });
+    return () => {
+      mounted = false;
+    };
+  }, [session]);
+
+  return staff;
 }
 
 export function useAutosave(saveFn, delay = 800) {
