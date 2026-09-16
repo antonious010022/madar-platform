@@ -630,6 +630,60 @@ function isSceneLockedForGuest(scene, { requireAuthForTools, session, isTeacherV
   return isSceneMembersOnly(scene);
 }
 
+/** Lesson-level Access Lock (registered users only). */
+export function isLessonMembersOnly(lesson) {
+  if (!lesson) return false;
+  if (lesson.isMembersOnly) return true;
+  const cfg = lesson.journeyConfig || lesson.journey_config || {};
+  return !!(cfg.isMembersOnly || cfg.exclusive || cfg.is_members_only);
+}
+
+/**
+ * Resolve lock kind for a scene index.
+ * Priority: COMPLETED → ACCESS_LOCK → SEQUENCE_LOCK → AVAILABLE
+ */
+export function getSceneLockKind(scene, index, opts) {
+  const {
+    session = null,
+    isTeacherView = false,
+    requireAuthForTools = false,
+    hasJourney = false,
+    journey = null,
+  } = opts || {};
+
+  if (isTeacherView) return "AVAILABLE";
+
+  const completed = hasJourney && Array.isArray(journey?.completedScenes) && journey.completedScenes.includes(index);
+  if (completed) return "COMPLETED";
+
+  // Access Lock first (guest + members-only scene)
+  if (requireAuthForTools && !session && isSceneMembersOnly(scene)) {
+    return "ACCESS_LOCK";
+  }
+
+  // Sequence Lock (must complete previous / be in unlockedScenes)
+  if (hasJourney && journey) {
+    const unlocked = journey.unlockedScenes || [0];
+    if (!unlocked.includes(index)) return "SEQUENCE_LOCK";
+  }
+
+  return "AVAILABLE";
+}
+
+export function sceneLockLabel(kind) {
+  switch (kind) {
+    case "COMPLETED":
+      return { mark: "✓", message: "مكتمل", short: "✓ " };
+    case "ACCESS_LOCK":
+      return { mark: "🔐", message: "تسجيل الدخول مطلوب", short: "🔐 " };
+    case "SEQUENCE_LOCK":
+      return { mark: "🔒", message: "أكمل العنوان السابق أولًا", short: "🔒 " };
+    case "AVAILABLE":
+    default:
+      return { mark: "🔵", message: "متاح", short: "○ " };
+  }
+}
+
 function buildFullQuestions(scenes) {
   if (!Array.isArray(scenes)) return [];
   const items = []; const seen = new Set();
@@ -743,18 +797,26 @@ export function StudentView({
     }
     const max = Math.max(0, sceneCount - 1);
     const idx = Math.max(0, Math.min(i, max));
-    if (hasJourney && !isTeacherView && !isSceneUnlocked(idx)) {
-      return; // locked future scene
-    }
     const s = lesson?.scenes?.[idx];
-    if (s && isSceneLockedForGuest(s, { requireAuthForTools, session, isTeacherView })) {
-      setGateFeature(s.title || "هذا المشهد");
+    const kind = getSceneLockKind(s, idx, {
+      session,
+      isTeacherView,
+      requireAuthForTools,
+      hasJourney,
+      journey,
+    });
+    // Access Lock first — show login, never "complete previous"
+    if (kind === "ACCESS_LOCK") {
+      setGateFeature(s?.title || "هذا المشهد");
       setPendingFeature(`scene-${idx}`);
       setGateOpen(true);
       return;
     }
+    if (kind === "SEQUENCE_LOCK") {
+      return; // sequence locked — button already shows message
+    }
     setActiveIndex(idx);
-  }, [lesson?.scenes, requireAuthForTools, session, isTeacherView, setActiveIndex, hasJourney, journey, sceneCount, isSceneUnlocked]);
+  }, [lesson?.scenes, requireAuthForTools, session, isTeacherView, setActiveIndex, hasJourney, journey, sceneCount]);
 
   if (!lesson || !Array.isArray(lesson.scenes) || lesson.scenes.length === 0) {
     return (
@@ -859,27 +921,53 @@ export function StudentView({
           )}
           <div className="flex flex-wrap gap-2 justify-center">
           {lesson.scenes.map((s, i) => {
-            const done = hasJourney ? isSceneCompleted(i) : i < activeIndex;
-            const current = !isFinalReview && i === sceneIndex;
-            const unlocked = isTeacherView || !hasJourney || isSceneUnlocked(i);
-            const mark = done ? "✓ " : current ? "● " : unlocked ? "○ " : "○ ";
-            const lock = !unlocked ? "🔒 " : (isSceneMembersOnly(s) && requireAuthForTools && !session && !isTeacherView ? "🔒 " : "");
+            const kind = getSceneLockKind(s, i, {
+              session,
+              isTeacherView,
+              requireAuthForTools,
+              hasJourney,
+              journey,
+            });
+            const labels = sceneLockLabel(kind);
+            const current = !isFinalReview && i === sceneIndex && kind !== "SEQUENCE_LOCK" && kind !== "ACCESS_LOCK";
+            const done = kind === "COMPLETED";
+            const canOpen = isTeacherView || kind === "AVAILABLE" || kind === "COMPLETED" || kind === "ACCESS_LOCK";
+            // ACCESS_LOCK is clickable (opens login gate); SEQUENCE_LOCK is not
+            const disabled = kind === "SEQUENCE_LOCK" && !isTeacherView;
+            const mark =
+              done ? "✓ " :
+              current ? "● " :
+              kind === "ACCESS_LOCK" ? "🔐 " :
+              kind === "SEQUENCE_LOCK" ? "🔒 " :
+              "○ ";
+            const titleHint =
+              kind === "ACCESS_LOCK" ? "تسجيل الدخول مطلوب" :
+              kind === "SEQUENCE_LOCK" ? "أكمل العنوان السابق أولًا" :
+              done ? "مكتمل" :
+              current ? "الحالي" : "متاح";
             return (
             <button
               type="button"
               key={s.id || `scene-btn-${i}`}
               onClick={() => tryOpenScene(i)}
-              disabled={!unlocked && !isTeacherView}
+              disabled={disabled}
+              title={titleHint}
               className="px-4 py-2 rounded-2xl text-sm font-bold transition-all shadow-sm"
               style={{
                 background: current ? "#10665A" : done ? "#E4F0EC" : "#FFFFFF",
                 color: current ? "#FAF6ED" : "#22291F",
-                border: "1px solid " + (current ? "#10665A" : done ? "#10665A" : "#DED4BD"),
-                opacity: unlocked || isTeacherView ? 1 : 0.55,
-                cursor: unlocked || isTeacherView ? "pointer" : "not-allowed",
+                border: "1px solid " + (
+                  current ? "#10665A" :
+                  done ? "#10665A" :
+                  kind === "ACCESS_LOCK" ? "#8A5A15" :
+                  kind === "SEQUENCE_LOCK" ? "#DED4BD" :
+                  "#DED4BD"
+                ),
+                opacity: disabled ? 0.55 : 1,
+                cursor: disabled ? "not-allowed" : "pointer",
               }}
             >
-              {lock}{mark}{i + 1}. {s.title}
+              {mark}{i + 1}. {s.title}
             </button>
             );
           })}
@@ -902,7 +990,7 @@ export function StudentView({
           )}
           </div>
           <p className="text-center text-[11px] mt-2" style={{ color: "#8A8570" }}>
-            ✓ مكتمل · ● الحالي · ○ متاح · 🔒 مقفل — أكمل المشهد لفتح التالي
+            ✓ مكتمل · ● الحالي · ○ متاح · 🔒 أكمل العنوان السابق · 🔐 تسجيل الدخول مطلوب
           </p>
         </div>
 
@@ -929,9 +1017,11 @@ export function StudentView({
 
         {sceneContentLocked && (
           <div className="rounded-3xl p-8 mb-6 text-center shadow-sm bg-white" style={{ border: "1px solid #DED4BD" }}>
-            <p className="text-3xl mb-2">🔒</p>
-            <p className="font-black text-lg mb-2" style={{ color: "#10665A" }}>هذا المحتوى متاح للأعضاء فقط</p>
-            <p className="text-sm mb-4" style={{ color: "#5C5A4A" }}>سجّل دخولك واستمتع بكل مميزات مَدَار مجانًا بالكامل.</p>
+            <p className="text-3xl mb-2">🔐</p>
+            <p className="font-black text-lg mb-2" style={{ color: "#10665A" }}>تسجيل الدخول مطلوب</p>
+            <p className="text-sm mb-4" style={{ color: "#5C5A4A" }}>
+              هذا العنوان حصري للمستخدمين المسجّلين. سجّل دخولك للوصول إليه — وليس بسبب ترتيب المشاهد.
+            </p>
             <button type="button" onClick={() => setAuthOpen(true)}
               className="px-5 py-2.5 rounded-2xl text-sm font-bold text-white" style={{ background: "#10665A" }}>
               تسجيل الدخول / إنشاء حساب

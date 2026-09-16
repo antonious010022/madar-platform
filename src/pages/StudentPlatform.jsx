@@ -1,11 +1,14 @@
 import { useEffect, useMemo, useState } from "react";
 import { useNavigate } from "react-router-dom";
-import { listPublishedLessons, signOut } from "../lib/db";
+import { listPublishedLessons, signOut, getStudentGradeMeta, saveStudentGradeMeta } from "../lib/db";
 import { useAuth } from "../lib/hooks";
 import Footer from "../components/Footer";
 import AuthModal, { GuestWelcomeBanner, LetterAvatar } from "../components/AuthModal";
 
 const PROGRESS_KEY = "ts_student_progress_v2";
+const GUEST_GRADE_KEY = "madar_guest_stage_grade_v1";
+/** Accumulator of completed lesson IDs (StudentPlatform only). Does not change v2 progress shape. */
+const COMPLETED_LESSON_IDS_KEY = "madar_completed_lesson_ids_v1";
 
 function readLocalProgress() {
   try {
@@ -16,6 +19,128 @@ function readLocalProgress() {
     return parsed;
   } catch {
     return null;
+  }
+}
+
+/** Merge single-lesson v2 completion into a multi-lesson id set for sequential UI. */
+function readCompletedLessonIds() {
+  let ids = [];
+  try {
+    const raw = localStorage.getItem(COMPLETED_LESSON_IDS_KEY);
+    if (raw) {
+      const parsed = JSON.parse(raw);
+      if (Array.isArray(parsed)) ids = parsed.map(String);
+    }
+  } catch {
+    /* ignore */
+  }
+  try {
+    const p = readLocalProgress();
+    if (p?.lessonCompleted && p.lessonId) {
+      const lid = String(p.lessonId);
+      if (!ids.includes(lid)) {
+        ids.push(lid);
+        try {
+          localStorage.setItem(COMPLETED_LESSON_IDS_KEY, JSON.stringify(ids));
+        } catch {
+          /* ignore */
+        }
+      }
+    }
+  } catch {
+    /* ignore */
+  }
+  return new Set(ids);
+}
+
+function isLessonExclusive(lesson) {
+  if (!lesson) return false;
+  if (lesson.isMembersOnly) return true;
+  const cfg = lesson.journeyConfig || lesson.journey_config || {};
+  return !!(cfg.isMembersOnly || cfg.exclusive || cfg.is_members_only);
+}
+
+/** Stable order within stage+grade+term+subject for sequence. */
+function sortLessonsForSequence(list) {
+  return [...list].sort((a, b) => {
+    const sa = a.sortOrder ?? a.sort_order ?? 0;
+    const sb = b.sortOrder ?? b.sort_order ?? 0;
+    if (sa !== sb) return sa - sb;
+    const ta = String(a.updatedAt || a.updated_at || "");
+    const tb = String(b.updatedAt || b.updated_at || "");
+    if (ta !== tb) return ta.localeCompare(tb);
+    return String(a.title || "").localeCompare(String(b.title || ""), "ar");
+  });
+}
+
+/**
+ * Lock kinds for lessons in one subject context.
+ * Priority per lesson: COMPLETED → ACCESS_LOCK (guest+exclusive) → SEQUENCE → CURRENT
+ * Exclusive+guest does not block sequence of later public lessons.
+ */
+function buildLessonLockStates(lessons, completedSet, isGuest) {
+  const ordered = sortLessonsForSequence(lessons || []);
+  let blockingIncomplete = false;
+  return ordered.map((lesson) => {
+    const id = String(lesson.id);
+    if (completedSet.has(id)) {
+      return { lesson, kind: "COMPLETED" };
+    }
+    if (isGuest && isLessonExclusive(lesson)) {
+      return { lesson, kind: "ACCESS_LOCK" };
+    }
+    if (blockingIncomplete) {
+      return { lesson, kind: "SEQUENCE_LOCK" };
+    }
+    blockingIncomplete = true;
+    return { lesson, kind: "CURRENT" };
+  });
+}
+
+function lessonLockUi(kind) {
+  switch (kind) {
+    case "COMPLETED":
+      return { mark: "✓", cta: "مكتمل", hint: "مكتمل" };
+    case "ACCESS_LOCK":
+      return { mark: "🔐", cta: "تسجيل الدخول مطلوب", hint: "تسجيل الدخول مطلوب" };
+    case "SEQUENCE_LOCK":
+      return { mark: "🔒", cta: "أكمل الدرس السابق أولًا", hint: "أكمل الدرس السابق أولًا" };
+    case "CURRENT":
+    default:
+      return { mark: "🔵", cta: "استكمال التعلم", hint: "متاح — استكمال التعلم" };
+  }
+}
+
+function readGuestGradeLocal() {
+  try {
+    const raw = localStorage.getItem(GUEST_GRADE_KEY);
+    if (!raw) return null;
+    const parsed = JSON.parse(raw);
+    if (!parsed || typeof parsed !== "object") return null;
+    const stage = typeof parsed.stage === "string" && parsed.stage.trim() ? parsed.stage.trim() : null;
+    const grade = typeof parsed.grade === "string" && parsed.grade.trim() ? parsed.grade.trim() : null;
+    if (!grade) return null;
+    return { stage, grade };
+  } catch {
+    return null;
+  }
+}
+
+function writeGuestGradeLocal(stage, grade) {
+  try {
+    if (!grade) {
+      localStorage.removeItem(GUEST_GRADE_KEY);
+      return;
+    }
+    localStorage.setItem(
+      GUEST_GRADE_KEY,
+      JSON.stringify({
+        stage: stage && String(stage).trim() ? String(stage).trim() : null,
+        grade: String(grade).trim(),
+      })
+    );
+  } catch {
+    /* ignore */
   }
 }
 
@@ -298,6 +423,10 @@ export default function StudentPlatform() {
   const [selectedGrade, setSelectedGrade] = useState("");
   const [selectedTerm, setSelectedTerm] = useState("");
   const [selectedSubject, setSelectedSubject] = useState("");
+  const [gradeMetaReady, setGradeMetaReady] = useState(false);
+  const [pickingGrade, setPickingGrade] = useState(false);
+  const [gradeSaveError, setGradeSaveError] = useState("");
+  const [gradeSaving, setGradeSaving] = useState(false);
 
   useEffect(() => {
     listPublishedLessons()
@@ -305,41 +434,123 @@ export default function StudentPlatform() {
       .catch(() => setError("تعذر تحميل الدروس المنشورة."));
   }, []);
 
+  useEffect(() => {
+    let cancelled = false;
+    async function loadGrade() {
+      setGradeMetaReady(false);
+      if (session === undefined) return;
+      if (session) {
+        try {
+          const meta = await getStudentGradeMeta();
+          if (cancelled) return;
+          if (meta.grade) {
+            setSelectedStage(meta.stage || "");
+            setSelectedGrade(meta.grade);
+            setPickingGrade(false);
+          } else {
+            setSelectedStage("");
+            setSelectedGrade("");
+            setPickingGrade(true);
+          }
+        } catch {
+          if (!cancelled) {
+            setSelectedStage("");
+            setSelectedGrade("");
+            setPickingGrade(true);
+          }
+        } finally {
+          if (!cancelled) setGradeMetaReady(true);
+        }
+      } else {
+        const local = readGuestGradeLocal();
+        if (local?.grade) {
+          setSelectedStage(local.stage || "");
+          setSelectedGrade(local.grade);
+          setPickingGrade(false);
+        } else {
+          setSelectedStage("");
+          setSelectedGrade("");
+          setPickingGrade(true);
+        }
+        setGradeMetaReady(true);
+      }
+    }
+    loadGrade();
+    return () => {
+      cancelled = true;
+    };
+  }, [session]);
+
+  useEffect(() => {
+    if (!pickingGrade || !lessons || !lessons.length) return;
+    if (selectedStage) return;
+    const stages = Array.from(new Set(lessons.map((l) => l.stage).filter(Boolean)));
+    if (stages.length === 1) {
+      setSelectedStage(stages[0]);
+    }
+  }, [pickingGrade, lessons, selectedStage]);
+
+  const gradeScopedLessons = useMemo(() => {
+    if (!lessons || !selectedGrade) return [];
+    let list = lessons.filter((l) => l.grade === selectedGrade);
+    if (selectedStage) list = list.filter((l) => l.stage === selectedStage);
+    return list;
+  }, [lessons, selectedStage, selectedGrade]);
+
   const availableStages = useMemo(() => {
     if (!lessons) return [];
-    return Array.from(new Set(lessons.map((l) => l.stage)));
+    return Array.from(new Set(lessons.map((l) => l.stage).filter(Boolean)));
   }, [lessons]);
 
   const availableGrades = useMemo(() => {
-    if (!lessons || !selectedStage) return [];
-    const list = lessons.filter((l) => l.stage === selectedStage);
-    return Array.from(new Set(list.map((l) => l.grade)));
+    if (!lessons) return [];
+    let list = lessons;
+    if (selectedStage) list = list.filter((l) => l.stage === selectedStage);
+    return Array.from(new Set(list.map((l) => l.grade).filter(Boolean)));
   }, [lessons, selectedStage]);
 
   const availableTerms = useMemo(() => {
-    if (!lessons || !selectedStage || !selectedGrade) return [];
-    const list = lessons.filter((l) => l.stage === selectedStage && l.grade === selectedGrade);
-    return Array.from(new Set(list.map((l) => l.term)));
-  }, [lessons, selectedStage, selectedGrade]);
+    if (!gradeScopedLessons.length) return [];
+    return Array.from(new Set(gradeScopedLessons.map((l) => l.term).filter(Boolean)));
+  }, [gradeScopedLessons]);
+
+  // Auto-select first available term for the current grade (field: lesson.term)
+  useEffect(() => {
+    if (pickingGrade || !selectedGrade) return;
+    if (!availableTerms.length) {
+      if (selectedTerm) setSelectedTerm("");
+      return;
+    }
+    if (selectedTerm && availableTerms.includes(selectedTerm)) return;
+    setSelectedTerm(availableTerms[0]);
+    setSelectedSubject("");
+  }, [pickingGrade, selectedGrade, availableTerms, selectedTerm]);
+
+  // Lessons for stage + grade + term only (term is the existing `term` column)
+  const termScopedLessons = useMemo(() => {
+    if (!gradeScopedLessons.length || !selectedTerm) return [];
+    return gradeScopedLessons.filter((l) => l.term === selectedTerm);
+  }, [gradeScopedLessons, selectedTerm]);
 
   const availableSubjects = useMemo(() => {
-    if (!lessons) return [];
-    let list = lessons;
-    if (selectedStage) list = list.filter((l) => l.stage === selectedStage);
-    if (selectedGrade) list = list.filter((l) => l.grade === selectedGrade);
-    if (selectedTerm) list = list.filter((l) => l.term === selectedTerm);
-    return Array.from(new Set(list.map((l) => l.subject)));
-  }, [lessons, selectedStage, selectedGrade, selectedTerm]);
+    if (!termScopedLessons.length) return [];
+    return Array.from(new Set(termScopedLessons.map((l) => l.subject).filter(Boolean)));
+  }, [termScopedLessons]);
 
   const filteredLessons = useMemo(() => {
-    if (!lessons) return [];
-    let list = lessons;
-    if (selectedStage) list = list.filter((l) => l.stage === selectedStage);
-    if (selectedGrade) list = list.filter((l) => l.grade === selectedGrade);
-    if (selectedTerm) list = list.filter((l) => l.term === selectedTerm);
+    if (!termScopedLessons.length) return [];
+    let list = termScopedLessons;
     if (selectedSubject) list = list.filter((l) => l.subject === selectedSubject);
     return list;
-  }, [lessons, selectedStage, selectedGrade, selectedTerm, selectedSubject]);
+  }, [termScopedLessons, selectedSubject]);
+
+  const completedLessonIds = useMemo(() => readCompletedLessonIds(), [lessons, filteredLessons]);
+
+  const sequentialLessons = useMemo(() => {
+    if (!selectedSubject || !filteredLessons.length) return [];
+    const isGuest = !session;
+    return buildLessonLockStates(filteredLessons, completedLessonIds, isGuest);
+  }, [filteredLessons, selectedSubject, completedLessonIds, session]);
 
   const progress = [
     !!selectedStage,
@@ -350,8 +561,10 @@ export default function StudentPlatform() {
 
   const localProgress = useMemo(() => readLocalProgress(), [lessons]);
   const continueLesson = useMemo(() => {
-    if (!lessons || !localProgress?.lessonId) return null;
-    const lesson = lessons.find((l) => String(l.id) === String(localProgress.lessonId));
+    // Prefer current term; fall back to any lesson in the grade
+    const pool = termScopedLessons.length ? termScopedLessons : gradeScopedLessons;
+    if (!pool.length || !localProgress?.lessonId) return null;
+    const lesson = pool.find((l) => String(l.id) === String(localProgress.lessonId));
     if (!lesson) return null;
     const sceneIdx =
       typeof localProgress.currentScene === "number"
@@ -361,19 +574,19 @@ export default function StudentPlatform() {
           : 0;
     const done = !!localProgress.lessonCompleted;
     return { lesson, sceneIdx, done };
-  }, [lessons, localProgress]);
+  }, [termScopedLessons, gradeScopedLessons, localProgress]);
+
+  const isLoggedIn = !!session;
+  // Progress counters are per selected term only — same subject name in another term is separate
   const progressBySubject = useMemo(() => {
-    if (!lessons || !lessons.length) return [];
-    // group published lessons by subject (within optional filters)
-    const base = filteredLessons.length ? filteredLessons : lessons;
+    if (!isLoggedIn || !selectedGrade || !selectedTerm || !termScopedLessons.length) return [];
+    const base = termScopedLessons;
     const map = {};
     for (const l of base) {
       const sub = l.subject || "أخرى";
       map[sub] = map[sub] || { subject: sub, total: 0, completed: 0 };
       map[sub].total += 1;
     }
-    // completed from local progress only for current continue lesson if marked done
-    // and scan v2 storage for lessonCompleted when same lessonId matches
     try {
       const raw = localStorage.getItem(PROGRESS_KEY);
       if (raw) {
@@ -388,23 +601,75 @@ export default function StudentPlatform() {
       }
     } catch (_) {}
     return Object.values(map).sort((a, b) => a.subject.localeCompare(b.subject, "ar"));
-  }, [lessons, filteredLessons]);
+  }, [isLoggedIn, selectedGrade, selectedTerm, termScopedLessons]);
 
   const recentLessons = useMemo(() => {
-    if (!lessons || !lessons.length) return [];
-    const sorted = [...lessons].sort((a, b) => {
+    if (!termScopedLessons.length) return [];
+    const sorted = [...termScopedLessons].sort((a, b) => {
       const ta = a.updatedAt || a.updated_at || "";
       const tb = b.updatedAt || b.updated_at || "";
       return String(tb).localeCompare(String(ta));
     });
     return sorted.slice(0, 4);
-  }, [lessons]);
+  }, [termScopedLessons]);
 
   const studentName =
     session?.user?.user_metadata?.full_name ||
     session?.user?.user_metadata?.name ||
     session?.user?.email?.split("@")[0] ||
     "طالب";
+
+  async function persistGradeChoice(stage, grade) {
+    setGradeSaveError("");
+    setGradeSaving(true);
+    try {
+      if (session) {
+        await saveStudentGradeMeta(stage || null, grade);
+      } else {
+        writeGuestGradeLocal(stage || null, grade);
+      }
+      setSelectedStage(stage || "");
+      setSelectedGrade(grade);
+      setSelectedTerm("");
+      setSelectedSubject("");
+      setPickingGrade(false);
+    } catch (err) {
+      setGradeSaveError("تعذر حفظ الصف. حاول مرة أخرى.");
+      console.warn("persistGradeChoice:", err);
+    } finally {
+      setGradeSaving(false);
+    }
+  }
+
+  function openChangeGrade() {
+    setMenuOpen(false);
+    setPickingGrade(true);
+    setGradeSaveError("");
+  }
+
+  async function cancelGradePick() {
+    setGradeSaveError("");
+    if (session) {
+      try {
+        const meta = await getStudentGradeMeta();
+        setSelectedStage(meta.stage || "");
+        setSelectedGrade(meta.grade || "");
+        setPickingGrade(!meta.grade);
+      } catch {
+        setPickingGrade(false);
+      }
+    } else {
+      const local = readGuestGradeLocal();
+      if (local?.grade) {
+        setSelectedStage(local.stage || "");
+        setSelectedGrade(local.grade);
+        setPickingGrade(false);
+      } else {
+        setPickingGrade(true);
+      }
+    }
+  }
+
 
   return (
     <div className="md-platform">
@@ -417,7 +682,14 @@ export default function StudentPlatform() {
               <span className="text-xs font-bold hidden sm:inline" style={{ color: "#22291F" }}>{studentName}</span>
             </button>
             {menuOpen && (
-              <div className="absolute left-0 mt-2 w-48 rounded-2xl bg-white shadow-lg py-2 z-50 dir-rtl text-right" style={{ border: "1px solid #DED4BD" }}>
+              <div className="absolute left-0 mt-2 w-52 rounded-2xl bg-white shadow-lg py-2 z-50 dir-rtl text-right" style={{ border: "1px solid #DED4BD" }}>
+                <button type="button" className="w-full text-right px-4 py-2 text-xs font-bold" style={{ color: "#10665A" }}
+                  onClick={openChangeGrade}>تغيير الصف الدراسي</button>
+                {selectedGrade ? (
+                  <p className="px-4 pb-2 text-[11px]" style={{ color: "#8A8570" }}>
+                    الحالي: {selectedStage ? selectedStage + " · " : ""}{selectedGrade}
+                  </p>
+                ) : null}
                 <button type="button" className="w-full text-right px-4 py-2 text-xs" style={{ color: "#C53030" }}
                   onClick={async () => { setMenuOpen(false); try { await signOut(); } catch (_) {} }}>تسجيل الخروج</button>
               </div>
@@ -459,8 +731,80 @@ export default function StudentPlatform() {
   <p>رحلة تعليمية منظمة: فهم المحتوى، ربط الأفكار، المراجعة، ثم التحقق من فهمك — بأسلوب تفاعلي ومرئي.</p>
 </header>
 
-        {/* لوحة متابعة بسيطة من البيانات المحلية + الدروس المنشورة */}
-        {lessons && lessons.length > 0 && (
+        {/* اختيار المرحلة والصف (أول مرة أو تغيير الصف) */}
+        {lessons && lessons.length > 0 && gradeMetaReady && pickingGrade && (
+          <section className="md-dashboard mb-6" aria-label="اختيار الصف الدراسي">
+            <div className="rounded-2xl p-5 bg-white shadow-sm" style={{ border: "1px solid #DED4BD" }}>
+              <h2 className="font-black text-base mb-1" style={{ color: "#10665A" }}>اختر صفك الدراسي</h2>
+              <p className="text-xs mb-4" style={{ color: "#8A8570" }}>
+                سنعرض لك الدروس الخاصة بصفك فقط. يمكنك تغيير الصف لاحقًا من قائمة الحساب.
+              </p>
+              {availableStages.length > 1 && (
+                <div className="mb-4">
+                  <p className="text-xs font-bold mb-2" style={{ color: "#5C5A4A" }}>المرحلة الدراسية</p>
+                  <div className="md-chips">
+                    {availableStages.map((st) => (
+                      <button
+                        key={st}
+                        type="button"
+                        className={`md-chip ${selectedStage === st ? "selected" : ""}`}
+                        disabled={gradeSaving}
+                        onClick={() => {
+                          setSelectedStage(st);
+                          setSelectedGrade("");
+                        }}
+                      >
+                        {st}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+              )}
+              {(selectedStage || availableStages.length <= 1) && (
+                <div>
+                  <p className="text-xs font-bold mb-2" style={{ color: "#5C5A4A" }}>الصف الدراسي</p>
+                  {availableGrades.length === 0 ? (
+                    <p className="md-empty">لا توجد صفوف منشورة لهذه المرحلة حالياً.</p>
+                  ) : (
+                    <div className="md-chips">
+                      {availableGrades.map((g) => (
+                        <button
+                          key={g}
+                          type="button"
+                          className={`md-chip ${selectedGrade === g ? "selected" : ""}`}
+                          disabled={gradeSaving}
+                          onClick={() => persistGradeChoice(selectedStage || (availableStages.length === 1 ? availableStages[0] : ""), g)}
+                        >
+                          {g}
+                        </button>
+                      ))}
+                    </div>
+                  )}
+                </div>
+              )}
+              {gradeSaveError && (
+                <p className="text-xs mt-3" style={{ color: "#C53030" }}>{gradeSaveError}</p>
+              )}
+              {gradeSaving && (
+                <p className="text-xs mt-3" style={{ color: "#8A8570" }}>جاري الحفظ...</p>
+              )}
+              {selectedGrade && (
+                <button
+                  type="button"
+                  className="mt-4 text-xs font-bold"
+                  style={{ color: "#8A8570" }}
+                  disabled={gradeSaving}
+                  onClick={cancelGradePick}
+                >
+                  إلغاء والبقاء على الصف الحالي
+                </button>
+              )}
+            </div>
+          </section>
+        )}
+
+        {/* لوحة متابعة — فقط بعد تحديد الصف، ومحتوى الصف فقط */}
+        {lessons && lessons.length > 0 && selectedGrade && !pickingGrade && (
           <section className="md-dashboard mb-6" aria-label="متابعة التعلم">
             {continueLesson && (
               <div
@@ -505,10 +849,12 @@ export default function StudentPlatform() {
                 </div>
               </div>
             )}
-          
-            {progressBySubject.length > 0 && (
+
+            {progressBySubject.length > 0 && selectedTerm && (
               <div className="mt-4">
-                <p className="text-xs font-bold mb-2" style={{ color: "#8A8570" }}>تقدّم الأقسام (من الدروس المنشورة)</p>
+                <p className="text-xs font-bold mb-2" style={{ color: "#8A8570" }}>
+                  تقدّم الأقسام · {selectedTerm}
+                </p>
                 <div className="grid sm:grid-cols-2 gap-2">
                   {progressBySubject.map((row) => {
                     const pct = row.total ? Math.round((row.completed / row.total) * 100) : 0;
@@ -525,7 +871,7 @@ export default function StudentPlatform() {
                 </div>
               </div>
             )}
-</section>
+          </section>
         )}
 
         {error && (
@@ -555,111 +901,64 @@ export default function StudentPlatform() {
           </div>
         )}
 
-        {lessons !== null && (
+        {lessons !== null && selectedGrade && !pickingGrade && (
           <div className="md-journey">
-            {/* Step 1 */}
+            <div className="mb-3 flex flex-wrap items-center gap-2 text-xs" style={{ color: "#5C5A4A" }}>
+              <span className="font-bold" style={{ color: "#10665A" }}>
+                {selectedStage ? selectedStage + " · " : ""}{selectedGrade}
+              </span>
+              <button
+                type="button"
+                className="font-bold underline-offset-2 hover:underline"
+                style={{ color: "#8A8570" }}
+                onClick={() => setPickingGrade(true)}
+              >
+                تغيير الصف
+              </button>
+            </div>
+
             <StepRow
               number={1}
-              done={!!selectedStage}
-              active={!selectedStage}
-              label="المرحلة الدراسية"
+              done={!!selectedTerm}
+              active={!selectedTerm}
+              label="الفصل الدراسي"
             >
-              {availableStages.length === 0 ? (
-                <p className="md-empty">لا توجد دروس منشورة حالياً. عد لاحقاً أو جرّب تصفية أخرى.</p>
+              {availableTerms.length === 0 ? (
+                <p className="md-empty">لا توجد فصول دراسية منشورة لهذا الصف حالياً.</p>
               ) : (
                 <div className="md-chips">
-                  {availableStages.map((st) => (
+                  {availableTerms.map((t) => (
                     <button
-                      key={st}
-                      className={`md-chip ${selectedStage === st ? "selected" : ""}`}
+                      key={t}
+                      type="button"
+                      className={`md-chip ${selectedTerm === t ? "selected" : ""}`}
                       onClick={() => {
-                        setSelectedStage(st);
-                        setSelectedGrade("");
-                        setSelectedTerm("");
+                        setSelectedTerm(t);
                         setSelectedSubject("");
                       }}
                     >
-                      {st}
+                      {t}
                     </button>
                   ))}
                 </div>
               )}
             </StepRow>
 
-            {/* Step 2 */}
-            {selectedStage && (
-              <StepRow
-                number={2}
-                done={!!selectedGrade}
-                active={!selectedGrade}
-                label="الصف الدراسي"
-              >
-                {availableGrades.length === 0 ? (
-                  <p className="md-empty">لا توجد صفوف متاحة لهذه المرحلة حالياً.</p>
-                ) : (
-                  <div className="md-chips">
-                    {availableGrades.map((g) => (
-                      <button
-                        key={g}
-                        className={`md-chip ${selectedGrade === g ? "selected" : ""}`}
-                        onClick={() => {
-                          setSelectedGrade(g);
-                          setSelectedTerm("");
-                          setSelectedSubject("");
-                        }}
-                      >
-                        {g}
-                      </button>
-                    ))}
-                  </div>
-                )}
-              </StepRow>
-            )}
-
-            {/* Step 3 */}
-            {selectedGrade && (
-              <StepRow
-                number={3}
-                done={!!selectedTerm}
-                active={!selectedTerm}
-                label="الفصل الدراسي"
-              >
-                {availableTerms.length === 0 ? (
-                  <p className="md-empty">لا توجد فصول دراسية منشورة لهذا الصف حالياً.</p>
-                ) : (
-                  <div className="md-chips">
-                    {availableTerms.map((t) => (
-                      <button
-                        key={t}
-                        className={`md-chip ${selectedTerm === t ? "selected" : ""}`}
-                        onClick={() => {
-                          setSelectedTerm(t);
-                          setSelectedSubject("");
-                        }}
-                      >
-                        {t}
-                      </button>
-                    ))}
-                  </div>
-                )}
-              </StepRow>
-            )}
-
-            {/* Step 4 */}
             {selectedTerm && (
               <StepRow
-                number={4}
+                number={2}
                 done={!!selectedSubject}
                 active={!selectedSubject}
                 label="المادة الدراسية"
               >
                 {availableSubjects.length === 0 ? (
-                  <p className="md-empty">لا توجد مواد دراسية منشورة لهذه المرحلة حالياً.</p>
+                  <p className="md-empty">لا توجد مواد دراسية منشورة لهذا الصف حالياً.</p>
                 ) : (
                   <div className="md-chips">
                     {availableSubjects.map((sub) => (
                       <button
                         key={sub}
+                        type="button"
                         className={`md-chip ${selectedSubject === sub ? "selected" : ""}`}
                         onClick={() => setSelectedSubject(sub)}
                       >
@@ -671,7 +970,6 @@ export default function StudentPlatform() {
               </StepRow>
             )}
 
-            {/* Lessons */}
             {selectedSubject && (
               <section className="md-lessons">
                 <div className="md-lessons-header">
@@ -683,31 +981,56 @@ export default function StudentPlatform() {
                   <p className="md-empty">لا توجد دروس منشورة حالياً في هذه المادة.</p>
                 ) : (
                   <div className="md-lessons-grid">
-                    {filteredLessons.map((l) => (
+                    {sequentialLessons.map(({ lesson: l, kind }) => {
+                      const ui = lessonLockUi(kind);
+                      const lockedSeq = kind === "SEQUENCE_LOCK";
+                      const lockedAccess = kind === "ACCESS_LOCK";
+                      const openLesson = () => {
+                        if (lockedSeq) return;
+                        if (lockedAccess) {
+                          setAuthOpen(true);
+                          return;
+                        }
+                        navigate(`/student/lesson/${l.id}`);
+                      };
+                      return (
                       <article
                         key={l.id}
-                        className="md-lesson-card"
+                        className={`md-lesson-card${lockedSeq ? " md-lesson-locked" : ""}`}
                         role="button"
-                        tabIndex={0}
-                        onClick={() => navigate(`/student/lesson/${l.id}`)}
+                        tabIndex={lockedSeq ? -1 : 0}
+                        title={ui.hint}
+                        aria-disabled={lockedSeq}
+                        onClick={openLesson}
                         onKeyDown={(e) => {
                           if (e.key === "Enter" || e.key === " ") {
                             e.preventDefault();
-                            navigate(`/student/lesson/${l.id}`);
+                            openLesson();
                           }
                         }}
+                        style={
+                          lockedSeq
+                            ? { opacity: 0.72, cursor: "not-allowed" }
+                            : lockedAccess
+                              ? { cursor: "pointer", borderColor: "rgba(183, 122, 32, 0.45)" }
+                              : undefined
+                        }
                       >
                         <div className="md-lesson-glow" />
                         <div className="md-lesson-body">
-                          <h3>{l.title}</h3>
+                          <div className="flex items-center gap-2 mb-1 flex-wrap">
+                            <span className="text-sm" aria-hidden="true">{ui.mark}</span>
+                            <h3 style={{ margin: 0 }}>{l.title}</h3>
+                          </div>
                           <p>{l.description || "درس تعليمي شامل مع خريطة ذهنية وأسئلة تفاعلية."}</p>
-                          <div className="md-lesson-cta">
-                            ابدأ الدرس
-                            <span>→</span>
+                          <div className="md-lesson-cta" style={lockedSeq ? { color: "#8A8570" } : lockedAccess ? { color: "#B77A20" } : undefined}>
+                            {ui.cta}
+                            {!lockedSeq ? <span>→</span> : null}
                           </div>
                         </div>
                       </article>
-                    ))}
+                      );
+                    })}
                   </div>
                 )}
               </section>

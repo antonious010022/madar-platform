@@ -21,6 +21,7 @@ import {
   listCurriculumNodes,
   listCompletionTemplates,
   updateLessonJourney,
+  setLessonMembersOnly,
 } from "../lib/db";
 
 const AUTOSAVE_DELAY = 800;
@@ -370,6 +371,48 @@ export default function TeacherStudioPage() {
             </select>
           </div>
 
+          {/* وصول الدرس — Access Lock على مستوى الدرس (journey_config.isMembersOnly) */}
+          <div className="mb-4 p-3 rounded-xl" style={{ background: "#FAF6ED", border: "1px solid #DED4BD" }}>
+            <p className="text-xs font-bold mb-2" style={{ color: "#10665A" }}>الوصول إلى الدرس</p>
+            <label className="text-xs flex items-center gap-2 cursor-pointer mb-1">
+              <input
+                type="radio"
+                name="lesson-access"
+                checked={!(lesson.isMembersOnly || lesson.journeyConfig?.isMembersOnly)}
+                onChange={async () => {
+                  try {
+                    const cfg = await setLessonMembersOnly(lesson.id, false, lesson.journeyConfig || {});
+                    setLesson((prev) => ({ ...prev, journeyConfig: cfg, isMembersOnly: false }));
+                    setSaveStatus("saved");
+                  } catch {
+                    setSaveStatus("error");
+                  }
+                }}
+              />
+              🌍 متاح للجميع
+            </label>
+            <label className="text-xs flex items-center gap-2 cursor-pointer">
+              <input
+                type="radio"
+                name="lesson-access"
+                checked={!!(lesson.isMembersOnly || lesson.journeyConfig?.isMembersOnly)}
+                onChange={async () => {
+                  try {
+                    const cfg = await setLessonMembersOnly(lesson.id, true, lesson.journeyConfig || {});
+                    setLesson((prev) => ({ ...prev, journeyConfig: cfg, isMembersOnly: true }));
+                    setSaveStatus("saved");
+                  } catch {
+                    setSaveStatus("error");
+                  }
+                }}
+              />
+              🔐 للمستخدمين المسجّلين فقط
+            </label>
+            <p className="text-[11px] mt-2" style={{ color: "#8A8570" }}>
+              عند التفعيل، الزائر (Guest) يرى قفل تسجيل الدخول وليس «أكمل الدرس السابق».
+            </p>
+          </div>
+
           <label className="block mb-4">
             <span className="block text-xs mb-1 font-bold" style={{ color: "#8A8570" }}>فيديو الدرس (YouTube — اختياري)</span>
             <input className="ts-input text-xs w-full" type="url" placeholder="https://www.youtube.com/watch?v=..."
@@ -398,7 +441,7 @@ export default function TeacherStudioPage() {
               }}
             >
               <span className="truncate">
-                {(s.isMembersOnly || s.is_members_only) ? "🔒 " : ""}
+                {(s.isMembersOnly || s.is_members_only) ? "🔐 " : ""}
                 {(SCENE_TYPES.find((x) => x.key === (s.sceneType || s.scene_type)) || {}).icon || ""} {s.title}
               </span>
               {lesson.scenes.length > 1 && (

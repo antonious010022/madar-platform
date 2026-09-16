@@ -2,7 +2,7 @@ import { useEffect, useState, useCallback, useMemo } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 import { getLessonWithScenes, signOut, listCompletionTemplates } from "../lib/db";
 import { useAuth } from "../lib/hooks";
-import { StudentView } from "../components/Viewer";
+import { StudentView, isLessonMembersOnly } from "../components/Viewer";
 import Footer from "../components/Footer";
 import AuthModal, { GuestWelcomeBanner, LetterAvatar } from "../components/AuthModal";
 
@@ -247,6 +247,64 @@ export default function StudentLessonPage() {
       : progress.view === "final"
         ? "المراجعة النهائية"
         : `المشهد ${Math.min(progress.currentScene + 1, sceneCount)} من ${sceneCount}`;
+
+  // Lesson-level Access Lock: exclusive lesson + guest → login required (not sequence message)
+  const lessonAccessLocked =
+    !!lesson &&
+    isLessonMembersOnly(lesson) &&
+    session === null; // explicit guest (undefined = still loading auth)
+
+  if (lessonAccessLocked) {
+    return (
+      <div className="min-h-screen flex flex-col" style={{ background: "#FAF6ED" }}>
+        <div
+          className="bg-white px-4 sm:px-6 py-3 border-b flex justify-between items-center gap-2 flex-wrap"
+          style={{ borderColor: "#DED4BD" }}
+        >
+          <button onClick={() => navigate("/student")} className="text-sm font-bold" style={{ color: "#10665A" }}>
+            ← العودة لقائمة الدروس
+          </button>
+          <span className="text-xs font-medium truncate max-w-[40%]" style={{ color: "#8A8570" }}>
+            {lesson?.title || "منصة الطالب التعليمية"}
+          </span>
+          <button
+            type="button"
+            onClick={() => setAuthOpen(true)}
+            className="text-xs font-bold px-3 py-1.5 rounded-xl text-white"
+            style={{ background: "#10665A" }}
+          >
+            تسجيل الدخول
+          </button>
+        </div>
+        <div className="flex-1 flex items-center justify-center p-6">
+          <div className="max-w-md w-full rounded-3xl p-8 text-center bg-white shadow-sm dir-rtl" style={{ border: "1px solid #DED4BD" }}>
+            <p className="text-4xl mb-3">🔐</p>
+            <p className="font-black text-lg mb-2" style={{ color: "#10665A" }}>تسجيل الدخول مطلوب</p>
+            <p className="text-sm mb-6" style={{ color: "#5C5A4A" }}>
+              هذا الدرس حصري للمستخدمين المسجّلين. سجّل دخولك للوصول إليه.
+            </p>
+            <button
+              type="button"
+              onClick={() => setAuthOpen(true)}
+              className="w-full px-5 py-3 rounded-2xl text-sm font-bold text-white"
+              style={{ background: "#10665A" }}
+            >
+              تسجيل الدخول / إنشاء حساب
+            </button>
+            <button
+              type="button"
+              onClick={() => navigate("/student")}
+              className="w-full mt-2 px-5 py-2 rounded-2xl text-xs font-bold"
+              style={{ color: "#8A8570" }}
+            >
+              ← العودة لقائمة الدروس
+            </button>
+          </div>
+        </div>
+        <AuthModal open={authOpen} onClose={() => setAuthOpen(false)} />
+      </div>
+    );
+  }
 
   return (
     <div className="min-h-screen flex flex-col" style={{ background: "#FAF6ED" }}>

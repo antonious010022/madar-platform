@@ -120,6 +120,31 @@ export async function isStaffUser() {
   return role === "teacher" || role === "admin";
 }
 
+/** Read student_stage / student_grade from the current user's Auth metadata. */
+export async function getStudentGradeMeta() {
+  const { data, error } = await supabase.auth.getUser();
+  if (error || !data?.user) return { stage: null, grade: null };
+  const meta = data.user.user_metadata || {};
+  const stage = typeof meta.student_stage === "string" && meta.student_stage.trim()
+    ? meta.student_stage.trim()
+    : null;
+  const grade = typeof meta.student_grade === "string" && meta.student_grade.trim()
+    ? meta.student_grade.trim()
+    : null;
+  return { stage, grade };
+}
+
+/** Persist student_stage / student_grade on the current user's Auth metadata only. */
+export async function saveStudentGradeMeta(stage, grade) {
+  const payload = {
+    student_stage: stage && String(stage).trim() ? String(stage).trim() : null,
+    student_grade: grade && String(grade).trim() ? String(grade).trim() : null,
+  };
+  const { data, error } = await supabase.auth.updateUser({ data: payload });
+  if (error) throw error;
+  return data?.user ?? null;
+}
+
 export function onAuthStateChange(callback) {
   const { data } = supabase.auth.onAuthStateChange((event, session) => {
     callback(session ?? null, event);
@@ -260,6 +285,14 @@ function sceneAppToRow(scene) {
 }
 
 function lessonRowToApp(row, scenes) {
+  const journeyConfig =
+    row.journey_config && typeof row.journey_config === "object" ? { ...row.journey_config } : {};
+  // Lesson-level exclusive for registered users only — stored inside existing journey_config JSON (no new column)
+  const isMembersOnly = !!(
+    journeyConfig.isMembersOnly ||
+    journeyConfig.exclusive ||
+    journeyConfig.is_members_only
+  );
   return {
     id: row.id,
     ownerId: row.owner_id,
@@ -271,7 +304,9 @@ function lessonRowToApp(row, scenes) {
     description: row.description,
     status: row.status,
     youtubeUrl: row.youtube_url || "",
-    journeyConfig: row.journey_config && typeof row.journey_config === "object" ? row.journey_config : {},
+    journeyConfig,
+    /** Lesson requires login (Access Lock). Persisted as journey_config.isMembersOnly */
+    isMembersOnly,
     sortOrder: row.sort_order ?? 0,
     updatedAt: row.updated_at,
     scenes: scenes ? scenes.map(sceneRowToApp) : undefined,
@@ -794,4 +829,17 @@ export async function updateLessonJourney(lessonId, journeyConfig) {
     .update({ journey_config: journeyConfig || {}, updated_at: new Date().toISOString() })
     .eq("id", lessonId);
   if (error) throw error;
+}
+
+/**
+ * Toggle lesson-level Access Lock (registered users only).
+ * Uses existing journey_config JSON — no schema change.
+ */
+export async function setLessonMembersOnly(lessonId, isMembersOnly, currentJourneyConfig = {}) {
+  const cfg = {
+    ...(currentJourneyConfig && typeof currentJourneyConfig === "object" ? currentJourneyConfig : {}),
+    isMembersOnly: !!isMembersOnly,
+  };
+  await updateLessonJourney(lessonId, cfg);
+  return cfg;
 }
