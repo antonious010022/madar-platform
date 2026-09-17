@@ -100,6 +100,71 @@ export default function StudentLessonPage() {
     if (lesson && id) saveProgress(id, progress);
   }, [id, lesson, progress]);
 
+  // SEO: dynamic <title>, <meta name="description"> و <link rel="canonical"> لصفحة الدرس.
+  // يعمل فقط عند توفر بيانات درس فعلية (lesson !== null && lesson !== false).
+  // يُعيد كل قيمة إلى حالتها السابقة عند المغادرة أو تغيير الدرس (cleanup).
+  useEffect(() => {
+    if (!lesson) return;
+
+    const prevTitle = document.title;
+    if (lesson.title) {
+      document.title = `${lesson.title} | مَدَار`;
+    }
+
+    let metaDescription = document.querySelector('meta[name="description"]');
+    const createdMeta = !metaDescription;
+    if (!metaDescription) {
+      metaDescription = document.createElement("meta");
+      metaDescription.setAttribute("name", "description");
+      document.head.appendChild(metaDescription);
+    }
+    const prevDescriptionContent = metaDescription.getAttribute("content");
+    const descriptionText =
+      lesson.description && lesson.description.trim()
+        ? lesson.description.trim()
+        : lesson.title
+          ? `تعلّم درس "${lesson.title}" على منصة مَدَار التعليمية.`
+          : null;
+    if (descriptionText) {
+      metaDescription.setAttribute("content", descriptionText);
+    }
+
+    let canonicalLink = document.querySelector('link[rel="canonical"]');
+    const createdCanonical = !canonicalLink;
+    if (!canonicalLink) {
+      canonicalLink = document.createElement("link");
+      canonicalLink.setAttribute("rel", "canonical");
+      document.head.appendChild(canonicalLink);
+    }
+    const prevCanonicalHref = canonicalLink.getAttribute("href");
+    if (id) {
+      canonicalLink.setAttribute(
+        "href",
+        `https://madar-platform-five.vercel.app/student/lesson/${id}`
+      );
+    }
+
+    return () => {
+      document.title = prevTitle;
+
+      if (createdMeta) {
+        metaDescription.remove();
+      } else if (prevDescriptionContent !== null) {
+        metaDescription.setAttribute("content", prevDescriptionContent);
+      } else {
+        metaDescription.removeAttribute("content");
+      }
+
+      if (createdCanonical) {
+        canonicalLink.remove();
+      } else if (prevCanonicalHref !== null) {
+        canonicalLink.setAttribute("href", prevCanonicalHref);
+      } else {
+        canonicalLink.removeAttribute("href");
+      }
+    };
+  }, [lesson, id]);
+
   const sceneCount = lesson?.scenes?.length || 0;
 
   const setCurrentScene = useCallback((i) => {
