@@ -55,7 +55,7 @@ async function supabaseGet(path, url, key) {
   return res.json();
 }
 
-module.exports = async function handler(req, res) {
+export default async function handler(req, res) {
   if (req.method && req.method !== "GET" && req.method !== "HEAD") {
     res.statusCode = 405;
     res.setHeader("Allow", "GET, HEAD");
