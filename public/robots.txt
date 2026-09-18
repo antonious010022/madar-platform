@@ -2,3 +2,5 @@ User-agent: *
 Allow: /
 
 Disallow: /teacher/
+
+Sitemap: https://madar-platform-five.vercel.app/sitemap.xml

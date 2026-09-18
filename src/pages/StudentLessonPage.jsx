@@ -1,12 +1,45 @@
 import { useEffect, useState, useCallback, useMemo } from "react";
-import { useNavigate, useParams } from "react-router-dom";
+import { useNavigate, useParams, useLocation } from "react-router-dom";
 import { getLessonWithScenes, signOut, listCompletionTemplates } from "../lib/db";
 import { useAuth } from "../lib/hooks";
 import { StudentView, isLessonMembersOnly } from "../components/Viewer";
 import Footer from "../components/Footer";
 import AuthModal, { GuestWelcomeBanner, LetterAvatar } from "../components/AuthModal";
+import { slugify } from "../lib/slugify";
 
 const PROGRESS_KEY = "ts_student_progress_v2";
+// Same origin already used for canonical links elsewhere in this project.
+const SITE_ORIGIN = "https://madar-platform-five.vercel.app";
+
+/** Resolves the slug to use in the lesson's URL: the teacher-controlled
+ * seo_slug when set, otherwise one derived from the lesson title. Always
+ * re-run through slugify() even when seo_slug is already set, so a slug
+ * saved before validation existed (or edited directly in the DB) still
+ * produces a safe URL segment. Cosmetic only — never used for lookup. */
+function lessonSlug(lesson) {
+  const raw = (lesson?.seoSlug && lesson.seoSlug.trim()) || lesson?.title || "";
+  return slugify(raw);
+}
+
+/** Builds the SEO-friendly lesson path. lesson.id is always the real lookup key —
+ * the slug is cosmetic only, so an empty/unslugifiable title still yields a valid path. */
+function lessonPath(lesson) {
+  const slug = lessonSlug(lesson);
+  return slug ? `/lessons/${lesson.id}/${slug}` : `/lessons/${lesson.id}`;
+}
+
+/** Effective SEO title/description/language with the documented fallback chain:
+ * seo_* field when set → lesson.title/description → a generated description
+ * as a last resort (never invents facts, only wraps the existing title). */
+function resolveSeo(lesson) {
+  const title = (lesson.seoTitle && lesson.seoTitle.trim()) || lesson.title || "";
+  const description =
+    (lesson.seoDescription && lesson.seoDescription.trim()) ||
+    (lesson.description && lesson.description.trim()) ||
+    (lesson.title ? `تعلّم درس "${lesson.title}" على منصة مَدَار التعليمية.` : "");
+  const language = lesson.seoLanguage || "ar";
+  return { title, description: description || null, language };
+}
 
 function defaultProgress() {
   return {
@@ -67,8 +100,9 @@ function displayName(session) {
 }
 
 export default function StudentLessonPage() {
-  const { id } = useParams();
+  const { id, slug: slugParam } = useParams();
   const navigate = useNavigate();
+  const location = useLocation();
   const session = useAuth();
   const [lesson, setLesson] = useState(null);
   const [authOpen, setAuthOpen] = useState(false);
@@ -100,34 +134,68 @@ export default function StudentLessonPage() {
     if (lesson && id) saveProgress(id, progress);
   }, [id, lesson, progress]);
 
-  // SEO: dynamic <title>, <meta name="description"> و <link rel="canonical"> لصفحة الدرس.
+  // URL freshening: lesson.id is always the real lookup key — the slug segment
+  // is cosmetic — so an outdated or missing slug never breaks access; it's just
+  // silently corrected in the address bar (replace, no history entry).
+  useEffect(() => {
+    if (!lesson || !id) return;
+
+    // Legacy URL: /student/lesson/:id → /lessons/:id/:slug
+    if (location.pathname.startsWith("/student/lesson/")) {
+      navigate(lessonPath(lesson), { replace: true });
+      return;
+    }
+
+    // Slug drifted (e.g. seo_slug or title changed since a link was shared/indexed):
+    // the lesson still loaded fine by id — just freshen the visible slug segment.
+    const canonicalSlug = lessonSlug(lesson);
+    if (location.pathname.startsWith("/lessons/") && slugParam !== undefined && slugParam !== canonicalSlug) {
+      navigate(lessonPath(lesson), { replace: true });
+    }
+  }, [lesson, id, slugParam, location.pathname, navigate]);
+
+  // SEO: dynamic <title>, <meta name="description">، canonical، Open Graph،
+  // Twitter Card، robots (noindex للدروس غير المنشورة) و JSON-LD (LearningResource).
   // يعمل فقط عند توفر بيانات درس فعلية (lesson !== null && lesson !== false).
   // يُعيد كل قيمة إلى حالتها السابقة عند المغادرة أو تغيير الدرس (cleanup).
   useEffect(() => {
     if (!lesson) return;
 
+    const seo = resolveSeo(lesson);
+
     const prevTitle = document.title;
-    if (lesson.title) {
-      document.title = `${lesson.title} | مَدَار`;
+    if (seo.title) {
+      document.title = `${seo.title} | مَدَار`;
     }
 
-    let metaDescription = document.querySelector('meta[name="description"]');
-    const createdMeta = !metaDescription;
-    if (!metaDescription) {
-      metaDescription = document.createElement("meta");
-      metaDescription.setAttribute("name", "description");
-      document.head.appendChild(metaDescription);
+    // SEO-only language signal for this page (crawlers/screen readers).
+    // Does NOT touch the platform's own UI language/RTL layout.
+    const prevLang = document.documentElement.getAttribute("lang");
+    document.documentElement.setAttribute("lang", seo.language);
+
+    // Generic helper: create-or-update a <meta> tag identified by attrName="value",
+    // returning enough info to restore/remove it on cleanup.
+    function upsertMeta(attrName, attrValue, content) {
+      let el = document.querySelector(`meta[${attrName}="${attrValue}"]`);
+      const created = !el;
+      if (!el) {
+        el = document.createElement("meta");
+        el.setAttribute(attrName, attrValue);
+        document.head.appendChild(el);
+      }
+      const prevContent = el.getAttribute("content");
+      if (content !== null && content !== undefined) {
+        el.setAttribute("content", content);
+      }
+      return { el, created, prevContent };
     }
-    const prevDescriptionContent = metaDescription.getAttribute("content");
-    const descriptionText =
-      lesson.description && lesson.description.trim()
-        ? lesson.description.trim()
-        : lesson.title
-          ? `تعلّم درس "${lesson.title}" على منصة مَدَار التعليمية.`
-          : null;
-    if (descriptionText) {
-      metaDescription.setAttribute("content", descriptionText);
-    }
+
+    const descriptionText = seo.description;
+
+    const metaDescriptionState = upsertMeta("name", "description", descriptionText);
+
+    const canonicalPath = lessonPath(lesson);
+    const canonicalUrl = `${SITE_ORIGIN}${canonicalPath}`;
 
     let canonicalLink = document.querySelector('link[rel="canonical"]');
     const createdCanonical = !canonicalLink;
@@ -138,22 +206,74 @@ export default function StudentLessonPage() {
     }
     const prevCanonicalHref = canonicalLink.getAttribute("href");
     if (id) {
-      canonicalLink.setAttribute(
-        "href",
-        `https://madar-platform-five.vercel.app/student/lesson/${id}`
-      );
+      canonicalLink.setAttribute("href", canonicalUrl);
     }
+
+    // Open Graph
+    const ogTitleState = upsertMeta("property", "og:title", seo.title || null);
+    const ogDescriptionState = upsertMeta("property", "og:description", descriptionText);
+    const ogTypeState = upsertMeta("property", "og:type", "article");
+    const ogUrlState = upsertMeta("property", "og:url", canonicalUrl);
+
+    // Twitter Card
+    const twitterCardState = upsertMeta("name", "twitter:card", "summary");
+    const twitterTitleState = upsertMeta("name", "twitter:title", seo.title || null);
+    const twitterDescriptionState = upsertMeta("name", "twitter:description", descriptionText);
+
+    // Robots: noindex الدروس غير المنشورة (لا تغيّر صلاحيات الوصول، فقط الفهرسة).
+    let robotsState = null;
+    if (lesson.status !== "Published") {
+      robotsState = upsertMeta("name", "robots", "noindex,nofollow");
+    } else {
+      robotsState = upsertMeta("name", "robots", "index,follow");
+    }
+
+    // Structured Data: LearningResource JSON-LD — بيانات الدرس المتوفرة فعلًا فقط.
+    const ldJson = {
+      "@context": "https://schema.org",
+      "@type": "LearningResource",
+      name: seo.title || undefined,
+      description: descriptionText || undefined,
+      inLanguage: seo.language,
+      isAccessibleForFree: !isLessonMembersOnly(lesson),
+      url: canonicalUrl,
+    };
+    const ldScript = document.createElement("script");
+    ldScript.type = "application/ld+json";
+    ldScript.setAttribute("data-lesson-jsonld", "true");
+    ldScript.text = JSON.stringify(ldJson);
+    document.head.appendChild(ldScript);
 
     return () => {
       document.title = prevTitle;
 
-      if (createdMeta) {
-        metaDescription.remove();
-      } else if (prevDescriptionContent !== null) {
-        metaDescription.setAttribute("content", prevDescriptionContent);
+      if (prevLang !== null) {
+        document.documentElement.setAttribute("lang", prevLang);
       } else {
-        metaDescription.removeAttribute("content");
+        document.documentElement.removeAttribute("lang");
       }
+
+      function restoreMeta(state) {
+        if (!state) return;
+        const { el, created, prevContent } = state;
+        if (created) {
+          el.remove();
+        } else if (prevContent !== null) {
+          el.setAttribute("content", prevContent);
+        } else {
+          el.removeAttribute("content");
+        }
+      }
+
+      restoreMeta(metaDescriptionState);
+      restoreMeta(ogTitleState);
+      restoreMeta(ogDescriptionState);
+      restoreMeta(ogTypeState);
+      restoreMeta(ogUrlState);
+      restoreMeta(twitterCardState);
+      restoreMeta(twitterTitleState);
+      restoreMeta(twitterDescriptionState);
+      restoreMeta(robotsState);
 
       if (createdCanonical) {
         canonicalLink.remove();
@@ -162,6 +282,8 @@ export default function StudentLessonPage() {
       } else {
         canonicalLink.removeAttribute("href");
       }
+
+      ldScript.remove();
     };
   }, [lesson, id]);
 

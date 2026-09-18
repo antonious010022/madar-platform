@@ -78,6 +78,11 @@ export default function App() {
           </Route>
 
           <Route path="/student" element={<StudentPlatform />} />
+          {/* SEO-friendly lesson URLs. lesson.id remains the sole identity/lookup key —
+              the slug segment is cosmetic only. Both routes render StudentLessonPage. */}
+          <Route path="/lessons/:id/:slug" element={<StudentLessonPage />} />
+          <Route path="/lessons/:id" element={<StudentLessonPage />} />
+          {/* Legacy URL kept for backward compatibility; redirects to /lessons/:id/:slug after load. */}
           <Route path="/student/lesson/:id" element={<StudentLessonPage />} />
           <Route path="/student/page/:slug" element={<CmsPage />} />
           <Route path="/student/about" element={<AboutPage />} />

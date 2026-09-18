@@ -4,6 +4,16 @@ import { listPublishedLessons, signOut, getStudentGradeMeta, saveStudentGradeMet
 import { useAuth } from "../lib/hooks";
 import Footer from "../components/Footer";
 import AuthModal, { GuestWelcomeBanner, LetterAvatar } from "../components/AuthModal";
+import { slugify } from "../lib/slugify";
+
+/** Builds the SEO-friendly lesson path (mirrors StudentLessonPage's helper).
+ * Prefers the teacher-controlled seo_slug over one derived from the title;
+ * lesson.id is always the real lookup key — the slug is cosmetic only. */
+function lessonPath(lesson) {
+  const raw = (lesson?.seoSlug && lesson.seoSlug.trim()) || lesson?.title || "";
+  const slug = slugify(raw);
+  return slug ? `/lessons/${lesson.id}/${slug}` : `/lessons/${lesson.id}`;
+}
 
 const PROGRESS_KEY = "ts_student_progress_v2";
 const GUEST_GRADE_KEY = "madar_guest_stage_grade_v1";
@@ -823,7 +833,7 @@ export default function StudentPlatform() {
                 </div>
                 <button
                   type="button"
-                  onClick={() => navigate(`/student/lesson/${continueLesson.lesson.id}`)}
+                  onClick={() => navigate(lessonPath(continueLesson.lesson))}
                   className="px-4 py-2.5 rounded-xl text-xs font-bold text-white shrink-0"
                   style={{ background: "#10665A" }}
                 >
@@ -839,7 +849,7 @@ export default function StudentPlatform() {
                     <button
                       key={l.id}
                       type="button"
-                      onClick={() => navigate(`/student/lesson/${l.id}`)}
+                      onClick={() => navigate(lessonPath(l))}
                       className="text-xs font-bold px-3 py-2 rounded-xl bg-white"
                       style={{ border: "1px solid #DED4BD", color: "#22291F" }}
                     >
@@ -991,7 +1001,7 @@ export default function StudentPlatform() {
                           setAuthOpen(true);
                           return;
                         }
-                        navigate(`/student/lesson/${l.id}`);
+                        navigate(lessonPath(l));
                       };
                       return (
                       <article

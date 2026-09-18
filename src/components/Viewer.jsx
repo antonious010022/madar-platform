@@ -852,6 +852,15 @@ export function StudentView({
     !!scene && isSceneLockedForGuest(scene, { requireAuthForTools, session, isTeacherView });
   const finalLocked = false;
 
+  // "📚 المراجعة النهائية" — a real Scene (scene_type = FINAL_REVIEW) that renders the
+  // same aggregated mind map / timeline / questions data used by the legacy virtual
+  // final-review step below, but as an ordinary scene in the lesson's scene sequence.
+  const isFinalReviewScene =
+    !!scene && (scene.sceneType || scene.scene_type) === "FINAL_REVIEW";
+  // Legacy "aggregated review" virtual step, opt-in only via journeyConfig.includeAggregatedReview.
+  // Kept for lessons that already rely on it; never triggered automatically otherwise.
+  const showAggregatedReviewFlow = hasJourney && !!journey.journeyConfig?.includeAggregatedReview;
+
     
   return (
     <div
@@ -1094,8 +1103,56 @@ export function StudentView({
         </div>
         )}
 
+        {/* 📚 المراجعة النهائية — محتوى مجمّع من كل مشاهد الدرس (خريطة ذهنية + خط زمني + أسئلة) */}
+        {!sceneContentLocked && scene && isFinalReviewScene && (
+          <div
+            className="rounded-3xl p-5 mb-6 shadow-sm bg-white"
+            style={{ border: "1px solid #DED4BD" }}
+          >
+            <h3 className="font-bold text-lg mb-1" style={{ color: "#10665A" }}>📚 المراجعة النهائية</h3>
+            <p className="text-xs mb-4" style={{ color: "#8A8570" }}>ملخص من كل مشاهد الدرس: خريطة ذهنية وخط زمني وأسئلة.</p>
+            {fullMindMap && fullMindMap.label && (
+              <div className="mb-6">
+                <p className="font-bold text-sm mb-2" style={{ color: "#0E5348" }}>🗺️ الخريطة الذهنية الكاملة</p>
+                <MindMapViewerNode
+                  node={fullMindMap}
+                  onSelectNode={(node) => setSelectedMindNode(node)}
+                  selectedNodeId={selectedMindNode?.id}
+                />
+              </div>
+            )}
+            {Array.isArray(fullTimeline) && fullTimeline.length > 0 && (
+              <div className="mb-6">
+                <p className="font-bold text-sm mb-2" style={{ color: "#0E5348" }}>🕒 الخط الزمني الكامل</p>
+                <div className="flex flex-col gap-3">
+                  {fullTimeline.map((item, idx) => (
+                    <div key={item.id || `fr-ft-${idx}`} className="p-3 rounded-xl" style={{ background: "#FAF6ED", border: "1px solid #DED4BD" }}>
+                      <p className="font-bold text-xs" style={{ color: "#10665A" }}>{item.date}</p>
+                      <p className="text-sm font-bold" style={{ color: "#22291F" }}>{item.title}</p>
+                      {item.description && <p className="text-xs mt-1" style={{ color: "#5C5A4A" }}>{item.description}</p>}
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
+            {Array.isArray(fullQuestions) && fullQuestions.length > 0 && (
+              <div className="mb-4">
+                <p className="font-bold text-sm mb-2" style={{ color: "#0E5348" }}>❓ أسئلة المراجعة</p>
+                <div className="flex flex-col gap-3">
+                  {fullQuestions.map((q, idx) => (
+                    <QuestionItem key={q.id || `fr-fq-${idx}`} q={q} />
+                  ))}
+                </div>
+              </div>
+            )}
+            {!fullMindMap?.label && !(fullTimeline || []).length && !(fullQuestions || []).length && (
+              <p className="text-sm" style={{ color: "#8A8570" }}>لا توجد عناصر مراجعة مجمّعة بعد — أضف محتوى في المشاهد من الاستوديو.</p>
+            )}
+          </div>
+        )}
+
         {/* الخريطة الذهنية */}
-        {!sceneContentLocked && scene && scene.mindmap && scene.mindmap.label && (
+        {!sceneContentLocked && scene && !isFinalReviewScene && scene.mindmap && scene.mindmap.label && (
           <div
             className="rounded-3xl p-6 mb-6 shadow-sm bg-white"
             style={{ border: "1px solid #DED4BD" }}
@@ -1161,7 +1218,7 @@ export function StudentView({
         )}
 
         {/* الشريط الزمني */}
-        {!sceneContentLocked && scene && Array.isArray(scene.timeline) && scene.timeline.length > 0 && (
+        {!sceneContentLocked && scene && !isFinalReviewScene && Array.isArray(scene.timeline) && scene.timeline.length > 0 && (
           <div
             className="rounded-3xl p-6 mb-6 shadow-sm bg-white"
             style={{ border: "1px solid #DED4BD" }}
@@ -1227,7 +1284,7 @@ export function StudentView({
         )}
 
         {/* قسم الأسئلة والتحقق من الفهم */}
-        {!sceneContentLocked && scene && Array.isArray(scene.questions) && scene.questions.length > 0 && (
+        {!sceneContentLocked && scene && !isFinalReviewScene && Array.isArray(scene.questions) && scene.questions.length > 0 && (
           <div
             className="rounded-3xl p-6 mb-6 shadow-sm bg-white"
             style={{ border: "1px solid #DED4BD" }}
@@ -1253,7 +1310,7 @@ export function StudentView({
                   if (isSceneCompleted(sceneIndex)) {
                     // already done — advance if next unlocked
                     if (sceneIndex + 1 < sceneCount) tryOpenScene(sceneIndex + 1);
-                    else tryOpenScene(sceneCount);
+                    else if (showAggregatedReviewFlow) tryOpenScene(sceneCount);
                     return;
                   }
                   journey.completeScene?.();
@@ -1262,7 +1319,11 @@ export function StudentView({
                 style={{ background: isSceneCompleted(sceneIndex) ? "#0E5348" : "#10665A" }}
               >
                 {isSceneCompleted(sceneIndex)
-                  ? (sceneIndex + 1 < sceneCount ? "✓ مكتمل — الانتقال للتالي" : "✓ مكتمل — المراجعة النهائية")
+                  ? (sceneIndex + 1 < sceneCount
+                      ? "✓ مكتمل — الانتقال للتالي"
+                      : showAggregatedReviewFlow
+                        ? "✓ مكتمل — المراجعة النهائية"
+                        : "✓ مكتمل")
                   : "✓ أكمل المشهد"}
               </button>
             )}
@@ -1282,7 +1343,7 @@ export function StudentView({
                   if (hasJourney && !isTeacherView) {
                     if (!isSceneUnlocked(sceneIndex + 1) && sceneIndex + 1 < sceneCount) return;
                     if (sceneIndex + 1 >= sceneCount) {
-                      tryOpenScene(sceneCount);
+                      if (showAggregatedReviewFlow) tryOpenScene(sceneCount);
                       return;
                     }
                   }
@@ -1292,13 +1353,13 @@ export function StudentView({
                   hasJourney && !isTeacherView
                     ? sceneIndex + 1 < sceneCount
                       ? !isSceneUnlocked(sceneIndex + 1)
-                      : !(journey.finalReviewUnlocked || (journey.completedScenes || []).length >= sceneCount)
+                      : !showAggregatedReviewFlow || !(journey.finalReviewUnlocked || (journey.completedScenes || []).length >= sceneCount)
                     : sceneIndex >= sceneCount - 1
                 }
                 className="px-5 py-2.5 rounded-2xl text-sm font-bold text-white disabled:opacity-40"
                 style={{ background: "#10665A" }}
               >
-                {sceneIndex + 1 >= sceneCount ? "المراجعة النهائية →" : "التالي →"}
+                {sceneIndex + 1 >= sceneCount && showAggregatedReviewFlow ? "المراجعة النهائية →" : "التالي →"}
               </button>
             </div>
           </div>

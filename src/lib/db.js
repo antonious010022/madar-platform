@@ -307,6 +307,13 @@ function lessonRowToApp(row, scenes) {
     journeyConfig,
     /** Lesson requires login (Access Lock). Persisted as journey_config.isMembersOnly */
     isMembersOnly,
+    /** SEO fields — independent columns, never stored inside journey_config.
+     * Raw values (may be empty string); fallback-to-title/description logic
+     * lives where they're consumed (StudentLessonPage, StudentPlatform, sitemap). */
+    seoLanguage: row.seo_language || "ar",
+    seoTitle: row.seo_title || "",
+    seoDescription: row.seo_description || "",
+    seoSlug: row.seo_slug || "",
     sortOrder: row.sort_order ?? 0,
     updatedAt: row.updated_at,
     scenes: scenes ? scenes.map(sceneRowToApp) : undefined,
@@ -383,6 +390,7 @@ function defaultTitleForType(type) {
     case "MIND_MAP": return "الخريطة الذهنية";
     case "TIMELINE": return "الخط الزمني والأحداث";
     case "QUESTIONS": return "تحقق من فهمك";
+    case "FINAL_REVIEW": return "المراجعة النهائية";
     default: return "المشهد الأول";
   }
 }
@@ -393,6 +401,7 @@ export const SCENE_TYPES = [
   { key: "MIND_MAP", label: "الخريطة الذهنية", icon: "🗺️" },
   { key: "TIMELINE", label: "الخط الزمني", icon: "🕒" },
   { key: "QUESTIONS", label: "تحقق من فهمك", icon: "❓" },
+  { key: "FINAL_REVIEW", label: "المراجعة النهائية", icon: "📚" },
 ];
 
 
@@ -456,12 +465,32 @@ export async function updateLessonMeta(id, patch) {
   if (patch.status !== undefined) allowed.status = patch.status;
   if (patch.youtubeUrl !== undefined) allowed.youtube_url = patch.youtubeUrl || "";
   if (patch.youtube_url !== undefined) allowed.youtube_url = patch.youtube_url || "";
+  // SEO fields — independent of journey_config. Stored as plain columns on lessons.
+  if (patch.seoLanguage !== undefined) allowed.seo_language = patch.seoLanguage || "ar";
+  if (patch.seo_language !== undefined) allowed.seo_language = patch.seo_language || "ar";
+  if (patch.seoTitle !== undefined) allowed.seo_title = patch.seoTitle;
+  if (patch.seo_title !== undefined) allowed.seo_title = patch.seo_title;
+  if (patch.seoDescription !== undefined) allowed.seo_description = patch.seoDescription;
+  if (patch.seo_description !== undefined) allowed.seo_description = patch.seo_description;
+  if (patch.seoSlug !== undefined) allowed.seo_slug = patch.seoSlug;
+  if (patch.seo_slug !== undefined) allowed.seo_slug = patch.seo_slug;
   if (Object.keys(allowed).length === 0) return;
   const { error } = await supabase.from("lessons").update(allowed).eq("id", id);
   if (error) {
     // Clearer signal when migration was not applied
     if (/youtube_url/i.test(error.message || "")) {
       const e = new Error("عمود youtube_url غير موجود. نفّذ migration_youtube_and_notes.sql في Supabase.");
+      e.cause = error;
+      throw e;
+    }
+    if (/seo_(language|title|description|slug)/i.test(error.message || "")) {
+      // Unique-constraint violation on the published-lessons partial index (see migration_seo_fields.sql)
+      if (error.code === "23505") {
+        const e = new Error("هذا الرابط (Slug) مستخدم بالفعل في درس منشور آخر. جرّب رابطًا مختلفًا.");
+        e.cause = error;
+        throw e;
+      }
+      const e = new Error("أعمدة SEO غير موجودة في قاعدة البيانات. نفّذ migration_seo_fields.sql في Supabase.");
       e.cause = error;
       throw e;
     }
@@ -824,11 +853,16 @@ export function defaultJourneyConfig(sceneCount) {
 
 export async function updateLessonJourney(lessonId, journeyConfig) {
   if (!(await isStaffUser())) throw new Error("ليس لديك صلاحية.");
-  const { error } = await supabase
+  const { data, error } = await supabase
     .from("lessons")
     .update({ journey_config: journeyConfig || {}, updated_at: new Date().toISOString() })
-    .eq("id", lessonId);
+    .eq("id", lessonId)
+    .select("id, journey_config")
+    .single();
   if (error) throw error;
+  if (!data || !data.id) {
+    throw new Error("لم يتم حفظ إعدادات رحلة الدرس — تحقق من ملكية الدرس أو الصلاحيات.");
+  }
 }
 
 /**
