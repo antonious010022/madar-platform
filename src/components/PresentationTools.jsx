@@ -40,8 +40,9 @@ const ERASE_R = 14; // نصف قطر الممحاة (px)
 const RATIOS = { none: null, "16:9": 16 / 9, "9:16": 9 / 16, "4:3": 4 / 3, "1:1": 1 };
 const RATIO_LABELS = { none: "بدون إطار", "16:9": "16:9 يوتيوب", "9:16": "9:16 Shorts", "4:3": "4:3", "1:1": "1:1" };
 const SIZES = [720, 900, 1080];
-// مساحة الأدوات خارج الإطار (px). left = عرض الـToolbar + هامش.
-const GUTTER = { left: 124, right: 16, top: 56, bottom: 16 };
+// مساحة الأدوات خارج الإطار (px). يجب أن تبقى كل عناصر التحكم (Toolbar / خروج / تسجيل)
+// داخل هذه الهوامش هندسيًا حتى لا تدخل في Region Capture عند قص data-pt-box.
+const GUTTER = { left: 124, right: 16, top: 96, bottom: 16 };
 
 const PREFS_KEY = "madar_capture_prefs_v1";
 const DEFAULT_PREFS = { ratio: "none", size: "fit", outline: true, halo: false, ghost: false };
@@ -234,6 +235,215 @@ function Check({ checked, onChange, children }) {
   );
 }
 
+/* ════════════════════════════════════════════════════════════════════════
+ * نظام تسجيل الفيديو (Recording Frame Recorder) — كل شيء داخل هذا الملف فقط.
+ * لا مكتبات خارجية، لا ملفات إضافية، لا Backend/Supabase. Local Browser فقط.
+ * ════════════════════════════════════════════════════════════════════════ */
+
+// ---- إعدادات الجودة: أهداف "مطلوبة" (ideal) وليست مضمونة — القيم الفعلية تُقاس بعد بدء التسجيل ----
+const REC_QUALITY_PRESETS = {
+  economy: { key: "economy", label: "اقتصادية", width: 1280, height: 720, frameRate: 24, videoBitrate: 1_500_000, audioBitrate: 96_000 },
+  high: { key: "high", label: "عالية", width: 1280, height: 720, frameRate: 30, videoBitrate: 3_000_000, audioBitrate: 128_000 },
+  professional: { key: "professional", label: "احترافية", width: 1920, height: 1080, frameRate: 60, videoBitrate: 8_000_000, audioBitrate: 192_000 },
+  ultra: { key: "ultra", label: "Ultra", width: 2560, height: 1440, frameRate: 60, videoBitrate: 16_000_000, audioBitrate: 256_000 },
+  maximum: { key: "maximum", label: "Maximum", width: 3840, height: 2160, frameRate: 60, videoBitrate: 30_000_000, audioBitrate: 320_000 },
+};
+const REC_QUALITY_ORDER = ["economy", "high", "professional", "ultra", "maximum"];
+const REC_DEFAULT_QUALITY = "professional";
+const REC_MAX_SAFE_DPR = 2; // حد أقصى آمن لـdevicePixelRatio لتجنب RAM/GPU overload
+const REC_CHUNK_TIMESLICE_MS = 3000; // كل كم يُطلب chunk جديد من MediaRecorder (autosave)
+
+/**
+ * أبعاد التسجيل المستهدفة حسب الجودة + نسبة إطار التصوير.
+ * presets مخزّنة كـ landscape (عرض ≥ ارتفاع). عند نسبة رأسية/مربعة
+ * نُعيد ترتيب الأبعاد بحيث يطابق الفيديو النهائي نسبة الإطار دون تشويه.
+ * مثال professional:
+ *   16:9 → 1920×1080 | 9:16 → 1080×1920 | 1:1 → 1080×1080 | 4:3 → 1440×1080
+ * بدون إطار (ratioKey = "none"): نُبقي أبعاد الـpreset كما هي.
+ */
+function resolveRecordingDimensions(qualityKey, ratioKey) {
+  const preset = REC_QUALITY_PRESETS[qualityKey] || REC_QUALITY_PRESETS[REC_DEFAULT_QUALITY];
+  const shortSide = Math.min(preset.width, preset.height);
+  const longSide = Math.max(preset.width, preset.height);
+  const even = (n) => Math.max(2, Math.floor(n / 2) * 2);
+  const a = RATIOS[ratioKey];
+  if (!a) {
+    return { width: even(preset.width), height: even(preset.height) };
+  }
+  let w;
+  let h;
+  if (a >= 1) {
+    // أفقي أو مربع: الضلع الأقصر = الارتفاع
+    h = shortSide;
+    w = Math.round(h * a);
+    if (w > longSide * 1.01 && a > 1) {
+      // احتياط نادر: لا نتجاوز الضلع الأطول في الـpreset إلا لنسب أوسع قليلًا
+      w = longSide;
+      h = Math.round(w / a);
+    }
+  } else {
+    // رأسي (مثل 9:16): الضلع الأقصر = العرض
+    w = shortSide;
+    h = Math.round(w / a);
+  }
+  return { width: even(w), height: even(h) };
+}
+
+// ---- اختيار أفضل codec متاح فعليًا (لا افتراض؛ فحص حقيقي عبر isTypeSupported) ----
+const REC_MIME_CANDIDATES = ["video/webm;codecs=vp9,opus", "video/webm;codecs=vp8,opus", "video/webm"];
+function pickSupportedMimeType() {
+  if (typeof MediaRecorder === "undefined" || !MediaRecorder.isTypeSupported) return "";
+  for (const t of REC_MIME_CANDIDATES) {
+    try {
+      if (MediaRecorder.isTypeSupported(t)) return t;
+    } catch (_) {}
+  }
+  return "";
+}
+
+// ---- فحص دعم المتصفح للـAPIs المطلوبة (بدون افتراض) ----
+function getRecorderSupportInfo() {
+  const hasMediaRecorder = typeof MediaRecorder !== "undefined";
+  const hasDisplayMedia = !!(typeof navigator !== "undefined" && navigator.mediaDevices && navigator.mediaDevices.getDisplayMedia);
+  const hasUserMedia = !!(typeof navigator !== "undefined" && navigator.mediaDevices && navigator.mediaDevices.getUserMedia);
+  const hasCropTarget = typeof window !== "undefined" && "CropTarget" in window && typeof window.CropTarget.fromElement === "function";
+  const hasIndexedDB = typeof indexedDB !== "undefined";
+  const mimeType = hasMediaRecorder ? pickSupportedMimeType() : "";
+  return {
+    hasMediaRecorder,
+    hasDisplayMedia,
+    hasUserMedia,
+    hasCropTarget, // إن توفر: نقتصر على تصوير Recording Frame فقط دون بقية الصفحة/الشاشة
+    hasIndexedDB,
+    mimeType,
+    canRecord: hasMediaRecorder && hasDisplayMedia && !!mimeType,
+  };
+}
+
+// ---- رسائل عربية واضحة بدل أخطاء المتصفح الخام ----
+function arabicRecorderError(err) {
+  const name = (err && err.name) || "";
+  const map = {
+    NotAllowedError: "لم يتم السماح بالوصول إلى مصدر التسجيل أو الميكروفون.",
+    NotFoundError: "تعذر العثور على جهاز الميكروفون أو مصدر التسجيل.",
+    AbortError: "تم إلغاء عملية التسجيل قبل اكتمالها.",
+    NotReadableError: "تعذر قراءة بيانات الميكروفون أو الشاشة (قد يكون الجهاز مستخدَمًا من تطبيق آخر).",
+    SecurityError: "تم رفض الوصول لأسباب أمنية في المتصفح.",
+    OverconstrainedError: "إعدادات الجودة المطلوبة غير مدعومة من الجهاز الحالي.",
+    InvalidStateError: "حدثت مشكلة في حالة التسجيل الحالية. حاول مرة أخرى.",
+  };
+  return map[name] || "حدثت مشكلة أثناء التسجيل. حاول مرة أخرى.";
+}
+
+// ---- IndexedDB: تخزين تدريجي لـchunks + metadata، منفصلين لتفادي إعادة كتابة مصفوفة متضخمة ----
+const REC_DB_NAME = "madar_recorder_db_v1";
+const REC_DB_VERSION = 1;
+const REC_STORE_META = "recordings_meta";
+const REC_STORE_CHUNKS = "recordings_chunks";
+
+function openRecordingDB() {
+  return new Promise((resolve, reject) => {
+    if (typeof indexedDB === "undefined") { reject(new Error("IndexedDB غير مدعوم")); return; }
+    const req = indexedDB.open(REC_DB_NAME, REC_DB_VERSION);
+    req.onupgradeneeded = () => {
+      const db = req.result;
+      if (!db.objectStoreNames.contains(REC_STORE_META)) {
+        db.createObjectStore(REC_STORE_META, { keyPath: "recordingId" });
+      }
+      if (!db.objectStoreNames.contains(REC_STORE_CHUNKS)) {
+        const store = db.createObjectStore(REC_STORE_CHUNKS, { keyPath: "id", autoIncrement: true });
+        store.createIndex("byRecording", "recordingId", { unique: false });
+      }
+    };
+    req.onsuccess = () => resolve(req.result);
+    req.onerror = () => reject(req.error);
+  });
+}
+function idbRun(db, storeName, mode, fn) {
+  return new Promise((resolve, reject) => {
+    const tx = db.transaction(storeName, mode);
+    const store = tx.objectStore(storeName);
+    let result;
+    try {
+      result = fn(store);
+    } catch (e) {
+      reject(e);
+      return;
+    }
+    tx.oncomplete = () => resolve(result);
+    tx.onerror = () => reject(tx.error);
+    tx.onabort = () => reject(tx.error);
+  });
+}
+async function createRecordingMeta(meta) {
+  const db = await openRecordingDB();
+  return idbRun(db, REC_STORE_META, "readwrite", (store) => store.put(meta));
+}
+async function updateRecordingMeta(recordingId, patch) {
+  const db = await openRecordingDB();
+  return new Promise((resolve, reject) => {
+    const tx = db.transaction(REC_STORE_META, "readwrite");
+    const store = tx.objectStore(REC_STORE_META);
+    const getReq = store.get(recordingId);
+    getReq.onsuccess = () => {
+      const current = getReq.result;
+      if (!current) { resolve(null); return; }
+      store.put({ ...current, ...patch, updatedAt: Date.now() });
+    };
+    tx.oncomplete = () => resolve(true);
+    tx.onerror = () => reject(tx.error);
+  });
+}
+async function getRecordingMeta(recordingId) {
+  const db = await openRecordingDB();
+  return idbRun(db, REC_STORE_META, "readonly", (store) => store.get(recordingId));
+}
+async function findIncompleteRecording() {
+  const db = await openRecordingDB();
+  const all = await idbRun(db, REC_STORE_META, "readonly", (store) => store.getAll());
+  const list = await new Promise((resolve) => {
+    // getAll() على IDBObjectStore يعيد IDBRequest، وليس Promise؛ idbRun تُعيد النتيجة عبر tx.oncomplete
+    resolve(all);
+  });
+  const arr = Array.isArray(list) ? list : [];
+  return arr.find((m) => m && (m.status === "recording" || m.status === "paused" || m.status === "draft")) || null;
+}
+async function saveRecordingChunk(recordingId, seq, blob) {
+  const db = await openRecordingDB();
+  return idbRun(db, REC_STORE_CHUNKS, "readwrite", (store) => store.add({ recordingId, seq, blob }));
+}
+async function getRecordingChunks(recordingId) {
+  const db = await openRecordingDB();
+  const all = await idbRun(db, REC_STORE_CHUNKS, "readonly", (store) => store.getAll());
+  const arr = Array.isArray(all) ? all : [];
+  return arr.filter((c) => c.recordingId === recordingId).sort((a, b) => a.seq - b.seq);
+}
+async function rebuildRecordingBlob(recordingId, mimeType) {
+  const chunks = await getRecordingChunks(recordingId);
+  return new Blob(chunks.map((c) => c.blob), { type: mimeType || "video/webm" });
+}
+async function deleteRecordingFully(recordingId) {
+  const db = await openRecordingDB();
+  const chunks = await idbRun(db, REC_STORE_CHUNKS, "readonly", (store) => {
+    const idx = store.index("byRecording");
+    return idx.getAllKeys(recordingId);
+  });
+  await idbRun(db, REC_STORE_CHUNKS, "readwrite", (store) => {
+    (chunks || []).forEach((key) => store.delete(key));
+  });
+  await idbRun(db, REC_STORE_META, "readwrite", (store) => store.delete(recordingId));
+}
+function formatBytes(bytes) {
+  if (!bytes && bytes !== 0) return "—";
+  if (bytes < 1024) return `${bytes} B`;
+  if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(1)} KB`;
+  if (bytes < 1024 * 1024 * 1024) return `${(bytes / (1024 * 1024)).toFixed(1)} MB`;
+  return `${(bytes / (1024 * 1024 * 1024)).toFixed(2)} GB`;
+}
+function genRecordingId() {
+  return `rec_${Date.now()}_${Math.random().toString(36).slice(2, 9)}`;
+}
+
 /**
  * PresentationTools
  * ------------------
@@ -281,6 +491,21 @@ export default function PresentationTools({ onExit, children }) {
   // مستطيل طبقة الرسم = منطقة المحتوى المرئية للـscroller (بدون scrollbar)
   const [frameBox, setFrameBox] = useState({ left: 0, top: 0, width: 0, height: 0 });
 
+  // ---- حالة نظام تسجيل الفيديو (Recording Frame فقط) ----
+  const [recPanelOpen, setRecPanelOpen] = useState(false);
+  const [recStatus, setRecStatus] = useState("IDLE"); // IDLE | READY | RECORDING | PAUSED | STOPPING | COMPLETED | RECOVERABLE_DRAFT | ERROR
+  const [recQuality, setRecQuality] = useState(REC_DEFAULT_QUALITY);
+  const [recWantMic, setRecWantMic] = useState(true);
+  const [recWantSystemAudio, setRecWantSystemAudio] = useState(true);
+  const [recElapsedSec, setRecElapsedSec] = useState(0);
+  const [recError, setRecError] = useState("");
+  const [recFallbackNotice, setRecFallbackNotice] = useState(""); // إشعار خفض جودة/عدم دعم قص الإطار
+  const [recSupport] = useState(getRecorderSupportInfo);
+  const [recActual, setRecActual] = useState(null); // { width, height, frameRate, sampleRate, mimeType }
+  const [recPreview, setRecPreview] = useState(null); // { url, blob, duration, size, quality, width, height, fps, hasMic, hasSystemAudio }
+  const [recDraft, setRecDraft] = useState(null); // metadata للتسجيل غير المكتمل المكتشف عند الفتح
+  const [recCancelConfirm, setRecCancelConfirm] = useState(false);
+
   const areaRef = useRef(null); // كل المساحة المتاحة لوضع التصوير
   const scrollRef = useRef(null); // العنصر الذي يحوي children ويتمرّر
   const frameRef = useRef(null); // طبقة الرسم: ثابتة على الشاشة ولا تتمرّر مع المحتوى
@@ -291,6 +516,30 @@ export default function PresentationTools({ onExit, children }) {
   const menuOpenRef = useRef(menuOpen);
   toolRef.current = teachingTool;
   menuOpenRef.current = menuOpen;
+
+  // ---- مراجع نظام التسجيل (لا نضع الـchunks أو الـstreams في React state) ----
+  const recordFrameRef = useRef(null); // العنصر الذي يمثل "Recording Frame" فعليًا = data-pt-box (المحتوى + الرسومات، بدون أي أداة)
+  const mediaRecorderRef = useRef(null);
+  const displayStreamRef = useRef(null);
+  const micStreamRef = useRef(null);
+  const audioContextRef = useRef(null);
+  const combinedStreamRef = useRef(null);
+  const chunkListRef = useRef([]); // Blob parts في الذاكرة أثناء التسجيل الحالي فقط (ref، ليست state)
+  const chunkSeqRef = useRef(0);
+  const recordingIdRef = useRef(null);
+  const persistQueueRef = useRef(Promise.resolve()); // طابور تسلسلي لحفظ الـchunks في IndexedDB
+  const recStatusRef = useRef("IDLE");
+  const recTimerBaseRef = useRef(0); // مجموع الثواني المتراكمة قبل آخر استئناف
+  const recTimerStartRef = useRef(0); // وقت بدء/استئناف التسجيل الحالي (performance.now)
+  const stopRequestedRef = useRef(false);
+  const cancelRequestedRef = useRef(false);
+  const currentQualityRef = useRef(null); // نسخة من إعدادات الجودة والصوت المستخدمة فعليًا في الجلسة الحالية
+  const recPreviewUrlRef = useRef(null); // آخر object URL لمعاينة الفيديو (لتنظيفه بأمان عند unmount)
+  // قص برمجي عبر Canvas عندما لا يتوفر CropTarget أو يفشل — يرسم منطقة recordFrameRef فقط
+  const softCropRafRef = useRef(null);
+  const softCropVideoRef = useRef(null);
+  const softCropCanvasRef = useRef(null);
+  recStatusRef.current = recStatus;
 
   const box = computeBox(area, prefs.ratio, prefs.size);
   const setPref = (k, v) => setPrefs((p) => ({ ...p, [k]: v }));
@@ -534,6 +783,644 @@ export default function PresentationTools({ onExit, children }) {
     setCurrentShape(null);
   };
 
+  /* ══════════════════════════════════════════════════════════════════════
+   * نظام تسجيل الفيديو — المنطق الكامل. لا يمسّ أيًا من متغيرات/دوال الرسم أعلاه.
+   * الهدف المسجَّل الوحيد هو data-pt-box (recordFrameRef) عبر Region/Element Capture
+   * عند توفره، وإلا يُعرض تنبيه واضح بدل الادّعاء بأن القص تم.
+   * ══════════════════════════════════════════════════════════════════════ */
+
+  const stopSoftCropLoop = () => {
+    if (softCropRafRef.current != null) {
+      try { cancelAnimationFrame(softCropRafRef.current); } catch (_) {}
+      softCropRafRef.current = null;
+    }
+    if (softCropVideoRef.current) {
+      try {
+        softCropVideoRef.current.pause();
+        softCropVideoRef.current.srcObject = null;
+      } catch (_) {}
+      softCropVideoRef.current = null;
+    }
+    softCropCanvasRef.current = null;
+  };
+
+  const stopAllRecordingTracks = () => {
+    stopSoftCropLoop();
+    try { displayStreamRef.current?.getTracks().forEach((t) => t.stop()); } catch (_) {}
+    try { micStreamRef.current?.getTracks().forEach((t) => t.stop()); } catch (_) {}
+    try { combinedStreamRef.current?.getTracks().forEach((t) => t.stop()); } catch (_) {}
+    if (audioContextRef.current) {
+      try { audioContextRef.current.close(); } catch (_) {}
+      audioContextRef.current = null;
+    }
+    displayStreamRef.current = null;
+    micStreamRef.current = null;
+    combinedStreamRef.current = null;
+  };
+
+  const cleanupRecordingResources = () => {
+    if (mediaRecorderRef.current) {
+      try {
+        if (mediaRecorderRef.current.state !== "inactive") mediaRecorderRef.current.stop();
+      } catch (_) {}
+      mediaRecorderRef.current.ondataavailable = null;
+      mediaRecorderRef.current.onstop = null;
+      mediaRecorderRef.current.onerror = null;
+      mediaRecorderRef.current = null;
+    }
+    stopAllRecordingTracks();
+    chunkListRef.current = [];
+  };
+
+  const persistChunk = (recordingId, seq, blob) => {
+    persistQueueRef.current = persistQueueRef.current
+      .then(() => saveRecordingChunk(recordingId, seq, blob))
+      .catch(() => {});
+    return persistQueueRef.current;
+  };
+
+  const buildRecordingConstraints = (qualityKey, ratioKey) => {
+    const preset = REC_QUALITY_PRESETS[qualityKey] || REC_QUALITY_PRESETS[REC_DEFAULT_QUALITY];
+    const dims = resolveRecordingDimensions(qualityKey, ratioKey);
+    const rawDpr = typeof window !== "undefined" ? window.devicePixelRatio || 1 : 1;
+    const safeDpr = Math.min(rawDpr, REC_MAX_SAFE_DPR);
+    return { preset, dims, safeDpr, ratioKey: ratioKey || "none" };
+  };
+
+  const setRecStatusSafe = (s) => {
+    recStatusRef.current = s;
+    setRecStatus(s);
+  };
+
+  // بناء الـBlob النهائي من الأجزاء المحفوظة في الذاكرة (chunkListRef) بعد التأكد من اكتمال كل عمليات الحفظ في IndexedDB
+  const finalizeRecording = async () => {
+    try {
+      await persistQueueRef.current; // لا نبني الـBlob النهائي قبل التأكد من حفظ آخر chunk (تفادي Race Condition)
+      const mimeType = currentQualityRef.current?.mimeType || "video/webm";
+      const parts = chunkListRef.current;
+      if (cancelRequestedRef.current) return; // تم الإلغاء أثناء الانتظار؛ لا شيء لعمله هنا
+      if (!parts.length) {
+        setRecError("لم يتم تسجيل أي بيانات فيديو.");
+        setRecStatusSafe("ERROR");
+        stopAllRecordingTracks();
+        return;
+      }
+      const blob = new Blob(parts, { type: mimeType });
+      const url = URL.createObjectURL(blob);
+      const q = currentQualityRef.current || {};
+      const durationSec = recTimerBaseRef.current;
+      await updateRecordingMeta(recordingIdRef.current, { status: "completed", duration: durationSec, size: blob.size });
+      setRecPreview({
+        url,
+        blob,
+        duration: durationSec,
+        size: blob.size,
+        qualityLabel: REC_QUALITY_PRESETS[q.qualityKey]?.label || "",
+        width: q.actualWidth,
+        height: q.actualHeight,
+        fps: q.actualFrameRate,
+        sampleRate: q.actualSampleRate,
+        hasMic: !!q.hasMic,
+        hasSystemAudio: !!q.hasSystemAudio,
+        cropped: !!q.cropped,
+      });
+      chunkListRef.current = [];
+      stopAllRecordingTracks();
+      setRecStatusSafe("COMPLETED");
+      setRecPanelOpen(true); // إظهار المعاينة/التنزيل بعد انتهاء التسجيل (اللوحة خارج الإطار)
+    } catch (_) {
+      setRecError("حدثت مشكلة أثناء إنهاء التسجيل، لكن قد تكون البيانات محفوظة في المسودة.");
+      setRecStatusSafe("ERROR");
+      setRecPanelOpen(true);
+    }
+  };
+
+  // توقف مصدر التسجيل من تلقاء نفسه (المستخدم أوقف مشاركة الشاشة/التبويب من واجهة المتصفح)
+  const handleSourceEnded = () => {
+    if (recStatusRef.current !== "RECORDING" && recStatusRef.current !== "PAUSED") return;
+    try {
+      if (mediaRecorderRef.current && mediaRecorderRef.current.state !== "inactive") {
+        mediaRecorderRef.current.requestData();
+        mediaRecorderRef.current.stop();
+      }
+    } catch (_) {}
+    setRecStatusSafe("STOPPING");
+    setRecFallbackNotice("تم إيقاف مصدر التسجيل. تم حفظ التسجيل الحالي.");
+  };
+
+  /**
+   * قص برمجي: يقرأ بث الشاشة/التبويب ويرسم فقط مستطيل recordFrameRef على Canvas
+   * ثم يُرجع MediaStream من الـCanvas — هذا يضمن أن الفيديو النهائي = إطار التصوير فقط
+   * حتى لو فشل CropTarget (أو غير مدعوم)، بشرط أن يكون المصدر هو التبويب الحالي.
+   */
+  const startSoftCropStream = async (displayStream, frameEl, targetW, targetH, fps) => {
+    const srcTrack = displayStream.getVideoTracks()[0];
+    if (!srcTrack || !frameEl) throw new Error("soft-crop: missing track or element");
+
+    const video = document.createElement("video");
+    video.muted = true;
+    video.playsInline = true;
+    video.srcObject = new MediaStream([srcTrack]);
+    softCropVideoRef.current = video;
+
+    await video.play();
+    // انتظار أول إطار بأبعاد معروفة
+    await new Promise((resolve) => {
+      if (video.videoWidth > 0) {
+        resolve();
+        return;
+      }
+      const onMeta = () => {
+        video.removeEventListener("loadeddata", onMeta);
+        resolve();
+      };
+      video.addEventListener("loadeddata", onMeta);
+      setTimeout(resolve, 1500);
+    });
+
+    const canvas = document.createElement("canvas");
+    canvas.width = Math.max(2, targetW);
+    canvas.height = Math.max(2, targetH);
+    softCropCanvasRef.current = canvas;
+    const ctx = canvas.getContext("2d", { alpha: false });
+
+    const draw = () => {
+      if (!softCropVideoRef.current || !softCropCanvasRef.current) return;
+      const el = recordFrameRef.current || frameEl;
+      const rect = el.getBoundingClientRect();
+      const vw = video.videoWidth || 1;
+      const vh = video.videoHeight || 1;
+      // عند مشاركة التبويب الحالي: إطار الفيديو ≈ نافذة المتصفح (viewport)
+      const scaleX = vw / Math.max(1, window.innerWidth);
+      const scaleY = vh / Math.max(1, window.innerHeight);
+      const sx = Math.max(0, rect.left * scaleX);
+      const sy = Math.max(0, rect.top * scaleY);
+      const sw = Math.max(1, rect.width * scaleX);
+      const sh = Math.max(1, rect.height * scaleY);
+      try {
+        ctx.drawImage(video, sx, sy, sw, sh, 0, 0, canvas.width, canvas.height);
+      } catch (_) {}
+      softCropRafRef.current = requestAnimationFrame(draw);
+    };
+    draw();
+
+    const outFps = Math.min(Math.max(1, fps || 30), 60);
+    const canvasStream = canvas.captureStream(outFps);
+    const outTrack = canvasStream.getVideoTracks()[0];
+    return outTrack;
+  };
+
+  // بدء التسجيل: قص Recording Frame فقط (CropTarget أو Canvas) + ميكروفون + صوت النظام + MediaRecorder + IndexedDB
+  const startRecording = async () => {
+    setRecError("");
+    setRecFallbackNotice("");
+    if (!recSupport.hasMediaRecorder || !recSupport.mimeType || !recSupport.hasDisplayMedia) {
+      setRecError("تسجيل الفيديو غير مدعوم في هذا المتصفح.");
+      setRecStatusSafe("ERROR");
+      return;
+    }
+    if (!recordFrameRef.current) {
+      setRecError("تعذر العثور على إطار التصوير. أعد فتح وضع التصوير وحاول مرة أخرى.");
+      setRecStatusSafe("ERROR");
+      return;
+    }
+    // Snapshot لنسبة الإطار والجودة لحظة البدء — لا تتأثر بأي تغيير لاحق في الواجهة أثناء التسجيل
+    const lockedRatio = prefs.ratio;
+    const lockedQuality = recQuality;
+    const { preset, dims, safeDpr, ratioKey } = buildRecordingConstraints(lockedQuality, lockedRatio);
+    let displayStream;
+    try {
+      // preferCurrentTab يجب أن يكون على مستوى خيارات getDisplayMedia (وليس داخل video)
+      // حتى يفضّل المتصفح «هذا التبويب» — CropTarget لا يعمل مع «الشاشة كاملة».
+      const displayOpts = {
+        video: {
+          frameRate: { ideal: preset.frameRate },
+          width: { ideal: Math.round(dims.width * safeDpr) },
+          height: { ideal: Math.round(dims.height * safeDpr) },
+        },
+        audio: !!recWantSystemAudio,
+        preferCurrentTab: true,
+        selfBrowserSurface: "include",
+        surfaceSwitching: "exclude",
+        systemAudio: recWantSystemAudio ? "include" : "exclude",
+      };
+      displayStream = await navigator.mediaDevices.getDisplayMedia(displayOpts);
+    } catch (e) {
+      setRecError(arabicRecorderError(e));
+      setRecStatusSafe("ERROR");
+      return;
+    }
+    const rawVideoTrack = displayStream.getVideoTracks()[0];
+    if (!rawVideoTrack) {
+      setRecError("تعذر الحصول على مسار الفيديو من مصدر التسجيل.");
+      try { displayStream.getTracks().forEach((t) => t.stop()); } catch (_) {}
+      setRecStatusSafe("ERROR");
+      return;
+    }
+
+    // رفض تسجيل الشاشة الكاملة صراحةً — القص الدقيق يحتاج تبويب المتصفح
+    const surface = (rawVideoTrack.getSettings && rawVideoTrack.getSettings().displaySurface) || "";
+    if (surface === "monitor") {
+      try { displayStream.getTracks().forEach((t) => t.stop()); } catch (_) {}
+      setRecError(
+        'تم اختيار الشاشة كاملة. لإطار التصوير فقط اختر «هذا التبويب / This Tab» وليس الشاشة أو نافذة أخرى.'
+      );
+      setRecStatusSafe("ERROR");
+      return;
+    }
+
+    let videoTrack = rawVideoTrack;
+    let cropped = false;
+    let cropMode = "none"; // "cropTarget" | "soft" | "none"
+
+    // 1) Region Capture الرسمي على data-pt-box
+    if (recSupport.hasCropTarget && recordFrameRef.current && typeof rawVideoTrack.cropTo === "function") {
+      try {
+        const cropTarget = await window.CropTarget.fromElement(recordFrameRef.current);
+        await rawVideoTrack.cropTo(cropTarget);
+        cropped = true;
+        cropMode = "cropTarget";
+        videoTrack = rawVideoTrack;
+      } catch (_) {
+        cropped = false;
+      }
+    }
+
+    // 2) إن فشل CropTarget: قص برمجي عبر Canvas لمنطقة إطار التصوير فقط
+    if (!cropped && recordFrameRef.current) {
+      try {
+        const softTrack = await startSoftCropStream(
+          displayStream,
+          recordFrameRef.current,
+          dims.width,
+          dims.height,
+          preset.frameRate
+        );
+        videoTrack = softTrack;
+        cropped = true;
+        cropMode = "soft";
+        setRecFallbackNotice(
+          surface && surface !== "browser"
+            ? "تم قص التسجيل برمجيًا على إطار التصوير. لنتائج أدق اختر «هذا التبويب / This Tab»."
+            : "تم قصر التسجيل على إطار التصوير (قص برمجي)."
+        );
+      } catch (_) {
+        cropped = false;
+      }
+    }
+
+    // 3) لا نكمل أبدًا بتسجيل غير مقصوص (شاشة/تبويب كامل)
+    if (!cropped) {
+      try { displayStream.getTracks().forEach((t) => t.stop()); } catch (_) {}
+      stopSoftCropLoop();
+      setRecError(
+        'تعذر قصر التسجيل على إطار التصوير. أعد المحاولة واختر «هذا التبويب / This Tab» فقط (وليس الشاشة كاملة).'
+      );
+      setRecStatusSafe("ERROR");
+      return;
+    }
+
+    try {
+      await videoTrack.applyConstraints({
+        frameRate: { ideal: preset.frameRate },
+        width: { ideal: dims.width },
+        height: { ideal: dims.height },
+      });
+    } catch (_) {}
+
+    rawVideoTrack.onended = () => handleSourceEnded();
+    if (videoTrack !== rawVideoTrack) {
+      try {
+        videoTrack.onended = () => handleSourceEnded();
+      } catch (_) {}
+    }
+
+    let micStream = null;
+    if (recWantMic) {
+      if (!recSupport.hasUserMedia) {
+        setRecFallbackNotice((s) => s || "الميكروفون غير مدعوم في هذا المتصفح؛ سيتم التسجيل بدون صوت الميكروفون.");
+      } else {
+        try {
+          micStream = await navigator.mediaDevices.getUserMedia({
+            audio: { echoCancellation: true, noiseSuppression: true, autoGainControl: true, sampleRate: { ideal: 48000 } },
+          });
+        } catch (e) {
+          setRecFallbackNotice((s) => s || `${arabicRecorderError(e)} سيتم المتابعة بدون الميكروفون.`);
+          micStream = null;
+        }
+      }
+    }
+
+    const systemAudioTrack = displayStream.getAudioTracks()[0] || null;
+    const micAudioTrack = micStream ? micStream.getAudioTracks()[0] : null;
+    let finalAudioTrack = null;
+    if (micAudioTrack && systemAudioTrack) {
+      try {
+        const audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+        const destination = audioCtx.createMediaStreamDestination();
+        audioCtx.createMediaStreamSource(new MediaStream([micAudioTrack])).connect(destination);
+        audioCtx.createMediaStreamSource(new MediaStream([systemAudioTrack])).connect(destination);
+        finalAudioTrack = destination.stream.getAudioTracks()[0];
+        audioContextRef.current = audioCtx;
+      } catch (_) {
+        finalAudioTrack = micAudioTrack;
+      }
+    } else {
+      finalAudioTrack = micAudioTrack || systemAudioTrack || null;
+    }
+
+    const combinedTracks = [videoTrack];
+    if (finalAudioTrack) combinedTracks.push(finalAudioTrack);
+    const combinedStream = new MediaStream(combinedTracks);
+
+    displayStreamRef.current = displayStream;
+    micStreamRef.current = micStream;
+    combinedStreamRef.current = combinedStream;
+
+    let recorder;
+    try {
+      recorder = new MediaRecorder(combinedStream, {
+        mimeType: recSupport.mimeType,
+        videoBitsPerSecond: preset.videoBitrate,
+        audioBitsPerSecond: preset.audioBitrate,
+      });
+    } catch (e) {
+      setRecError(arabicRecorderError(e));
+      setRecStatusSafe("ERROR");
+      stopAllRecordingTracks();
+      return;
+    }
+
+    const recordingId = genRecordingId();
+    recordingIdRef.current = recordingId;
+    chunkSeqRef.current = 0;
+    chunkListRef.current = [];
+    stopRequestedRef.current = false;
+    cancelRequestedRef.current = false;
+    persistQueueRef.current = Promise.resolve();
+
+    const vSettings = videoTrack.getSettings ? videoTrack.getSettings() : {};
+    const aSettings = finalAudioTrack && finalAudioTrack.getSettings ? finalAudioTrack.getSettings() : {};
+    currentQualityRef.current = {
+      qualityKey: lockedQuality,
+      ratioKey,
+      targetWidth: dims.width,
+      targetHeight: dims.height,
+      mimeType: recSupport.mimeType,
+      cropped,
+      cropMode,
+      hasMic: !!micAudioTrack,
+      hasSystemAudio: !!systemAudioTrack,
+      actualWidth: vSettings.width,
+      actualHeight: vSettings.height,
+      actualFrameRate: vSettings.frameRate,
+      actualSampleRate: aSettings.sampleRate,
+    };
+    setRecActual({
+      width: vSettings.width,
+      height: vSettings.height,
+      frameRate: vSettings.frameRate ? Math.round(vSettings.frameRate) : undefined,
+      sampleRate: aSettings.sampleRate,
+      mimeType: recSupport.mimeType,
+      targetWidth: dims.width,
+      targetHeight: dims.height,
+      ratioKey,
+    });
+
+    try {
+      await createRecordingMeta({
+        recordingId,
+        createdAt: Date.now(),
+        updatedAt: Date.now(),
+        status: "recording",
+        mimeType: recSupport.mimeType,
+        quality: lockedQuality,
+        ratio: ratioKey,
+        targetWidth: dims.width,
+        targetHeight: dims.height,
+        width: vSettings.width,
+        height: vSettings.height,
+        fps: vSettings.frameRate,
+        audioSettings: { hasMic: !!micAudioTrack, hasSystemAudio: !!systemAudioTrack, sampleRate: aSettings.sampleRate },
+        duration: 0,
+      });
+    } catch (_) {}
+
+    recorder.ondataavailable = (e) => {
+      if (!e.data || e.data.size === 0) return;
+      chunkListRef.current.push(e.data);
+      const seq = chunkSeqRef.current++;
+      persistChunk(recordingId, seq, e.data);
+    };
+    recorder.onerror = (e) => {
+      setRecError(arabicRecorderError(e?.error));
+      setRecStatusSafe("ERROR");
+    };
+    recorder.onstop = () => {
+      finalizeRecording();
+    };
+
+    mediaRecorderRef.current = recorder;
+    recTimerBaseRef.current = 0;
+    recTimerStartRef.current = performance.now();
+    setRecElapsedSec(0);
+    // إغلاق اللوحة الكبيرة أثناء التسجيل حتى لا تغطي أي جزء من Recording Frame على الشاشة
+    setRecPanelOpen(false);
+    recorder.start(REC_CHUNK_TIMESLICE_MS);
+    setRecStatusSafe("RECORDING");
+  };
+
+  const pauseRecording = () => {
+    const r = mediaRecorderRef.current;
+    if (!r || r.state !== "recording") return;
+    try {
+      r.requestData();
+      r.pause();
+      recTimerBaseRef.current += Math.floor((performance.now() - recTimerStartRef.current) / 1000);
+      setRecStatusSafe("PAUSED");
+      updateRecordingMeta(recordingIdRef.current, { status: "paused", duration: recTimerBaseRef.current });
+    } catch (_) {}
+  };
+
+  const resumeRecording = () => {
+    const r = mediaRecorderRef.current;
+    if (!r || r.state !== "paused") return;
+    try {
+      r.resume();
+      recTimerStartRef.current = performance.now();
+      setRecStatusSafe("RECORDING");
+      updateRecordingMeta(recordingIdRef.current, { status: "recording" });
+    } catch (_) {}
+  };
+
+  const stopRecording = () => {
+    const r = mediaRecorderRef.current;
+    if (!r || r.state === "inactive") return;
+    stopRequestedRef.current = true;
+    if (r.state === "recording") {
+      recTimerBaseRef.current += Math.floor((performance.now() - recTimerStartRef.current) / 1000);
+    }
+    setRecStatusSafe("STOPPING");
+    try {
+      r.requestData();
+      r.stop();
+    } catch (_) {
+      finalizeRecording();
+    }
+  };
+
+  const requestCancelRecording = () => {
+    if (recStatus === "RECORDING" || recStatus === "PAUSED") setRecCancelConfirm(true);
+    else setRecPanelOpen(false);
+  };
+
+  const confirmCancel = async () => {
+    cancelRequestedRef.current = true;
+    const id = recordingIdRef.current;
+    try {
+      if (mediaRecorderRef.current && mediaRecorderRef.current.state !== "inactive") {
+        mediaRecorderRef.current.ondataavailable = null;
+        mediaRecorderRef.current.onstop = null;
+        mediaRecorderRef.current.stop();
+      }
+    } catch (_) {}
+    cleanupRecordingResources();
+    if (id) {
+      try { await deleteRecordingFully(id); } catch (_) {}
+    }
+    recordingIdRef.current = null;
+    setRecCancelConfirm(false);
+    setRecElapsedSec(0);
+    setRecFallbackNotice("");
+    setRecError("");
+    setRecStatusSafe("IDLE");
+  };
+
+  const dismissCancel = () => setRecCancelConfirm(false);
+
+  const recordAgain = () => {
+    if (recPreview?.url) {
+      try { URL.revokeObjectURL(recPreview.url); } catch (_) {}
+    }
+    setRecPreview(null);
+    setRecFallbackNotice("");
+    setRecError("");
+    setRecStatusSafe("IDLE");
+  };
+
+  const checkForDraft = async () => {
+    if (!recSupport.hasIndexedDB) return;
+    try {
+      const found = await findIncompleteRecording();
+      if (found) {
+        setRecDraft(found);
+        setRecStatusSafe("RECOVERABLE_DRAFT");
+        setRecPanelOpen(true);
+      }
+    } catch (_) {}
+  };
+
+  const restoreDraft = async () => {
+    if (!recDraft) return;
+    try {
+      const blob = await rebuildRecordingBlob(recDraft.recordingId, recDraft.mimeType);
+      if (!blob || blob.size === 0) {
+        setRecError("تعذر استعادة التسجيل؛ لا توجد بيانات كافية.");
+        setRecDraft(null);
+        setRecStatusSafe("ERROR");
+        return;
+      }
+      const url = URL.createObjectURL(blob);
+      setRecPreview({
+        url,
+        blob,
+        duration: recDraft.duration || 0,
+        size: blob.size,
+        qualityLabel: REC_QUALITY_PRESETS[recDraft.quality]?.label || "",
+        width: recDraft.width,
+        height: recDraft.height,
+        fps: recDraft.fps,
+        sampleRate: recDraft.audioSettings?.sampleRate,
+        hasMic: !!recDraft.audioSettings?.hasMic,
+        hasSystemAudio: !!recDraft.audioSettings?.hasSystemAudio,
+        restored: true,
+      });
+      await updateRecordingMeta(recDraft.recordingId, { status: "completed" });
+      setRecDraft(null);
+      setRecStatusSafe("COMPLETED");
+    } catch (_) {
+      setRecError("تعذر استعادة التسجيل السابق.");
+      setRecStatusSafe("ERROR");
+    }
+  };
+
+  const discardDraft = async () => {
+    if (!recDraft) return;
+    try { await deleteRecordingFully(recDraft.recordingId); } catch (_) {}
+    setRecDraft(null);
+    setRecStatusSafe("IDLE");
+  };
+
+  const dismissRecError = () => {
+    setRecError("");
+    if (recStatus === "ERROR") setRecStatusSafe(chunkListRef.current.length || recPreview ? "COMPLETED" : "IDLE");
+  };
+
+  // فحص وجود تسجيل غير مكتمل من جلسة سابقة (refresh/crash) عند فتح أداة التصوير
+  useEffect(() => {
+    checkForDraft();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  // عداد وقت التسجيل: يتوقف أثناء PAUSE ويستكمل من نفس الرقم عند RESUME
+  useEffect(() => {
+    if (recStatus !== "RECORDING") return;
+    const id = setInterval(() => {
+      setRecElapsedSec(recTimerBaseRef.current + Math.floor((performance.now() - recTimerStartRef.current) / 1000));
+    }, 250);
+    return () => clearInterval(id);
+  }, [recStatus]);
+
+  // حفظ آخر بيانات ممكنة قبل إغلاق/تحديث الصفحة — إجراء احتياطي إضافي فقط؛ الحفظ الأساسي يتم أثناء التسجيل نفسه (timeslice)
+  useEffect(() => {
+    const flushBeforeUnload = () => {
+      const r = mediaRecorderRef.current;
+      if (r && r.state === "recording") {
+        try { r.requestData(); } catch (_) {}
+      }
+    };
+    const onVisibility = () => {
+      if (document.visibilityState === "hidden") flushBeforeUnload();
+    };
+    window.addEventListener("beforeunload", flushBeforeUnload);
+    window.addEventListener("pagehide", flushBeforeUnload);
+    document.addEventListener("visibilitychange", onVisibility);
+    return () => {
+      window.removeEventListener("beforeunload", flushBeforeUnload);
+      window.removeEventListener("pagehide", flushBeforeUnload);
+      document.removeEventListener("visibilitychange", onVisibility);
+    };
+  }, []);
+
+  // تتبّع آخر object URL لمعاينة الفيديو حتى يمكن تنظيفه بأمان عند فك التركيب
+  useEffect(() => {
+    recPreviewUrlRef.current = recPreview?.url || null;
+  }, [recPreview]);
+
+  // تنظيف كامل عند فك تركيب المكوّن: إيقاف التسجيل، كل الـtracks، وrevoke أي object URL متبقٍّ
+  useEffect(() => {
+    return () => {
+      try {
+        if (mediaRecorderRef.current && mediaRecorderRef.current.state !== "inactive") mediaRecorderRef.current.stop();
+      } catch (_) {}
+      stopAllRecordingTracks();
+      if (recPreviewUrlRef.current) {
+        try { URL.revokeObjectURL(recPreviewUrlRef.current); } catch (_) {}
+      }
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
   const now = Date.now();
   const spotlightStrokes = strokes.filter((s) => s.type === "spotlight");
   const drawStrokes = strokes.filter((s) => s.type !== "spotlight");
@@ -543,6 +1430,51 @@ export default function PresentationTools({ onExit, children }) {
   const activeColor = teachingTool === "highlighter" ? hlColor : penColor;
   const activeSize = teachingTool === "highlighter" ? hlSize : penSize;
   const framed = !!box;
+  // أثناء التسجيل/الإيقاف المؤقت: لا نسمح بتغيير نسبة الإطار (مثبّتة snapshot عند البدء)
+  const isRecActive = recStatus === "RECORDING" || recStatus === "PAUSED" || recStatus === "STOPPING";
+  // أبعاد التسجيل المستهدفة المعروضة في لوحة الجودة (حسب الجودة + نسبة الإطار الحالية)
+  const recTargetDims = resolveRecordingDimensions(recQuality, prefs.ratio);
+
+  // موضع لوحة التسجيل (تُعرض فقط خارج أوقات RECORDING/PAUSED): خارج مستطيل الإطار إن وُجد
+  const recPanelStyle = (() => {
+    const base = {
+      width: 300,
+      maxHeight: "calc(100vh - 90px)",
+      overflowY: "auto",
+      background: "rgba(20,26,20,0.97)",
+      color: "#FAF6ED",
+      zIndex: Z.menu,
+      pointerEvents: "auto",
+      direction: "rtl",
+      textAlign: "right",
+    };
+    // بدون إطار: بجانب أزرار التحكم العلوية اليسرى (خارج منطقة المحتوى قدر الإمكان)
+    if (!framed || !box || !area.w) {
+      return { ...base, top: 12, left: GUTTER.left + 8, right: "auto" };
+    }
+    const panelW = 300;
+    const panelH = 320;
+    const gap = 12;
+    const spaceRight = area.w - (box.left + box.width);
+    const spaceBelow = area.h - (box.top + box.height);
+    const spaceLeft = box.left;
+    if (spaceRight >= panelW + gap) {
+      return { ...base, top: Math.max(8, box.top), left: box.left + box.width + gap, right: "auto" };
+    }
+    if (spaceBelow >= Math.min(panelH, 180) + gap) {
+      return {
+        ...base,
+        top: box.top + box.height + gap,
+        left: Math.max(8, Math.min(box.left + (box.width - panelW) / 2, area.w - panelW - 8)),
+        right: "auto",
+      };
+    }
+    if (spaceLeft >= panelW + gap) {
+      return { ...base, top: Math.max(8, box.top), left: Math.max(8, box.left - panelW - gap), right: "auto" };
+    }
+    // احتياطي: بجانب شريط الأدوات الأيسر فوق/بجانب الإطار دون الاعتماد على يمين الشاشة
+    return { ...base, top: 12, left: GUTTER.left + 8, right: "auto" };
+  })();
 
   const boxStyle = framed
     ? { left: box.left, top: box.top, width: box.width, height: box.height, overflow: "hidden", contain: "layout paint" }
@@ -550,7 +1482,7 @@ export default function PresentationTools({ onExit, children }) {
 
   const sizeOptions = [
     { value: "fit", label: "أقصى حجم" },
-    ...SIZES.map((s) => ({ value: s, label: String(s), disabled: !computeBox(area, prefs.ratio, s)?.fixed })),
+    ...SIZES.map((s) => ({ value: s, label: String(s), disabled: !computeBox(area, prefs.ratio, s)?.fixed || isRecActive })),
   ];
 
   return (
@@ -578,9 +1510,12 @@ export default function PresentationTools({ onExit, children }) {
           />
         )}
 
-        {/* الصندوق: بدون إطار = يملأ المساحة كما كان. مع إطار = مقاس ثابت؛ contain يحبس أي عنصر fixed (popup/modal) داخل الصندوق. */}
+        {/* الصندوق: بدون إطار = يملأ المساحة كما كان. مع إطار = مقاس ثابت؛ contain يحبس أي عنصر fixed (popup/modal) داخل الصندوق.
+            هذا العنصر بالذات هو "Recording Frame": المرجع recordFrameRef يُستخدم لقص تسجيل الفيديو عليه فقط (انظر نظام التسجيل أدناه). */}
         <div
+          ref={recordFrameRef}
           data-pt-box
+          data-recording-frame
           className="absolute"
           style={{ zIndex: 0, ...boxStyle }}
           onMouseMove={handleStageMouseMove}
@@ -755,16 +1690,246 @@ export default function PresentationTools({ onExit, children }) {
         </div>
       </div>
 
+      {/* إشعار "تسجيل غير مكتمل من جلسة سابقة" — يظهر دائمًا (حتى مع إخفاء الأدوات) حتى لا يُفقَد تسجيل بصمت */}
+      {recStatus === "RECOVERABLE_DRAFT" && recDraft && (
+        <div
+          className="fixed rounded-2xl p-3 shadow-lg"
+          style={{
+            top: 14,
+            left: "50%",
+            transform: "translateX(-50%)",
+            width: 320,
+            background: "rgba(20,26,20,0.97)",
+            color: "#FAF6ED",
+            zIndex: Z.menu,
+            pointerEvents: "auto",
+            direction: "rtl",
+            textAlign: "right",
+          }}
+        >
+          <p className="text-[13px] mb-2">⚠️ تم العثور على تسجيل غير مكتمل من جلسة سابقة.</p>
+          <div className="flex gap-2 justify-end">
+            <button
+              type="button"
+              onClick={discardDraft}
+              className="rounded-lg px-3 py-1.5 text-[12px]"
+              style={{ background: "rgba(255,255,255,0.12)" }}
+            >
+              حذف التسجيل
+            </button>
+            <button
+              type="button"
+              onClick={restoreDraft}
+              className="rounded-lg px-3 py-1.5 text-[12px]"
+              style={{ background: "#10665A" }}
+            >
+              استعادة التسجيل
+            </button>
+          </div>
+        </div>
+      )}
+
       {/* الأدوات: خارج الصندوق دائمًا مع الإطار، وفوق الـstage (Z.tools). عند الإخفاء بالاختصار لا يُرسم أي شيء بديل — لا Toast ولا Tooltip ولا Overlay. */}
       {!toolsHidden && (
         <>
-          <button
-            onClick={exit}
-            className="fixed top-14 left-5 px-4 py-2 rounded-xl text-xs shadow-lg"
-            style={{ background: "rgba(255,255,255,0.2)", color: "#FAF6ED", zIndex: Z.tools, pointerEvents: "auto" }}
+          {/* أزرار الخروج والتسجيل في الهامش الأيسر/العلوي فقط — خارج مستطيل Recording Frame هندسيًا */}
+          <div
+            className="fixed flex flex-col gap-2"
+            style={{ top: 12, left: 12, zIndex: Z.tools, pointerEvents: "auto", maxWidth: GUTTER.left - 20 }}
           >
-            خروج من التصوير (Esc)
-          </button>
+            <button
+              onClick={exit}
+              className="px-3 py-2 rounded-xl text-xs shadow-lg"
+              style={{ background: "rgba(255,255,255,0.2)", color: "#FAF6ED" }}
+            >
+              خروج من التصوير (Esc)
+            </button>
+            <button
+              type="button"
+              onClick={() => setRecPanelOpen((v) => !v)}
+              className="px-3 py-2 rounded-xl text-xs shadow-lg flex items-center justify-center gap-1.5"
+              style={{
+                background: recStatus === "RECORDING" ? "#B91C1C" : recStatus === "PAUSED" ? "#92400E" : "rgba(255,255,255,0.2)",
+                color: "#FAF6ED",
+              }}
+            >
+              {recStatus === "RECORDING" && <span>🔴 {formatClock(recElapsedSec)}</span>}
+              {recStatus === "PAUSED" && <span>⏸️ {formatClock(recElapsedSec)}</span>}
+              {recStatus !== "RECORDING" && recStatus !== "PAUSED" && <span>🎥 تسجيل الفيديو</span>}
+            </button>
+            {/* عناصر تحكم مضغوطة أثناء التسجيل — داخل هامش الأدوات فقط، لا تغطي الإطار */}
+            {isRecActive && (
+              <div className="flex flex-col gap-1.5 p-1.5 rounded-xl" style={{ background: "rgba(20,26,20,0.92)" }}>
+                {recStatus === "RECORDING" && (
+                  <button type="button" onClick={pauseRecording} className="rounded-lg px-2 py-1 text-[11px]" style={{ background: "rgba(255,255,255,0.12)", color: "#FAF6ED" }}>
+                    إيقاف مؤقت
+                  </button>
+                )}
+                {recStatus === "PAUSED" && (
+                  <button type="button" onClick={resumeRecording} className="rounded-lg px-2 py-1 text-[11px]" style={{ background: "#10665A", color: "#FAF6ED" }}>
+                    استئناف
+                  </button>
+                )}
+                {recStatus !== "STOPPING" && (
+                  <button type="button" onClick={stopRecording} className="rounded-lg px-2 py-1 text-[11px]" style={{ background: "#B91C1C", color: "#FAF6ED" }}>
+                    إيقاف نهائي
+                  </button>
+                )}
+              </div>
+            )}
+          </div>
+
+          {/* لوحة التسجيل الكاملة: تُعرض فقط عندما لا يكون التسجيل جاريًا، أو تُوضع خارج مستطيل الإطار */}
+          {recPanelOpen && !isRecActive && (
+            <div
+              data-pt-record-panel
+              className="fixed rounded-2xl p-3 shadow-lg flex flex-col gap-3"
+              style={recPanelStyle}
+            >
+              {recFallbackNotice && (
+                <p className="text-[11px] rounded-lg p-2" style={{ background: "rgba(251,191,36,0.15)", color: "#FBBF24" }}>
+                  {recFallbackNotice}
+                </p>
+              )}
+              {recError && (
+                <div className="text-[11px] rounded-lg p-2 flex flex-col gap-1.5" style={{ background: "rgba(239,68,68,0.15)", color: "#FCA5A5" }}>
+                  <span>{recError}</span>
+                  <button type="button" onClick={dismissRecError} className="self-start rounded px-2 py-0.5" style={{ background: "rgba(255,255,255,0.1)" }}>
+                    إغلاق
+                  </button>
+                </div>
+              )}
+
+              {!recSupport.canRecord && recStatus === "IDLE" && (
+                <p className="text-[12px]" style={{ opacity: 0.85 }}>تسجيل الفيديو غير مدعوم في هذا المتصفح.</p>
+              )}
+
+              {(recStatus === "IDLE" || recStatus === "READY") && recSupport.canRecord && (
+                <>
+                  <div>
+                    <p className="text-[11px] mb-1" style={{ opacity: 0.7 }}>جودة التسجيل</p>
+                    <Seg
+                      value={recQuality}
+                      onChange={setRecQuality}
+                      options={REC_QUALITY_ORDER.map((k) => ({ value: k, label: REC_QUALITY_PRESETS[k].label }))}
+                    />
+                    <div className="text-[11px] mt-2 leading-5" style={{ opacity: 0.85, direction: "ltr", textAlign: "right" }}>
+                      <div>
+                        الدقة المستهدفة: {recTargetDims.width} × {recTargetDims.height}
+                        {prefs.ratio !== "none" ? ` (${RATIO_LABELS[prefs.ratio] || prefs.ratio})` : ""}
+                      </div>
+                      <div>FPS المستهدف: {REC_QUALITY_PRESETS[recQuality].frameRate}</div>
+                      <div>Video Bitrate: ~{(REC_QUALITY_PRESETS[recQuality].videoBitrate / 1_000_000).toFixed(1)} Mbps</div>
+                      <div>Audio: 48 kHz / ~{Math.round(REC_QUALITY_PRESETS[recQuality].audioBitrate / 1000)} kbps</div>
+                      <div>Codec: {recSupport.mimeType || "—"}</div>
+                    </div>
+                    <p className="text-[10px] mt-1" style={{ opacity: 0.55 }}>
+                      الأبعاد تتبع نسبة إطار التصوير المختار. القيم أعلاه هدف مطلوب؛ الفعلية تُقاس بعد بدء التسجيل حسب قدرات جهازك.
+                    </p>
+                  </div>
+                  <Check checked={recWantMic} onChange={setRecWantMic}>تسجيل الميكروفون</Check>
+                  <Check checked={recWantSystemAudio} onChange={setRecWantSystemAudio}>تسجيل صوت النظام (إن سمح المتصفح)</Check>
+                  {!recSupport.hasCropTarget && (
+                    <p className="text-[10px]" style={{ opacity: 0.6 }}>
+                      ملاحظة: متصفحك لا يدعم قص التسجيل تلقائيًا على منطقة العرض فقط؛ عند البدء اختر "هذا التبويب" يدويًا.
+                    </p>
+                  )}
+                  <button
+                    type="button"
+                    onClick={startRecording}
+                    className="rounded-lg px-3 py-2 text-[12px] font-medium"
+                    style={{ background: "#10665A" }}
+                  >
+                    ابدأ التسجيل
+                  </button>
+                </>
+              )}
+
+              {(recStatus === "RECORDING" || recStatus === "PAUSED" || recStatus === "STOPPING") && (
+                <>
+                  <div className="text-[13px] flex items-center gap-2">
+                    <span>{recStatus === "RECORDING" ? "🔴 التسجيل جارٍ" : recStatus === "PAUSED" ? "⏸️ متوقف مؤقتًا" : "⏳ جارٍ الإنهاء..."}</span>
+                    <span style={{ direction: "ltr", fontFamily: "monospace" }}>{formatClock(recElapsedSec)}</span>
+                  </div>
+                  {recActual && (
+                    <div className="text-[10px] leading-5" style={{ opacity: 0.7, direction: "ltr", textAlign: "right" }}>
+                      {recActual.width && recActual.height ? `${recActual.width} × ${recActual.height}` : ""}
+                      {recActual.targetWidth && recActual.targetHeight && (recActual.width !== recActual.targetWidth || recActual.height !== recActual.targetHeight)
+                        ? ` (هدف: ${recActual.targetWidth}×${recActual.targetHeight})`
+                        : ""}
+                      {recActual.ratioKey && recActual.ratioKey !== "none" ? ` · ${RATIO_LABELS[recActual.ratioKey] || recActual.ratioKey}` : ""}
+                      {recActual.frameRate ? ` · ${recActual.frameRate} FPS` : ""}
+                      {recActual.sampleRate ? ` · ${recActual.sampleRate} Hz` : ""}
+                    </div>
+                  )}
+                  <div className="flex gap-2 flex-wrap">
+                    {recStatus === "RECORDING" && (
+                      <button type="button" onClick={pauseRecording} className="rounded-lg px-3 py-1.5 text-[12px]" style={{ background: "rgba(255,255,255,0.12)" }}>
+                        إيقاف مؤقت
+                      </button>
+                    )}
+                    {recStatus === "PAUSED" && (
+                      <button type="button" onClick={resumeRecording} className="rounded-lg px-3 py-1.5 text-[12px]" style={{ background: "#10665A" }}>
+                        استئناف
+                      </button>
+                    )}
+                    {recStatus !== "STOPPING" && (
+                      <button type="button" onClick={stopRecording} className="rounded-lg px-3 py-1.5 text-[12px]" style={{ background: "#B91C1C" }}>
+                        إيقاف نهائي
+                      </button>
+                    )}
+                    {recStatus !== "STOPPING" && (
+                      <button type="button" onClick={requestCancelRecording} className="rounded-lg px-3 py-1.5 text-[12px]" style={{ background: "rgba(255,255,255,0.12)" }}>
+                        إلغاء
+                      </button>
+                    )}
+                  </div>
+                  {recCancelConfirm && (
+                    <div className="rounded-lg p-2 text-[11px] flex flex-col gap-1.5" style={{ background: "rgba(239,68,68,0.15)" }}>
+                      <span>هل تريد إلغاء التسجيل؟ سيتم حذف التسجيل الحالي.</span>
+                      <div className="flex gap-2 justify-end">
+                        <button type="button" onClick={dismissCancel} className="rounded px-2 py-1" style={{ background: "rgba(255,255,255,0.12)" }}>
+                          تراجع
+                        </button>
+                        <button type="button" onClick={confirmCancel} className="rounded px-2 py-1" style={{ background: "#B91C1C" }}>
+                          تأكيد الإلغاء
+                        </button>
+                      </div>
+                    </div>
+                  )}
+                </>
+              )}
+
+              {recStatus === "COMPLETED" && recPreview && (
+                <>
+                  <video src={recPreview.url} controls className="w-full rounded-lg" style={{ maxHeight: 200, background: "#000" }} />
+                  <div className="text-[11px] leading-5" style={{ opacity: 0.85, direction: "ltr", textAlign: "right" }}>
+                    <div>المدة: {formatClock(recPreview.duration || 0)}</div>
+                    <div>الحجم: {formatBytes(recPreview.size)}</div>
+                    {recPreview.qualityLabel && <div>الجودة: {recPreview.qualityLabel}</div>}
+                    {recPreview.width && recPreview.height && <div>الدقة: {recPreview.width} × {recPreview.height}</div>}
+                    {recPreview.fps && <div>FPS: {Math.round(recPreview.fps)}</div>}
+                    {recPreview.sampleRate && <div>Audio: {recPreview.sampleRate} Hz</div>}
+                    <div>الصوت: {[recPreview.hasMic && "ميكروفون", recPreview.hasSystemAudio && "صوت النظام"].filter(Boolean).join(" + ") || "بدون صوت"}</div>
+                    {recPreview.restored && <div>تمت الاستعادة من جلسة سابقة.</div>}
+                  </div>
+                  <div className="flex gap-2 flex-wrap">
+                    <a
+                      href={recPreview.url}
+                      download={`recording-${Date.now()}.webm`}
+                      className="rounded-lg px-3 py-1.5 text-[12px]"
+                      style={{ background: "#10665A", color: "#FAF6ED", textDecoration: "none" }}
+                    >
+                      تنزيل الفيديو
+                    </a>
+                    <button type="button" onClick={recordAgain} className="rounded-lg px-3 py-1.5 text-[12px]" style={{ background: "rgba(255,255,255,0.12)" }}>
+                      تسجيل مرة أخرى
+                    </button>
+                  </div>
+                </>
+              )}
+            </div>
+          )}
 
           {/* Toolbar عائمة — لا يوجد زر تشغيل/إيقاف؛ اختيار أي أداة يفعّلها فورًا */}
           <div
@@ -880,17 +2045,34 @@ export default function PresentationTools({ onExit, children }) {
               }}
             >
               <div>
-                <p className="text-[11px] mb-1" style={{ opacity: 0.7 }}>إطار التصوير (المحتوى داخله والأدوات خارجه)</p>
+                <p className="text-[11px] mb-1" style={{ opacity: 0.7 }}>
+                  إطار التصوير (المحتوى داخله والأدوات خارجه)
+                  {isRecActive ? " — مثبت أثناء التسجيل" : ""}
+                </p>
                 <Seg
                   value={prefs.ratio}
-                  onChange={(v) => setPref("ratio", v)}
-                  options={Object.keys(RATIOS).map((k) => ({ value: k, label: RATIO_LABELS[k] }))}
+                  onChange={(v) => {
+                    if (isRecActive) return;
+                    setPref("ratio", v);
+                  }}
+                  options={Object.keys(RATIOS).map((k) => ({
+                    value: k,
+                    label: RATIO_LABELS[k],
+                    disabled: isRecActive,
+                  }))}
                 />
               </div>
               {framed && (
                 <div>
                   <p className="text-[11px] mb-1" style={{ opacity: 0.7 }}>الحجم (الضلع الأقصر بالبكسل)</p>
-                  <Seg value={prefs.size} onChange={(v) => setPref("size", v)} options={sizeOptions} />
+                  <Seg
+                    value={prefs.size}
+                    onChange={(v) => {
+                      if (isRecActive) return;
+                      setPref("size", v);
+                    }}
+                    options={sizeOptions}
+                  />
                   <p className="text-[11px] mt-1.5" style={{ opacity: 0.85, direction: "ltr", textAlign: "right" }} data-pt-size-label>
                     {box.width}×{box.height}
                     {dpr !== 1 ? ` (≈ ${Math.round(box.width * dpr)}×${Math.round(box.height * dpr)} فعليًا)` : ""}

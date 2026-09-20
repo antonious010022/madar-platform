@@ -67,9 +67,9 @@ export default function Footer() {
             </a>
           </div>
 
-          <p className="text-[11px]" style={{ color: "#8A8570" }}>
-            © {new Date().getFullYear()} {brand.name}
-          </p>
+           <p className="text-[11px] text-center sm:text-right" style={{ color: "#8A8570" }}>
+           © {new Date().getFullYear()} {brand.name} — جميع الحقوق محفوظة <span className="mx-1">|</span> Antonious Shenoda
+           </p>
         </div>
       </div>
     </footer>

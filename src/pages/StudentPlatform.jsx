@@ -736,9 +736,9 @@ export default function StudentPlatform() {
       className="md-hero-logo"
     />
   </div>
-  <div className="md-badge">منصة تعليمية</div>
-  <h1>مَدَار — تعلّم بوضوح</h1>
-  <p>رحلة تعليمية منظمة: فهم المحتوى، ربط الأفكار، المراجعة، ثم التحقق من فهمك — بأسلوب تفاعلي ومرئي.</p>
+  <div className="md-badge">منصة مَدَار</div>
+  <h1>منصتك لتعلّم واضح ومنظّم</h1>
+  <p>رحلة تعليمية منظمة فهم المحتوى، ربط الأفكار، المراجعة، ثم التحقق من فهمك — بأسلوب تفاعلي ومرئي.</p>
 </header>
 
         {/* اختيار المرحلة والصف (أول مرة أو تغيير الصف) */}
@@ -747,7 +747,7 @@ export default function StudentPlatform() {
             <div className="rounded-2xl p-5 bg-white shadow-sm" style={{ border: "1px solid #DED4BD" }}>
               <h2 className="font-black text-base mb-1" style={{ color: "#10665A" }}>اختر صفك الدراسي</h2>
               <p className="text-xs mb-4" style={{ color: "#8A8570" }}>
-                سنعرض لك الدروس الخاصة بصفك فقط. يمكنك تغيير الصف لاحقًا من قائمة الحساب.
+                سنعرض لك الدروس الخاصة بصفك . يمكنك تغيير الصف لاحقًا من قائمة الحساب.
               </p>
               {availableStages.length > 1 && (
                 <div className="mb-4">
