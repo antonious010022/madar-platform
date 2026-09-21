@@ -433,7 +433,7 @@ export default function StudentLessonPage() {
       ? "مكتمل"
       : progress.view === "final"
         ? "المراجعة النهائية"
-        : `المشهد ${Math.min(progress.currentScene + 1, sceneCount)} من ${sceneCount}`;
+        : `العنوان ${Math.min(progress.currentScene + 1, sceneCount)} من ${sceneCount}`;
 
   // Lesson-level Access Lock: exclusive lesson + guest → login required (not sequence message)
   const lessonAccessLocked =
@@ -571,8 +571,8 @@ export default function StudentLessonPage() {
 
       {sceneCount > 0 && (
         <div className="px-4 py-2 text-center text-xs font-bold" style={{ background: "#E4F0EC", color: "#0E5348" }}>
-          تقدّم الرحلة: {progressLabel}
-          {sceneCount > 0 && !progress.lessonCompleted ? ` · مشاهد مكتملة ${doneCount}/${sceneCount}` : ""}
+          التقدّم : {progressLabel}
+          {sceneCount > 0 && !progress.lessonCompleted ? ` · عناوين مكتملة ${doneCount}/${sceneCount}` : ""}
         </div>
       )}
 

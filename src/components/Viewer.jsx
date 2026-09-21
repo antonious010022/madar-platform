@@ -905,7 +905,10 @@ export function StudentView({
         {/* فيديو الدرس — ثابت أعلى الرحلة (مستوى الدرس) */}
         {youtubeId && !recordingMode && !sceneContentLocked && (
           <div className="mb-6">
-            <p className="text-xs font-bold mb-2 text-center" style={{ color: "#8A8570" }}>🎥 فيديو الدرس</p>
+            <p className="text-xs font-bold mb-2 text-center" style={{ color: "#8A8570" }}>🎥 شاهد فيديو الدرس
+
+تابع الشرح خطوة بخطوة وركّز في ترتيب الأفكار والأمثلة. خُد وقتك في الفهم قبل الانتقال للجزء التالي، لأن الفيديو هو بداية رحلتك لفهم الدرس بشكل كامل.
+</p>
             <YouTubePlayer videoId={youtubeId} />
           </div>
         )}
@@ -919,11 +922,11 @@ export function StudentView({
                   ? "🎉 تم إكمال الدرس"
                   : isFinalReview
                     ? "المراجعة النهائية"
-                    : `تقدّم الرحلة · المشهد ${sceneIndex + 1} من ${sceneCount}`}
+                    : `التقدّم  ·  ${sceneIndex + 1} من ${sceneCount}`}
               </p>
               {hasJourney && sceneCount > 0 && (
                 <p className="text-[11px] mt-1" style={{ color: "#8A8570" }}>
-                  مشاهد مكتملة {(journey.completedScenes || []).length}/{sceneCount}
+                  عناوين مكتملة {(journey.completedScenes || []).length}/{sceneCount}
                 </p>
               )}
             </div>

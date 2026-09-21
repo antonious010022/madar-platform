@@ -863,7 +863,7 @@ export default function StudentPlatform() {
             {progressBySubject.length > 0 && selectedTerm && (
               <div className="mt-4">
                 <p className="text-xs font-bold mb-2" style={{ color: "#8A8570" }}>
-                  تقدّم الأقسام · {selectedTerm}
+                  تقدّمك · {selectedTerm}
                 </p>
                 <div className="grid sm:grid-cols-2 gap-2">
                   {progressBySubject.map((row) => {
@@ -959,7 +959,7 @@ export default function StudentPlatform() {
                 number={2}
                 done={!!selectedSubject}
                 active={!selectedSubject}
-                label="المادة الدراسية"
+                label="الفرع"
               >
                 {availableSubjects.length === 0 ? (
                   <p className="md-empty">لا توجد مواد دراسية منشورة لهذا الصف حالياً.</p>
