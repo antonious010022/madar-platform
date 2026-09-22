@@ -9,6 +9,12 @@ import { slugify } from "../lib/slugify";
 /** Builds the SEO-friendly lesson path (mirrors StudentLessonPage's helper).
  * Prefers the teacher-controlled seo_slug over one derived from the title;
  * lesson.id is always the real lookup key — the slug is cosmetic only. */
+const ARABIC_ORDINALS = ["الأول", "الثاني", "الثالث", "الرابع", "الخامس", "السادس", "السابع", "الثامن", "التاسع", "العاشر"];
+function arabicLessonOrdinal(index) {
+  // index is 0-based. Falls back to a plain number beyond the 10th lesson.
+  return ARABIC_ORDINALS[index] || `رقم ${index + 1}`;
+}
+
 function lessonPath(lesson) {
   const raw = (lesson?.seoSlug && lesson.seoSlug.trim()) || lesson?.title || "";
   const slug = slugify(raw);
@@ -400,6 +406,32 @@ function CompassSpinner() {
 }
 
 /* ---------------------------------------------------------------------------
+   Coming-soon smart assistant bubble — floating, bottom-right, non-functional
+   placeholder for now. Purely presentational; no data or backend involved.
+--------------------------------------------------------------------------- */
+function ComingSoonAssistantBubble() {
+  const [open, setOpen] = useState(false);
+  return (
+    <div className="md-assistant-wrap">
+      {open && (
+        <div className="md-assistant-tooltip" role="status">
+          <p className="md-assistant-tooltip-title">المساعد الذكي</p>
+          <p className="md-assistant-tooltip-body">قريبًا هيبقى متاح، تابعنا!</p>
+        </div>
+      )}
+      <button
+        type="button"
+        className="md-assistant-bubble"
+        onClick={() => setOpen((v) => !v)}
+        aria-label="المساعد الذكي - قريبًا يكون متاح"
+      >
+        <img src="/photo/IevsR.png" alt="" aria-hidden="true" className="md-assistant-bubble-logo" />
+      </button>
+    </div>
+  );
+}
+
+/* ---------------------------------------------------------------------------
    Step Row
 --------------------------------------------------------------------------- */
 function StepRow({ number, done, active, label, children }) {
@@ -441,7 +473,7 @@ export default function StudentPlatform() {
   useEffect(() => {
     listPublishedLessons()
       .then(setLessons)
-      .catch(() => setError("تعذر تحميل الدروس المنشورة."));
+      .catch(() => setError("تعذر تحميل الدروس ."));
   }, []);
 
   useEffect(() => {
@@ -545,6 +577,25 @@ export default function StudentPlatform() {
   const availableSubjects = useMemo(() => {
     if (!termScopedLessons.length) return [];
     return Array.from(new Set(termScopedLessons.map((l) => l.subject).filter(Boolean)));
+  }, [termScopedLessons]);
+
+  // Per-unit ("subject") lesson list — used for the plain-text preview shown
+  // next to a unit card before the student opens it. Sorted with the same
+  // sortLessonsForSequence() used for the actual lesson-cards grid, so the
+  // preview numbering always matches what the student sees after opening
+  // the unit (driven by the "ترتيب الدرس داخل الوحدة" field in Teacher Studio).
+  const lessonsBySubject = useMemo(() => {
+    if (!termScopedLessons.length) return {};
+    const map = {};
+    for (const l of termScopedLessons) {
+      const sub = l.subject || "أخرى";
+      map[sub] = map[sub] || [];
+      map[sub].push(l);
+    }
+    for (const sub of Object.keys(map)) {
+      map[sub] = sortLessonsForSequence(map[sub]);
+    }
+    return map;
   }, [termScopedLessons]);
 
   const filteredLessons = useMemo(() => {
@@ -736,9 +787,9 @@ export default function StudentPlatform() {
       className="md-hero-logo"
     />
   </div>
-  <div className="md-badge">منصة مَدَار</div>
-  <h1>منصتك لتعلّم واضح ومنظّم</h1>
-  <p>رحلة تعليمية منظمة فهم المحتوى، ربط الأفكار، المراجعة، ثم التحقق من فهمك — بأسلوب تفاعلي ومرئي.</p>
+  <div className="md-badge">منصة تعليمية</div>
+  <h1>مَدَار — تعلّم بوضوح</h1>
+  <p>رحلة تعليمية منظمة: فهم المحتوى، ربط الأفكار، المراجعة، ثم التحقق من فهمك — بأسلوب تفاعلي ومرئي.</p>
 </header>
 
         {/* اختيار المرحلة والصف (أول مرة أو تغيير الصف) */}
@@ -747,7 +798,7 @@ export default function StudentPlatform() {
             <div className="rounded-2xl p-5 bg-white shadow-sm" style={{ border: "1px solid #DED4BD" }}>
               <h2 className="font-black text-base mb-1" style={{ color: "#10665A" }}>اختر صفك الدراسي</h2>
               <p className="text-xs mb-4" style={{ color: "#8A8570" }}>
-                سنعرض لك الدروس الخاصة بصفك . يمكنك تغيير الصف لاحقًا من قائمة الحساب.
+                سنعرض لك الدروس الخاصة بصفك فقط. يمكنك تغيير الصف لاحقًا من قائمة الحساب.
               </p>
               {availableStages.length > 1 && (
                 <div className="mb-4">
@@ -843,7 +894,7 @@ export default function StudentPlatform() {
             )}
             {recentLessons.length > 0 && (
               <div>
-                <p className="text-xs font-bold mb-2" style={{ color: "#8A8570" }}>أحدث الدروس المنشورة</p>
+                <p className="text-xs font-bold mb-2" style={{ color: "#8A8570" }}>أحدث الدروس </p>
                 <div className="flex flex-wrap gap-2">
                   {recentLessons.map((l) => (
                     <button
@@ -863,7 +914,7 @@ export default function StudentPlatform() {
             {progressBySubject.length > 0 && selectedTerm && (
               <div className="mt-4">
                 <p className="text-xs font-bold mb-2" style={{ color: "#8A8570" }}>
-                  تقدّمك · {selectedTerm}
+                  التقدّم  · {selectedTerm}
                 </p>
                 <div className="grid sm:grid-cols-2 gap-2">
                   {progressBySubject.map((row) => {
@@ -959,22 +1010,37 @@ export default function StudentPlatform() {
                 number={2}
                 done={!!selectedSubject}
                 active={!selectedSubject}
-                label="الفرع"
+                label="الــوحــدة"
               >
                 {availableSubjects.length === 0 ? (
                   <p className="md-empty">لا توجد مواد دراسية منشورة لهذا الصف حالياً.</p>
                 ) : (
-                  <div className="md-chips">
-                    {availableSubjects.map((sub) => (
-                      <button
-                        key={sub}
-                        type="button"
-                        className={`md-chip ${selectedSubject === sub ? "selected" : ""}`}
-                        onClick={() => setSelectedSubject(sub)}
-                      >
-                        {sub}
-                      </button>
-                    ))}
+                  <div className="md-units-grid">
+                    {availableSubjects.map((sub) => {
+                      const subLessons = lessonsBySubject[sub] || [];
+                      const isOpen = selectedSubject === sub;
+                      return (
+                        <div key={sub} className="md-unit-row">
+                          <button
+                            type="button"
+                            className={`md-unit-card ${isOpen ? "selected" : ""}`}
+                            onClick={() => setSelectedSubject(isOpen ? "" : sub)}
+                          >
+                            <span className="md-unit-card-title">{sub}</span>
+                            <span className="md-unit-card-count">{subLessons.length} درس</span>
+                          </button>
+                          {!isOpen && subLessons.length > 0 && (
+                            <ul className="md-unit-preview">
+                              {subLessons.map((l, i) => (
+                                <li key={l.id}>
+                                  <span className="md-unit-preview-num">الدرس {arabicLessonOrdinal(i)}:</span> {l.title}
+                                </li>
+                              ))}
+                            </ul>
+                          )}
+                        </div>
+                      );
+                    })}
                   </div>
                 )}
               </StepRow>
@@ -1053,6 +1119,7 @@ export default function StudentPlatform() {
       <Footer />
       <GuestWelcomeBanner session={session} />
       <AuthModal open={authOpen} onClose={() => setAuthOpen(false)} />
+      <ComingSoonAssistantBubble />
 
       {/* Global Styles for this page */}
       <style>{`
@@ -1641,6 +1708,165 @@ export default function StudentPlatform() {
     color: var(--md-muted);
     font-size: 0.95rem;
     margin: 0;
+  }
+
+  /* =========================
+     COMING-SOON ASSISTANT BUBBLE
+     ========================= */
+  .md-assistant-wrap {
+    position: fixed;
+    bottom: 20px;
+    right: 20px;
+    z-index: 60;
+    display: flex;
+    flex-direction: column;
+    align-items: flex-end;
+    gap: 10px;
+  }
+
+  .md-assistant-bubble {
+    width: 56px;
+    height: 56px;
+    border-radius: 50%;
+    border: 1.5px solid rgba(17, 122, 107, 0.25);
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: #FFFFFF;
+    box-shadow: 0 8px 22px rgba(6, 59, 52, 0.28);
+    animation: md-assistant-float 2.6s ease-in-out infinite;
+  }
+
+  .md-assistant-bubble:hover {
+    box-shadow: 0 10px 26px rgba(6, 59, 52, 0.34);
+  }
+
+  .md-assistant-bubble-logo {
+    width: 36px;
+    height: 36px;
+    object-fit: contain;
+    pointer-events: none;
+  }
+
+  @keyframes md-assistant-float {
+    0%, 100% { transform: translateY(0); }
+    50% { transform: translateY(-8px); }
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    .md-assistant-bubble { animation: none; }
+  }
+
+  .md-assistant-tooltip {
+    max-width: 200px;
+    background: #FFFFFF;
+    border: 1px solid var(--md-border);
+    border-radius: 14px;
+    padding: 10px 14px;
+    text-align: right;
+    box-shadow: 0 8px 20px rgba(6, 59, 52, 0.14);
+  }
+
+  .md-assistant-tooltip-title {
+    margin: 0 0 2px;
+    font-size: 0.85rem;
+    font-weight: 800;
+    color: var(--md-teal-deep);
+  }
+
+  .md-assistant-tooltip-body {
+    margin: 0;
+    font-size: 0.78rem;
+    color: var(--md-muted);
+  }
+
+  /* =========================
+     UNIT CARDS + LESSON PREVIEW
+     (unit = "subject" curriculum node; text list shows before the unit
+     is opened, replaced by the existing lesson-cards grid once opened)
+     ========================= */
+  .md-units-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(230px, 1fr));
+    gap: 16px;
+  }
+
+  .md-unit-row {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+  }
+
+  .md-unit-card {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 10px;
+    padding: 14px 18px;
+    border-radius: var(--md-radius);
+    background: #FFFFFF;
+    border: 1px solid rgba(17, 122, 107, 0.22);
+    cursor: pointer;
+    text-align: right;
+    transition:
+      transform 0.22s ease,
+      border-color 0.22s ease,
+      background 0.22s ease,
+      box-shadow 0.22s ease,
+      color 0.22s ease;
+    box-shadow: 0 2px 8px rgba(6, 59, 52, 0.04);
+  }
+
+  .md-unit-card:hover {
+    border-color: rgba(17, 122, 107, 0.45);
+    transform: translateY(-2px);
+    box-shadow: 0 6px 18px rgba(6, 59, 52, 0.09);
+  }
+
+  .md-unit-card.selected {
+    background: linear-gradient(135deg, var(--md-teal), var(--md-teal-deep));
+    border-color: var(--md-teal-deep);
+    box-shadow:
+      0 8px 22px rgba(6, 59, 52, 0.22),
+      0 0 0 3px rgba(17, 122, 107, 0.12);
+  }
+
+  .md-unit-card-title {
+    font-weight: 800;
+    font-size: 1rem;
+    color: var(--md-text);
+  }
+
+  .md-unit-card.selected .md-unit-card-title,
+  .md-unit-card.selected .md-unit-card-count {
+    color: #FFFFFF;
+  }
+
+  .md-unit-card-count {
+    font-size: 0.78rem;
+    color: var(--md-muted);
+    white-space: nowrap;
+  }
+
+  .md-unit-preview {
+    list-style: none;
+    margin: 0;
+    padding: 4px 4px 0;
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+  }
+
+  .md-unit-preview li {
+    font-size: 0.85rem;
+    color: var(--md-text-soft);
+    line-height: 1.5;
+  }
+
+  .md-unit-preview-num {
+    color: var(--md-teal-deep);
+    font-weight: 700;
   }
 
   /* =========================

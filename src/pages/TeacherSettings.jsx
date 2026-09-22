@@ -417,10 +417,10 @@ export default function TeacherSettings() {
                 value={form.kind}
                 onChange={(e) => setForm({ ...form, kind: e.target.value, parentId: "" })}
               >
-                <option value="stage">مرحلة (مثل: الإعدادية)</option>
-                <option value="grade">صف (مثل: الثالث الإعدادي)</option>
-                <option value="term">ترم (مثل: الترم الأول)</option>
-                <option value="subject">مادة / قسم (مثل: التاريخ)</option>
+                <option value="stage">المرحلة</option>
+                <option value="grade">الصف</option>
+                <option value="term">الترم</option>
+                <option value="subject">الـوحـدة</option>
               </select>
               {form.kind !== "stage" && (
                 <select
@@ -428,7 +428,7 @@ export default function TeacherSettings() {
                   value={form.parentId}
                   onChange={(e) => setForm({ ...form, parentId: e.target.value })}
                 >
-                  <option value="">— اختر العنصر الأب —</option>
+                  <option value="">—— العنصر الاساسي ——</option>
                   {parentsFor.map((n) => (
                     <option key={n.id} value={n.id}>
                       {n.name}

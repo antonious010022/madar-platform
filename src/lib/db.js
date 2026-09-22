@@ -461,6 +461,7 @@ export async function updateLessonMeta(id, patch) {
   if (patch.stage !== undefined) allowed.stage = patch.stage;
   if (patch.grade !== undefined) allowed.grade = patch.grade;
   if (patch.term !== undefined) allowed.term = patch.term;
+  if (patch.sortOrder !== undefined) allowed.sort_order = Number(patch.sortOrder) || 0;
   if (patch.description !== undefined) allowed.description = patch.description;
   if (patch.status !== undefined) allowed.status = patch.status;
   if (patch.youtubeUrl !== undefined) allowed.youtube_url = patch.youtubeUrl || "";
