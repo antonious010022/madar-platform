@@ -734,11 +734,11 @@ export default function StudentPlatform() {
 
   return (
     <div className="md-platform">
-      <div className="flex justify-end items-center px-4 sm:px-6 py-2 relative z-20" style={{ background: "transparent" }}>
+      <div className="md-topbar flex justify-end items-center px-4 sm:px-6 py-2 relative z-20" style={{ background: "transparent" }}>
         {session === undefined ? null : session ? (
           <div className="relative">
             <button type="button" onClick={() => setMenuOpen((v) => !v)}
-              className="flex items-center gap-2 rounded-full py-1 px-2 bg-white/90 shadow-sm" style={{ border: "1px solid #DED4BD" }}>
+              className="md-account-btn flex items-center gap-2 rounded-full py-1 px-2 bg-white/90 shadow-sm" style={{ border: "1px solid #DED4BD" }}>
               <LetterAvatar name={studentName} email={session.user?.email} size={28} />
               <span className="text-xs font-bold hidden sm:inline" style={{ color: "#22291F" }}>{studentName}</span>
             </button>
@@ -758,7 +758,7 @@ export default function StudentPlatform() {
           </div>
         ) : (
           <button type="button" onClick={() => setAuthOpen(true)}
-            className="text-xs font-bold px-3 py-1.5 rounded-xl text-white shadow-sm" style={{ background: "#10665A" }}>تسجيل الدخول</button>
+            className="md-login-btn text-xs font-bold px-3 py-1.5 rounded-xl text-white shadow-sm" style={{ background: "#10665A" }}>تسجيل الدخول</button>
         )}
       </div>
       {/* Background layers */}
@@ -795,7 +795,7 @@ export default function StudentPlatform() {
         {/* اختيار المرحلة والصف (أول مرة أو تغيير الصف) */}
         {lessons && lessons.length > 0 && gradeMetaReady && pickingGrade && (
           <section className="md-dashboard mb-6" aria-label="اختيار الصف الدراسي">
-            <div className="rounded-2xl p-5 bg-white shadow-sm" style={{ border: "1px solid #DED4BD" }}>
+            <div className="md-panel rounded-2xl p-5 bg-white shadow-sm" style={{ border: "1px solid #DED4BD" }}>
               <h2 className="font-black text-base mb-1" style={{ color: "#10665A" }}>اختر صفك الدراسي</h2>
               <p className="text-xs mb-4" style={{ color: "#8A8570" }}>
                 سنعرض لك الدروس الخاصة بصفك فقط. يمكنك تغيير الصف لاحقًا من قائمة الحساب.
@@ -869,7 +869,7 @@ export default function StudentPlatform() {
           <section className="md-dashboard mb-6" aria-label="متابعة التعلم">
             {continueLesson && (
               <div
-                className="rounded-2xl p-4 mb-4 bg-white shadow-sm flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3"
+                className="md-continue rounded-2xl p-4 mb-4 bg-white shadow-sm flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3"
                 style={{ border: "1px solid #DED4BD" }}
               >
                 <div>
@@ -885,7 +885,7 @@ export default function StudentPlatform() {
                 <button
                   type="button"
                   onClick={() => navigate(lessonPath(continueLesson.lesson))}
-                  className="px-4 py-2.5 rounded-xl text-xs font-bold text-white shrink-0"
+                  className="md-continue-btn px-4 py-2.5 rounded-xl text-xs font-bold text-white shrink-0"
                   style={{ background: "#10665A" }}
                 >
                   متابعة الدرس ←
@@ -894,14 +894,14 @@ export default function StudentPlatform() {
             )}
             {recentLessons.length > 0 && (
               <div>
-                <p className="text-xs font-bold mb-2" style={{ color: "#8A8570" }}>أحدث الدروس </p>
+                <p className="md-section-label text-xs font-bold mb-2" style={{ color: "#8A8570" }}>أحدث الدروس </p>
                 <div className="flex flex-wrap gap-2">
                   {recentLessons.map((l) => (
                     <button
                       key={l.id}
                       type="button"
                       onClick={() => navigate(lessonPath(l))}
-                      className="text-xs font-bold px-3 py-2 rounded-xl bg-white"
+                      className="md-recent-chip text-xs font-bold px-3 py-2 rounded-xl bg-white"
                       style={{ border: "1px solid #DED4BD", color: "#22291F" }}
                     >
                       {l.title}
@@ -913,18 +913,18 @@ export default function StudentPlatform() {
 
             {progressBySubject.length > 0 && selectedTerm && (
               <div className="mt-4">
-                <p className="text-xs font-bold mb-2" style={{ color: "#8A8570" }}>
+                <p className="md-section-label text-xs font-bold mb-2" style={{ color: "#8A8570" }}>
                   التقدّم  · {selectedTerm}
                 </p>
-                <div className="grid sm:grid-cols-2 gap-2">
+                <div className="md-progress-grid grid sm:grid-cols-2 gap-2">
                   {progressBySubject.map((row) => {
                     const pct = row.total ? Math.round((row.completed / row.total) * 100) : 0;
                     return (
-                      <div key={row.subject} className="rounded-xl p-3 bg-white text-xs" style={{ border: "1px solid #DED4BD" }}>
+                      <div key={row.subject} className="md-progress-row rounded-xl p-3 bg-white text-xs" style={{ border: "1px solid #DED4BD" }}>
                         <p className="font-bold" style={{ color: "#10665A" }}>{row.subject}</p>
                         <p style={{ color: "#5C5A4A" }}>{row.completed} / {row.total} دروس مكتملة · متبقي {Math.max(0, row.total - row.completed)}</p>
-                        <div className="mt-2 h-1.5 rounded-full" style={{ background: "#E4F0EC" }}>
-                          <div className="h-full rounded-full" style={{ width: pct + "%", background: "#10665A" }} />
+                        <div className="md-progress-track mt-2 h-1.5 rounded-full" style={{ background: "#E4F0EC" }}>
+                          <div className="md-progress-fill h-full rounded-full" style={{ width: pct + "%", background: "#10665A" }} />
                         </div>
                       </div>
                     );
@@ -964,13 +964,13 @@ export default function StudentPlatform() {
 
         {lessons !== null && selectedGrade && !pickingGrade && (
           <div className="md-journey">
-            <div className="mb-3 flex flex-wrap items-center gap-2 text-xs" style={{ color: "#5C5A4A" }}>
+            <div className="md-journey-meta mb-3 flex flex-wrap items-center gap-2 text-xs" style={{ color: "#5C5A4A" }}>
               <span className="font-bold" style={{ color: "#10665A" }}>
                 {selectedStage ? selectedStage + " · " : ""}{selectedGrade}
               </span>
               <button
                 type="button"
-                className="font-bold underline-offset-2 hover:underline"
+                className="md-link-btn font-bold underline-offset-2 hover:underline"
                 style={{ color: "#8A8570" }}
                 onClick={() => setPickingGrade(true)}
               >
@@ -1171,23 +1171,17 @@ export default function StudentPlatform() {
     display: flex;
     justify-content: center;
     align-items: center;
-    margin-bottom: 20px;
+    margin-bottom: 26px;
     position: relative;
   }
 
   .md-hero-logo-wrap::before {
     content: "";
     position: absolute;
-    width: 110px;
-    height: 110px;
+    width: 170px;
+    height: 170px;
     border-radius: 50%;
-    background: radial-gradient(
-      circle,
-      rgba(17, 122, 107, 0.12),
-      rgba(17, 122, 107, 0.04) 45%,
-      transparent 70%
-    );
-    filter: blur(6px);
+    background: radial-gradient(circle, rgba(255, 255, 255, 0.20), rgba(255, 255, 255, 0.05) 50%, transparent 72%);
     z-index: -1;
   }
 
@@ -1195,19 +1189,17 @@ export default function StudentPlatform() {
     height: 58px;
     width: auto;
     object-fit: contain;
-    filter:
-      drop-shadow(0 6px 12px rgba(6, 59, 52, 0.12))
-      drop-shadow(0 0 24px rgba(17, 122, 107, 0.10));
-    transition:
-      transform 0.35s ease,
-      filter 0.35s ease;
+    box-sizing: content-box;
+    padding: 14px 26px;
+    border-radius: 26px;
+    background: #FFFFFF;
+    box-shadow: 0 14px 34px rgba(0, 0, 0, 0.22), 0 0 0 6px rgba(255, 255, 255, 0.10);
+    transition: transform 0.35s ease, box-shadow 0.35s ease;
   }
 
   .md-hero-logo:hover {
-    transform: translateY(-2px) scale(1.02);
-    filter:
-      drop-shadow(0 10px 18px rgba(6, 59, 52, 0.16))
-      drop-shadow(0 0 28px rgba(17, 122, 107, 0.14));
+    transform: translateY(-3px) scale(1.02);
+    box-shadow: 0 20px 44px rgba(0, 0, 0, 0.28), 0 0 0 8px rgba(255, 255, 255, 0.12);
   }
 
   /* =========================
@@ -1243,6 +1235,7 @@ export default function StudentPlatform() {
       sans-serif;
     position: relative;
     overflow-x: hidden;
+    overflow-x: clip;
     direction: rtl;
   }
 
@@ -1250,9 +1243,10 @@ export default function StudentPlatform() {
     flex: 1;
     position: relative;
     z-index: 2;
-    max-width: 920px;
+    --md-main-pb: 72px;
+    max-width: 1040px;
     margin: 0 auto;
-    padding: 48px 20px 48px;
+    padding: 0 20px var(--md-main-pb);
   }
 
   /* =========================
@@ -1455,51 +1449,114 @@ export default function StudentPlatform() {
   /* =========================
      HERO
      ========================= */
+  /* Full-bleed "orbit" hero: deep teal band with concentric rings */
   .md-hero {
+    position: relative;
+    isolation: isolate;
+    overflow: hidden;
+    width: 100vw;
+    margin: 0 calc(50% - 50vw);
+    padding: clamp(44px, 7vw, 84px) 20px clamp(96px, 12vw, 128px);
     text-align: center;
-    margin-bottom: 48px;
+    background:
+      radial-gradient(circle at 82% 8%, rgba(213, 160, 74, 0.20), transparent 38%),
+      linear-gradient(160deg, var(--md-teal-dark) 0%, var(--md-teal-deep) 55%, var(--md-teal) 130%);
+    border-radius: 0 0 clamp(32px, 6vw, 72px) clamp(32px, 6vw, 72px);
+    box-shadow: 0 24px 60px rgba(6, 59, 52, 0.22);
+  }
+
+  .md-hero > * {
+    position: relative;
+    z-index: 1;
+    animation: md-rise 0.6s cubic-bezier(0.22, 1, 0.36, 1) both;
+  }
+  .md-hero > *:nth-child(2) { animation-delay: 0.06s; }
+  .md-hero > *:nth-child(3) { animation-delay: 0.12s; }
+  .md-hero > *:nth-child(4) { animation-delay: 0.18s; }
+
+  .md-hero::before,
+  .md-hero::after {
+    content: "";
+    position: absolute;
+    left: 50%;
+    top: 46%;
+    border-radius: 50%;
+    pointer-events: none;
+    z-index: 0;
+  }
+
+  .md-hero::before {
+    width: min(820px, 150vw);
+    aspect-ratio: 1;
+    transform: translate(-50%, -50%);
+    border: 1px solid rgba(255, 255, 255, 0.10);
+    box-shadow:
+      0 0 0 clamp(48px, 8vw, 90px) rgba(255, 255, 255, 0.025),
+      0 0 0 clamp(96px, 16vw, 180px) rgba(255, 255, 255, 0.018);
+  }
+
+  .md-hero::after {
+    width: min(520px, 110vw);
+    aspect-ratio: 1;
+    border: 1px dashed rgba(213, 160, 74, 0.38);
+    transform: translate(-50%, -50%);
+    animation: md-orbit-turn 120s linear infinite;
+  }
+
+  @keyframes md-orbit-turn {
+    to { transform: translate(-50%, -50%) rotate(360deg); }
+  }
+
+  @keyframes md-rise {
+    from { opacity: 0; transform: translateY(14px); }
+    to { opacity: 1; transform: translateY(0); }
   }
 
   .md-badge {
     display: inline-flex;
     align-items: center;
     justify-content: center;
-    padding: 7px 16px;
+    gap: 9px;
+    padding: 7px 18px;
     border-radius: 999px;
-    background: var(--md-teal-soft);
-    color: var(--md-teal-deep);
+    background: rgba(255, 255, 255, 0.08);
+    color: var(--md-gold-light);
     font-size: 0.85rem;
     font-weight: 700;
-    letter-spacing: 0.02em;
-    margin-bottom: 17px;
-    border: 1px solid rgba(17, 122, 107, 0.18);
-    box-shadow:
-      0 4px 14px rgba(6, 59, 52, 0.06);
+    margin-bottom: 20px;
+    border: 1px solid rgba(213, 160, 74, 0.45);
+    backdrop-filter: blur(8px);
+    -webkit-backdrop-filter: blur(8px);
+  }
+
+  .md-badge::before {
+    content: "";
+    width: 6px;
+    height: 6px;
+    border-radius: 50%;
+    background: var(--md-gold-light);
+    box-shadow: 0 0 0 3px rgba(213, 160, 74, 0.22);
   }
 
   .md-hero h1 {
-    font-size: clamp(1.8rem, 5vw, 2.65rem);
-    font-weight: 800;
-    margin: 0 0 12px;
-    background:
-      linear-gradient(
-        135deg,
-        var(--md-teal-dark) 10%,
-        var(--md-teal-deep) 40%,
-        var(--md-teal) 75%,
-        var(--md-teal-mid) 100%
-      );
-    -webkit-background-clip: text;
-    -webkit-text-fill-color: transparent;
-    background-clip: text;
-    letter-spacing: -0.02em;
+    font-size: clamp(2.2rem, 6.5vw, 3.8rem);
+    font-weight: 900;
+    line-height: 1.25;
+    margin: 0 auto 18px;
+    max-width: 16em;
+    color: #FFFFFF;
+    background: none;
+    -webkit-text-fill-color: #FFFFFF;
+    text-wrap: balance;
   }
 
   .md-hero p {
-    color: var(--md-muted);
-    font-size: 1.05rem;
-    margin: 0;
-    line-height: 1.8;
+    color: rgba(255, 255, 255, 0.82);
+    font-size: clamp(1rem, 2.4vw, 1.18rem);
+    line-height: 2;
+    margin: 0 auto;
+    max-width: 36em;
+    text-wrap: balance;
   }
 
   /* =========================
@@ -1553,76 +1610,90 @@ export default function StudentPlatform() {
   /* =========================
      JOURNEY
      ========================= */
+  /* Journey = an open vertical timeline (no boxes) */
   .md-journey {
     display: flex;
     flex-direction: column;
-    gap: 8px;
+    gap: 2px;
+    margin-top: 44px;
+    animation: md-rise 0.6s 0.1s cubic-bezier(0.22, 1, 0.36, 1) both;
+  }
+
+  .md-journey-meta {
+    width: fit-content;
+    max-width: 100%;
+    gap: 10px;
+    padding: 8px 8px 8px 18px;
+    margin-bottom: 30px !important;
+    border-radius: 999px;
+    background: var(--md-teal-soft);
+    border: 1px solid rgba(17, 122, 107, 0.16);
+    font-size: 0.85rem !important;
+  }
+
+  .md-link-btn {
+    padding: 4px 14px;
+    border-radius: 999px;
+    background: #FFFFFF;
+    transition: background 0.2s ease, color 0.2s ease;
+  }
+
+  .md-link-btn:hover {
+    background: var(--md-teal);
+    color: #FFFFFF !important;
+    text-decoration: none;
   }
 
   .md-step {
     display: flex;
-    gap: 18px;
-    padding: 8px 0;
+    gap: clamp(16px, 3vw, 28px);
+    padding: 4px 0;
   }
 
   .md-step-indicator {
     display: flex;
     flex-direction: column;
     align-items: center;
-    width: 42px;
+    width: 44px;
     flex-shrink: 0;
   }
 
   .md-step-number {
-    width: 36px;
-    height: 36px;
+    width: 44px;
+    height: 44px;
     border-radius: 50%;
     display: flex;
     align-items: center;
     justify-content: center;
-    font-weight: 700;
-    font-size: 0.95rem;
+    font-weight: 900;
+    font-size: 1.05rem;
     background: #FFFFFF;
-    border: 2px solid var(--md-border);
+    border: 2px solid var(--md-border-strong);
     color: var(--md-muted);
-    box-shadow:
-      0 3px 10px rgba(6, 59, 52, 0.05);
     transition: all 0.3s ease;
   }
 
   .md-step.done .md-step-number {
-    background:
-      linear-gradient(
-        135deg,
-        var(--md-teal),
-        var(--md-teal-deep)
-      );
-    border-color: var(--md-teal);
+    background: linear-gradient(135deg, var(--md-teal), var(--md-teal-deep));
+    border-color: var(--md-teal-deep);
     color: #FFFFFF;
-    box-shadow:
-      0 5px 16px rgba(6, 59, 52, 0.20);
+    box-shadow: 0 8px 20px rgba(6, 59, 52, 0.22);
   }
 
   .md-step.active .md-step-number {
     border-color: var(--md-gold);
     color: var(--md-gold-deep);
     background: var(--md-gold-soft);
-    box-shadow:
-      0 0 0 5px rgba(183, 122, 32, 0.10),
-      0 6px 16px rgba(183, 122, 32, 0.12);
+    box-shadow: 0 0 0 6px rgba(183, 122, 32, 0.12);
   }
 
   .md-step-line {
     width: 2px;
     flex: 1;
-    background:
-      linear-gradient(
-        180deg,
-        var(--md-border-strong),
-        var(--md-border)
-      );
-    margin-top: 6px;
-    min-height: 24px;
+    margin-top: 8px;
+    min-height: 32px;
+    border-radius: 2px;
+    background: repeating-linear-gradient(180deg, var(--md-border-strong) 0 6px, transparent 6px 12px);
   }
 
   .md-step:last-child .md-step-line {
@@ -1631,29 +1702,22 @@ export default function StudentPlatform() {
 
   .md-step-content {
     flex: 1;
-    padding-bottom: 20px;
     min-width: 0; /* عشان النص ميتقطعش */
+    padding-bottom: 36px;
   }
 
-  /* ===== تحسين عرض العناوين (المرحلة / الصف / الفصل / المادة) ===== */
   .md-step-label {
-    font-size: 1rem;
-    color: var(--md-text-soft);
-    margin-bottom: 14px;
-    font-weight: 700;
-    letter-spacing: 0.01em;
     display: block;
     width: 100%;
-    line-height: 1.5;
+    margin-bottom: 16px;
+    font-size: 1.25rem;
+    font-weight: 900;
+    line-height: 44px;
+    color: var(--md-text-soft);
   }
 
-  .md-step.active .md-step-label {
-    color: var(--md-gold);
-  }
-
-  .md-step.done .md-step-label {
-    color: var(--md-teal);
-  }
+  .md-step.active .md-step-label { color: var(--md-gold-deep); }
+  .md-step.done .md-step-label { color: var(--md-teal-deep); }
 
   /* =========================
      CHIPS
@@ -1665,49 +1729,237 @@ export default function StudentPlatform() {
   }
 
   .md-chip {
-    padding: 10px 18px;
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    min-height: 46px;
+    padding: 10px 22px;
     border-radius: 999px;
     background: #FFFFFF;
-    border: 1px solid rgba(17, 122, 107, 0.22);
+    border: 1.5px solid var(--md-border-strong);
     color: var(--md-text-soft);
-    font-size: 0.95rem;
+    font-size: 0.98rem;
+    font-weight: 700;
     cursor: pointer;
-    transition:
-      transform 0.22s ease,
-      border-color 0.22s ease,
-      background 0.22s ease,
-      box-shadow 0.22s ease,
-      color 0.22s ease;
-    box-shadow:
-      0 2px 8px rgba(6, 59, 52, 0.04);
+    transition: transform 0.2s ease, border-color 0.2s ease, background 0.2s ease, box-shadow 0.2s ease, color 0.2s ease;
   }
 
   .md-chip:hover {
-    border-color: rgba(17, 122, 107, 0.45);
+    border-color: var(--md-teal);
     background: var(--md-teal-soft);
     transform: translateY(-2px);
-    box-shadow:
-      0 6px 18px rgba(6, 59, 52, 0.09);
   }
 
   .md-chip.selected {
-    background:
-      linear-gradient(
-        135deg,
-        var(--md-teal),
-        var(--md-teal-deep)
-      );
+    background: var(--md-teal-deep);
     border-color: var(--md-teal-deep);
     color: #FFFFFF;
-    box-shadow:
-      0 8px 22px rgba(6, 59, 52, 0.22),
-      0 0 0 3px rgba(17, 122, 107, 0.12);
+    box-shadow: 0 10px 24px rgba(6, 59, 52, 0.24);
+  }
+
+  .md-chip.selected::before {
+    content: "";
+    width: 7px;
+    height: 7px;
+    border-radius: 50%;
+    background: var(--md-gold-light);
+  }
+
+  .md-chip:disabled {
+    opacity: 0.6;
+    cursor: not-allowed;
+    transform: none;
+  }
+
+  .md-chip:focus-visible,
+  .md-unit-card:focus-visible,
+  .md-lesson-card:focus-visible,
+  .md-continue-btn:focus-visible,
+  .md-recent-chip:focus-visible {
+    outline: 3px solid rgba(213, 160, 74, 0.6);
+    outline-offset: 3px;
   }
 
   .md-empty {
     color: var(--md-muted);
     font-size: 0.95rem;
     margin: 0;
+    padding: 16px 20px;
+    border-radius: 16px;
+    background: var(--md-surface-2);
+    border: 1px dashed var(--md-border-strong);
+  }
+
+  /* =========================
+     TOP BAR
+     ========================= */
+  .md-topbar {
+    position: sticky;
+    top: 0;
+    z-index: 40 !important;
+    padding-top: 10px !important;
+    padding-bottom: 10px !important;
+    background: rgba(255, 255, 255, 0.82) !important;
+    backdrop-filter: blur(14px);
+    -webkit-backdrop-filter: blur(14px);
+    border-bottom: 1px solid var(--md-border);
+  }
+
+  .md-account-btn { transition: box-shadow 0.2s ease, transform 0.2s ease; }
+  .md-account-btn:hover { box-shadow: var(--md-shadow-md); transform: translateY(-1px); }
+
+  .md-topbar .md-login-btn {
+    padding: 9px 22px;
+    border-radius: 999px;
+    font-size: 0.82rem;
+    box-shadow: 0 6px 16px rgba(6, 59, 52, 0.20);
+    transition: transform 0.2s ease, box-shadow 0.2s ease, filter 0.2s ease;
+  }
+
+  .md-topbar .md-login-btn:hover {
+    transform: translateY(-1px);
+    filter: brightness(1.1);
+    box-shadow: 0 10px 22px rgba(6, 59, 52, 0.26);
+  }
+
+  /* =========================
+     DASHBOARD — floating cards over the hero, then open sections
+     ========================= */
+  .md-dashboard {
+    position: relative;
+    z-index: 3;
+    display: flex;
+    flex-direction: column;
+    gap: 34px;
+    margin-top: 40px;
+    margin-bottom: 0 !important;
+  }
+
+  .md-hero + .md-dashboard:has(> .md-continue),
+  .md-hero + .md-dashboard:has(> .md-panel) {
+    margin-top: calc(-1 * clamp(56px, 8vw, 76px));
+  }
+
+  .md-dashboard > .md-continue { margin-bottom: 0 !important; }
+  .md-dashboard > div.mt-4 { margin-top: 0 !important; }
+
+  .md-panel {
+    position: relative;
+    overflow: hidden;
+    border-radius: 28px !important;
+    padding: clamp(24px, 4vw, 40px) !important;
+    border-color: transparent !important;
+    background: #FFFFFF !important;
+    box-shadow: 0 24px 60px rgba(6, 59, 52, 0.16), 0 2px 8px rgba(6, 59, 52, 0.06) !important;
+  }
+
+  .md-panel::before,
+  .md-continue::before {
+    content: "";
+    position: absolute;
+    inset-inline: 0;
+    top: 0;
+    height: 4px;
+    background: linear-gradient(90deg, var(--md-teal), var(--md-gold));
+  }
+
+  .md-panel h2 {
+    font-size: 1.5rem;
+    font-weight: 900;
+    margin-bottom: 6px;
+  }
+
+  .md-continue {
+    position: relative;
+    overflow: hidden;
+    border-radius: 28px !important;
+    padding: clamp(22px, 3.5vw, 32px) clamp(22px, 4vw, 40px) !important;
+    background: #FFFFFF !important;
+    border-color: transparent !important;
+    box-shadow: 0 24px 60px rgba(6, 59, 52, 0.16), 0 2px 8px rgba(6, 59, 52, 0.06) !important;
+  }
+
+  .md-continue .font-black {
+    font-size: clamp(1.2rem, 3vw, 1.6rem);
+    line-height: 1.5;
+    color: var(--md-teal-deep) !important;
+  }
+
+  .md-continue .md-continue-btn {
+    padding: 14px 28px;
+    border-radius: 999px;
+    font-size: 0.95rem;
+    box-shadow: 0 10px 24px rgba(6, 59, 52, 0.26);
+    transition: transform 0.22s ease, box-shadow 0.22s ease;
+  }
+
+  .md-continue .md-continue-btn:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 16px 32px rgba(6, 59, 52, 0.32);
+  }
+
+  .md-dashboard .md-section-label {
+    display: flex;
+    align-items: center;
+    gap: 14px;
+    font-size: 0.82rem;
+    font-weight: 800;
+    margin-bottom: 16px !important;
+    color: var(--md-teal-deep) !important;
+  }
+
+  .md-dashboard .md-section-label::after {
+    content: "";
+    flex: 1;
+    height: 1px;
+    background: var(--md-border);
+  }
+
+  .md-dashboard .md-recent-chip {
+    padding: 10px 18px;
+    border-radius: 999px;
+    font-size: 0.85rem;
+    background: var(--md-surface-2);
+    border-color: var(--md-border) !important;
+    transition: transform 0.2s ease, background 0.2s ease, border-color 0.2s ease;
+  }
+
+  .md-dashboard .md-recent-chip:hover {
+    background: var(--md-teal-soft);
+    border-color: var(--md-teal) !important;
+    transform: translateY(-2px);
+  }
+
+  /* progress: open rows with hairlines, not boxes */
+  .md-dashboard .md-progress-grid {
+    gap: 8px clamp(28px, 5vw, 56px);
+  }
+
+  .md-progress-row {
+    padding: 4px 0 18px !important;
+    border: 0 !important;
+    border-bottom: 1px solid var(--md-border) !important;
+    border-radius: 0 !important;
+    background: transparent !important;
+    font-size: 0.86rem;
+    line-height: 1.8;
+  }
+
+  .md-progress-row p:first-child {
+    font-size: 1.05rem;
+    font-weight: 900;
+  }
+
+  .md-progress-row .md-progress-track {
+    height: 6px !important;
+    margin-top: 12px !important;
+    overflow: hidden;
+    border-radius: 999px;
+  }
+
+  .md-progress-fill {
+    background-image: linear-gradient(90deg, var(--md-teal), var(--md-gold)) !important;
+    transition: width 0.7s cubic-bezier(0.22, 1, 0.36, 1);
   }
 
   /* =========================
@@ -1783,132 +2035,162 @@ export default function StudentPlatform() {
 
   /* =========================
      UNIT CARDS + LESSON PREVIEW
-     (unit = "subject" curriculum node; text list shows before the unit
-     is opened, replaced by the existing lesson-cards grid once opened)
      ========================= */
+  /* Units = numbered editorial list, hairline separated */
   .md-units-grid {
     display: grid;
-    grid-template-columns: repeat(auto-fill, minmax(230px, 1fr));
-    gap: 16px;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 0 clamp(28px, 5vw, 56px);
+    counter-reset: unit;
+    align-items: start;
   }
 
   .md-unit-row {
     display: flex;
     flex-direction: column;
     gap: 10px;
+    padding: 6px 0 16px;
+    border-bottom: 1px solid var(--md-border);
+    counter-increment: unit;
   }
 
   .md-unit-card {
     display: flex;
     align-items: center;
-    justify-content: space-between;
-    gap: 10px;
-    padding: 14px 18px;
-    border-radius: var(--md-radius);
-    background: #FFFFFF;
-    border: 1px solid rgba(17, 122, 107, 0.22);
+    gap: 16px;
+    min-height: 68px;
+    padding: 12px 14px;
+    border-radius: 18px;
+    background: transparent;
+    border: 0;
     cursor: pointer;
     text-align: right;
-    transition:
-      transform 0.22s ease,
-      border-color 0.22s ease,
-      background 0.22s ease,
-      box-shadow 0.22s ease,
-      color 0.22s ease;
-    box-shadow: 0 2px 8px rgba(6, 59, 52, 0.04);
+    transition: background 0.22s ease, transform 0.22s ease, box-shadow 0.22s ease;
+  }
+
+  .md-unit-card::before {
+    content: counter(unit, decimal-leading-zero);
+    flex-shrink: 0;
+    font-size: 1.9rem;
+    font-weight: 900;
+    line-height: 1;
+    color: var(--md-gold-light);
+    opacity: 0.85;
+    font-variant-numeric: tabular-nums;
   }
 
   .md-unit-card:hover {
-    border-color: rgba(17, 122, 107, 0.45);
-    transform: translateY(-2px);
-    box-shadow: 0 6px 18px rgba(6, 59, 52, 0.09);
+    background: var(--md-teal-soft);
+    transform: translateX(-4px);
   }
 
   .md-unit-card.selected {
-    background: linear-gradient(135deg, var(--md-teal), var(--md-teal-deep));
-    border-color: var(--md-teal-deep);
-    box-shadow:
-      0 8px 22px rgba(6, 59, 52, 0.22),
-      0 0 0 3px rgba(17, 122, 107, 0.12);
+    background: linear-gradient(135deg, var(--md-teal-deep), var(--md-teal-dark));
+    box-shadow: 0 14px 30px rgba(6, 59, 52, 0.26);
+    transform: none;
   }
 
+  .md-unit-card.selected::before { color: var(--md-gold-light); opacity: 1; }
+
   .md-unit-card-title {
+    flex: 1;
     font-weight: 800;
-    font-size: 1rem;
+    font-size: 1.08rem;
+    line-height: 1.5;
     color: var(--md-text);
   }
 
-  .md-unit-card.selected .md-unit-card-title,
-  .md-unit-card.selected .md-unit-card-count {
-    color: #FFFFFF;
-  }
+  .md-unit-card.selected .md-unit-card-title { color: #FFFFFF; }
 
   .md-unit-card-count {
-    font-size: 0.78rem;
-    color: var(--md-muted);
+    font-size: 0.76rem;
+    font-weight: 700;
+    color: var(--md-teal-deep);
+    background: var(--md-teal-soft);
+    padding: 5px 12px;
+    border-radius: 999px;
     white-space: nowrap;
+  }
+
+  .md-unit-card.selected .md-unit-card-count {
+    color: #FFFFFF;
+    background: rgba(255, 255, 255, 0.16);
   }
 
   .md-unit-preview {
     list-style: none;
-    margin: 0;
-    padding: 4px 4px 0;
+    margin: 0 30px 0 0;
+    padding: 0 16px 0 0;
+    border-inline-start: 2px solid var(--md-gold-light);
     display: flex;
     flex-direction: column;
-    gap: 6px;
+    gap: 8px;
   }
 
   .md-unit-preview li {
-    font-size: 0.85rem;
+    font-size: 0.86rem;
     color: var(--md-text-soft);
-    line-height: 1.5;
+    line-height: 1.7;
   }
 
   .md-unit-preview-num {
     color: var(--md-teal-deep);
-    font-weight: 700;
+    font-weight: 800;
   }
 
   /* =========================
      LESSONS
      ========================= */
+  /* Lessons = full-bleed tinted band; the only place real cards appear */
   .md-lessons {
-    margin-top: 32px;
-    padding-top: 28px;
-    border-top: 1px solid var(--md-border);
+    margin: 48px calc(50% - 50vw) calc(-1 * var(--md-main-pb));
+    padding: clamp(40px, 6vw, 68px) calc(50vw - 50%);
+    background: linear-gradient(180deg, var(--md-surface-2), var(--md-teal-soft));
+    border-block: 1px solid var(--md-border);
   }
 
   .md-lessons-header {
     display: flex;
-    align-items: center;
+    align-items: flex-end;
     justify-content: space-between;
-    margin-bottom: 22px;
+    gap: 12px;
+    margin-bottom: clamp(24px, 4vw, 36px);
   }
 
   .md-lessons-header h2 {
+    position: relative;
     margin: 0;
-    font-size: 1.35rem;
-    font-weight: 800;
-    color: var(--md-text);
+    padding-bottom: 14px;
+    font-size: clamp(1.5rem, 4vw, 2.1rem);
+    font-weight: 900;
+    color: var(--md-teal-dark);
+  }
+
+  .md-lessons-header h2::after {
+    content: "";
+    position: absolute;
+    inset-inline-start: 0;
+    bottom: 0;
+    width: 48px;
+    height: 4px;
+    border-radius: 999px;
+    background: linear-gradient(90deg, var(--md-gold), var(--md-gold-light));
   }
 
   .md-count {
-    font-size: 0.9rem;
-    color: var(--md-teal-deep);
-    background: var(--md-teal-soft);
-    padding: 6px 13px;
+    font-size: 0.85rem;
+    font-weight: 800;
+    color: #FFFFFF;
+    background: var(--md-teal-deep);
+    padding: 7px 16px;
     border-radius: 999px;
-    border: 1px solid rgba(17, 122, 107, 0.16);
   }
 
   .md-lessons-grid {
     display: grid;
-    grid-template-columns:
-      repeat(
-        auto-fill,
-        minmax(260px, 1fr)
-      );
-    gap: 18px;
+    grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+    gap: 22px;
+    counter-reset: lesson;
   }
 
   /* =========================
@@ -1916,93 +2198,90 @@ export default function StudentPlatform() {
      ========================= */
   .md-lesson-card {
     position: relative;
-    border-radius: var(--md-radius);
-    background:
-      linear-gradient(
-        180deg,
-        #FFFFFF 0%,
-        var(--md-surface-2) 100%
-      );
+    display: flex;
+    flex-direction: column;
+    counter-increment: lesson;
+    border-radius: 24px;
+    background: #FFFFFF;
     border: 1px solid var(--md-border);
     overflow: hidden;
     cursor: pointer;
-    transition:
-      transform 0.28s cubic-bezier(0.22, 1, 0.36, 1),
-      border-color 0.28s ease,
-      box-shadow 0.28s ease;
-    box-shadow:
-      0 4px 16px rgba(6, 59, 52, 0.05);
+    transition: transform 0.28s cubic-bezier(0.22, 1, 0.36, 1), border-color 0.28s ease, box-shadow 0.28s ease;
+    box-shadow: 0 2px 10px rgba(6, 59, 52, 0.05);
+  }
+
+  .md-lesson-card::after {
+    content: counter(lesson, decimal-leading-zero);
+    position: absolute;
+    top: 12px;
+    inset-inline-end: 20px;
+    font-size: 3rem;
+    font-weight: 900;
+    line-height: 1;
+    color: var(--md-teal);
+    opacity: 0.09;
+    pointer-events: none;
+    font-variant-numeric: tabular-nums;
   }
 
   .md-lesson-card::before {
     content: "";
     position: absolute;
+    inset-inline: 0;
     top: 0;
-    right: 0;
-    left: 0;
-    height: 3px;
-    background:
-      linear-gradient(
-        90deg,
-        transparent,
-        var(--md-teal),
-        var(--md-gold),
-        transparent
-      );
-    opacity: 0;
-    transition: opacity 0.3s ease;
+    height: 4px;
+    background: linear-gradient(90deg, var(--md-teal), var(--md-gold));
+    transform: scaleX(0);
+    transform-origin: right;
+    transition: transform 0.35s ease;
   }
 
   .md-lesson-card:hover {
-    transform: translateY(-6px);
-    border-color: rgba(17, 122, 107, 0.32);
-    box-shadow:
-      0 18px 42px rgba(6, 59, 52, 0.12),
-      0 4px 12px rgba(6, 59, 52, 0.06);
+    transform: translateY(-5px);
+    border-color: rgba(17, 122, 107, 0.35);
+    box-shadow: 0 22px 46px rgba(6, 59, 52, 0.14);
   }
 
-  .md-lesson-card:hover::before {
-    opacity: 1;
+  .md-lesson-card:hover::before { transform: scaleX(1); }
+
+  .md-lesson-locked {
+    background: var(--md-surface-3);
+    border-style: dashed;
+    box-shadow: none;
   }
 
   .md-lesson-glow {
     position: absolute;
     inset: 0;
-    background:
-      radial-gradient(
-        500px circle at
-        var(--x, 50%)
-        var(--y, 0%),
-        rgba(17, 122, 107, 0.09),
-        transparent 42%
-      );
+    background: radial-gradient(500px circle at var(--x, 50%) var(--y, 0%), rgba(17, 122, 107, 0.08), transparent 42%);
     opacity: 0;
     transition: opacity 0.3s;
     pointer-events: none;
   }
 
-  .md-lesson-card:hover .md-lesson-glow {
-    opacity: 1;
-  }
+  .md-lesson-card:hover .md-lesson-glow { opacity: 1; }
 
   .md-lesson-body {
-    padding: 22px;
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    padding: 26px 26px 22px;
     position: relative;
   }
 
   .md-lesson-body h3 {
     margin: 0 0 10px;
-    font-size: 1.1rem;
-    font-weight: 700;
+    font-size: 1.15rem;
+    font-weight: 900;
     line-height: 1.5;
-    color: var(--md-text);
+    color: var(--md-teal-dark);
   }
 
   .md-lesson-body p {
-    margin: 0 0 18px;
+    margin: 0 0 22px;
     color: var(--md-muted);
     font-size: 0.9rem;
-    line-height: 1.6;
+    line-height: 1.8;
     display: -webkit-box;
     -webkit-line-clamp: 2;
     -webkit-box-orient: vertical;
@@ -2010,21 +2289,33 @@ export default function StudentPlatform() {
   }
 
   .md-lesson-cta {
-    display: inline-flex;
+    display: flex;
     align-items: center;
+    justify-content: space-between;
     gap: 8px;
-    font-size: 0.9rem;
-    font-weight: 700;
+    margin-top: auto;
+    padding-top: 16px;
+    border-top: 1px solid var(--md-border);
+    font-size: 0.92rem;
+    font-weight: 800;
     color: var(--md-teal);
   }
 
-  .md-lesson-card:hover .md-lesson-cta span {
-    transform: translateX(-5px);
+  .md-lesson-cta span {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 32px;
+    height: 32px;
+    border-radius: 50%;
+    background: var(--md-teal-soft);
+    transition: transform 0.2s ease, background 0.2s ease, color 0.2s ease;
   }
 
-  .md-lesson-cta span {
-    transition: transform 0.2s;
-    display: inline-block;
+  .md-lesson-card:hover .md-lesson-cta span {
+    transform: translateX(-4px);
+    background: var(--md-teal);
+    color: #FFFFFF;
   }
 
   /* =========================
@@ -2149,85 +2440,39 @@ export default function StudentPlatform() {
   /* =========================
      RESPONSIVE
      ========================= */
+  @media (max-width: 1024px) {
+    .md-main { max-width: 860px; }
+    .md-lessons-grid { grid-template-columns: repeat(auto-fill, minmax(260px, 1fr)); }
+  }
+
   @media (max-width: 768px) {
-    .md-hero-logo {
-      height: 50px;
-    }
-
-    .md-main {
-      flex-direction: column;
-      align-items: flex-start;
-      gap: 10px;
-      padding: 12px 16px 130px;
-    }
-
-    .md-hero {
-      margin-bottom: 36px;
-    }
-
-    .md-hero h1 {
-      font-size: 2rem;
-    }
-
-    .md-hero p {
-      font-size: 0.95rem;
-    }
-
-    .md-lessons-header {
-      gap: 12px;
-    }
-
-    .md-lessons-header h2 {
-      font-size: 1.2rem;
-    }
-
-    .md-corner-compass {
-      width: 44px;
-      height: 44px;
-      top: 16px;
-      left: 16px;
-    }
-
-    .md-step-label {
-      font-size: 0.95rem;
-    }
-
-    .md-footer {
-      padding: 12px 16px;
-    }
-
-    .md-footer-desc {
-      font-size: 0.78rem;
-    }
+    .md-hero-logo { height: 50px; padding: 12px 20px; border-radius: 22px; }
+    .md-main { padding: 0 16px var(--md-main-pb); }
+    .md-corner-compass { width: 44px; height: 44px; top: 16px; left: 16px; }
+    .md-units-grid { grid-template-columns: 1fr; }
+    .md-step-label { font-size: 1.1rem; }
+    .md-footer { padding: 12px 16px; }
+    .md-footer-desc { font-size: 0.78rem; }
   }
 
   @media (max-width: 640px) {
-    .md-main {
-      padding: 32px 16px 140px;
-    }
-
-    .md-corner-compass {
-      width: 40px;
-      height: 40px;
-      top: 14px;
-      left: 14px;
-    }
-
-    .md-step {
-      gap: 12px;
-    }
-
-    .md-lessons-grid {
-      grid-template-columns: 1fr;
-    }
-
-    .md-lesson-body {
-      padding: 20px;
-    }
-
-    .md-footer-inner {
-      gap: 4px;
-    }
+    .md-main { --md-main-pb: 56px; padding: 0 16px var(--md-main-pb); }
+    .md-corner-compass { width: 40px; height: 40px; top: 14px; left: 14px; }
+    .md-hero h1 { max-width: 12em; }
+    .md-journey { margin-top: 32px; }
+    .md-step { gap: 14px; }
+    .md-step-indicator { width: 36px; }
+    .md-step-number { width: 36px; height: 36px; font-size: 0.92rem; }
+    .md-step-label { line-height: 36px; font-size: 1.05rem; }
+    .md-chip { min-height: 44px; padding: 9px 18px; font-size: 0.92rem; }
+    .md-lessons-grid { grid-template-columns: 1fr; gap: 16px; }
+    .md-lesson-body { padding: 22px 20px 18px; }
+    .md-lesson-card::after { font-size: 2.4rem; }
+    .md-unit-card::before { font-size: 1.5rem; }
+    .md-unit-preview { margin-right: 22px; }
+    .md-continue .md-continue-btn { width: 100%; }
+    .md-assistant-wrap { bottom: 14px; right: 14px; }
+    .md-footer-inner { gap: 4px; }
   }
 
   /* =========================
@@ -2237,7 +2482,15 @@ export default function StudentPlatform() {
     .md-orbit,
     .md-star.twinkle,
     .md-spinner-rose,
-    .md-hero-logo {
+    .md-hero-logo,
+    .md-hero > *,
+    .md-hero::after,
+    .md-journey,
+    .md-chip,
+    .md-unit-card,
+    .md-lesson-card,
+    .md-continue-btn,
+    .md-recent-chip {
       animation: none !important;
       transition: none !important;
     }

@@ -14,7 +14,8 @@ import { TableRow } from "@tiptap/extension-table-row";
 import { TableCell } from "@tiptap/extension-table-cell";
 import { TableHeader } from "@tiptap/extension-table-header";
 import { ImageUploadField } from "./Viewer";
-import { STAGES, GRADES, TERMS, uid } from "../lib/constants";
+import { uid } from "../lib/constants";
+import { listCurriculumNodes } from "../lib/db";
 import { Hotword } from "../lib/hotwordExtension";
 
 // ---------------------------------------------------------------------------
@@ -783,30 +784,166 @@ export function QuestionStudioEditor({ questions, onAdd, onUpdate, onDelete }) {
 
 export function CreateLessonModal({ onCreate, onClose }) {
   const [title, setTitle] = useState("");
-  const [subject, setSubject] = useState("");
-  const [stage, setStage] = useState(STAGES[0]);
-  const [grade, setGrade] = useState(GRADES[0]);
-  const [term, setTerm] = useState(TERMS[0]);
   const [description, setDescription] = useState("");
+
+  const [nodes, setNodes] = useState(null); // null = still loading
+  const [loadError, setLoadError] = useState("");
+  const [stageId, setStageId] = useState("");
+  const [gradeId, setGradeId] = useState("");
+  const [termId, setTermId] = useState("");
+  const [subjectId, setSubjectId] = useState("");
+
+  useEffect(() => {
+    let cancelled = false;
+    listCurriculumNodes()
+      .then((rows) => {
+        if (cancelled) return;
+        const active = (rows || []).filter((n) => n.isActive !== false);
+        setNodes(active);
+        const firstStage = active.find((n) => n.kind === "stage" && !n.parentId);
+        if (firstStage) setStageId(firstStage.id);
+      })
+      .catch((e) => {
+        if (!cancelled) setLoadError(e?.message || "تعذر تحميل بيانات المنهج.");
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, []);
+
+  const byKindAndParent = (kind, parentId) =>
+    (nodes || [])
+      .filter((n) => n.kind === kind && (n.parentId || "") === (parentId || ""))
+      .sort((a, b) => (a.sortOrder || 0) - (b.sortOrder || 0));
+
+  const stageOptions = byKindAndParent("stage", null);
+  const gradeOptions = stageId ? byKindAndParent("grade", stageId) : [];
+  const termOptions = gradeId ? byKindAndParent("term", gradeId) : [];
+  const subjectOptions = termId ? byKindAndParent("subject", termId) : [];
+
+  // إذا تغيّرت المرحلة/الصف/الترم، امسح الاختيارات التابعة التي لم تعد صالحة
+  useEffect(() => {
+    if (gradeId && !gradeOptions.some((g) => g.id === gradeId)) {
+      setGradeId(gradeOptions[0]?.id || "");
+    } else if (!gradeId && gradeOptions.length) {
+      setGradeId(gradeOptions[0].id);
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [stageId, nodes]);
+
+  useEffect(() => {
+    if (termId && !termOptions.some((t) => t.id === termId)) {
+      setTermId(termOptions[0]?.id || "");
+    } else if (!termId && termOptions.length) {
+      setTermId(termOptions[0].id);
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [gradeId, nodes]);
+
+  useEffect(() => {
+    if (subjectId && !subjectOptions.some((s) => s.id === subjectId)) {
+      setSubjectId(subjectOptions[0]?.id || "");
+    } else if (!subjectId && subjectOptions.length) {
+      setSubjectId(subjectOptions[0].id);
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [termId, nodes]);
+
+  const nameOf = (id) => (nodes || []).find((n) => n.id === id)?.name || "";
+  const curriculumEmpty = nodes && stageOptions.length === 0;
+  const canSubmit = title.trim() && stageId && gradeId && termId && subjectId;
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4" style={{ background: "rgba(34,41,31,0.5)" }}>
       <div className="ts-fade w-full rounded-3xl p-6 shadow-2xl bg-white border max-w-md" style={{ borderColor: "#DED4BD" }}>
         <h2 className="font-black text-xl mb-4" style={{ color: "#10665A" }}>إنشاء درس جديد</h2>
-        <label className="block mb-3"><span className="block text-xs mb-1" style={{ color: "#5C5A4A" }}>عنوان الدرس</span><input className="ts-input" value={title} onChange={(e) => setTitle(e.target.value)} /></label>
-        <label className="block mb-3"><span className="block text-xs mb-1" style={{ color: "#5C5A4A" }}>المادة</span><input className="ts-input" placeholder="مثال: التاريخ" value={subject} onChange={(e) => setSubject(e.target.value)} /></label>
-        <div className="grid grid-cols-3 gap-2 mb-3">
-          <select className="ts-input text-xs" value={stage} onChange={(e) => setStage(e.target.value)}>{STAGES.map((s) => <option key={s}>{s}</option>)}</select>
-          <select className="ts-input text-xs" value={grade} onChange={(e) => setGrade(e.target.value)}>{GRADES.map((s) => <option key={s}>{s}</option>)}</select>
-          <select className="ts-input text-xs" value={term} onChange={(e) => setTerm(e.target.value)}>{TERMS.map((s) => <option key={s}>{s}</option>)}</select>
-        </div>
-        <label className="block mb-5"><span className="block text-xs mb-1" style={{ color: "#5C5A4A" }}>وصف مختصر</span><textarea rows={2} className="ts-input" value={description} onChange={(e) => setDescription(e.target.value)} /></label>
+
+        {loadError && (
+          <p className="text-xs mb-3" style={{ color: "#C53030" }}>{loadError}</p>
+        )}
+
+        {curriculumEmpty ? (
+          <p className="text-sm mb-5 leading-6" style={{ color: "#5C5A4A" }}>
+            لا يوجد منهج مُعرَّف بعد (مراحل · صفوف · ترمات · مواد). أضِف عناصر المنهج أولًا من
+            «إعدادات المنصة ← المنهج» ثم عُد هنا لإنشاء الدرس.
+          </p>
+        ) : (
+          <>
+            <label className="block mb-3">
+              <span className="block text-xs mb-1" style={{ color: "#5C5A4A" }}>عنوان الدرس</span>
+              <input className="ts-input" value={title} onChange={(e) => setTitle(e.target.value)} />
+            </label>
+
+            <div className="grid grid-cols-2 gap-2 mb-3">
+              <select
+                className="ts-input text-xs"
+                value={stageId}
+                onChange={(e) => setStageId(e.target.value)}
+              >
+                {stageOptions.map((s) => (
+                  <option key={s.id} value={s.id}>{s.name}</option>
+                ))}
+              </select>
+              <select
+                className="ts-input text-xs"
+                value={gradeId}
+                onChange={(e) => setGradeId(e.target.value)}
+                disabled={!gradeOptions.length}
+              >
+                {gradeOptions.length ? (
+                  gradeOptions.map((g) => <option key={g.id} value={g.id}>{g.name}</option>)
+                ) : (
+                  <option value="">لا يوجد صفوف لهذه المرحلة</option>
+                )}
+              </select>
+              <select
+                className="ts-input text-xs"
+                value={termId}
+                onChange={(e) => setTermId(e.target.value)}
+                disabled={!termOptions.length}
+              >
+                {termOptions.length ? (
+                  termOptions.map((t) => <option key={t.id} value={t.id}>{t.name}</option>)
+                ) : (
+                  <option value="">لا يوجد ترمات لهذا الصف</option>
+                )}
+              </select>
+              <select
+                className="ts-input text-xs"
+                value={subjectId}
+                onChange={(e) => setSubjectId(e.target.value)}
+                disabled={!subjectOptions.length}
+              >
+                {subjectOptions.length ? (
+                  subjectOptions.map((s) => <option key={s.id} value={s.id}>{s.name}</option>)
+                ) : (
+                  <option value="">لا يوجد مواد لهذا الترم</option>
+                )}
+              </select>
+            </div>
+
+            <label className="block mb-5">
+              <span className="block text-xs mb-1" style={{ color: "#5C5A4A" }}>وصف مختصر</span>
+              <textarea rows={2} className="ts-input" value={description} onChange={(e) => setDescription(e.target.value)} />
+            </label>
+          </>
+        )}
+
         <div className="flex gap-2">
           <button
-            disabled={!title.trim()}
-            onClick={() => onCreate({ title: title.trim(), subject: subject.trim() || "عام", stage, grade, term, description: description.trim() })}
+            disabled={!canSubmit}
+            onClick={() =>
+              onCreate({
+                title: title.trim(),
+                subject: nameOf(subjectId),
+                stage: nameOf(stageId),
+                grade: nameOf(gradeId),
+                term: nameOf(termId),
+                description: description.trim(),
+              })
+            }
             className="px-4 py-2.5 rounded-xl text-xs font-bold text-white shadow-sm flex-1"
-            style={{ background: title.trim() ? "#10665A" : "#DED4BD" }}
+            style={{ background: canSubmit ? "#10665A" : "#DED4BD" }}
           >
             إنشاء والبدء في الاستوديو
           </button>

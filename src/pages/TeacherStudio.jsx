@@ -29,11 +29,6 @@ import PresentationTools from "../components/PresentationTools";
 const AUTOSAVE_DELAY = 800;
 
 // Same ordinal labels used on the student-facing unit preview list — keeps
-// "ترتيب الدرس داخل الوحدة" here consistent with what the student sees.
-const LESSON_ORDER_LABELS = [
-  "الدرس الأول", "الدرس الثاني", "الدرس الثالث", "الدرس الرابع", "الدرس الخامس",
-  "الدرس السادس", "الدرس السابع", "الدرس الثامن", "الدرس التاسع", "الدرس العاشر",
-];
 
 const SEO_TITLE_LIMIT = 60;
 const SEO_DESCRIPTION_LIMIT = 160;
@@ -563,19 +558,7 @@ export default function TeacherStudioPage() {
             </select>
           </div>
 
-          <label className="block mb-4">
-            <span className="block text-xs mb-1" style={{ color: "#8A8570" }}>ترتيب الدرس داخل الوحدة</span>
-            <select
-              className="ts-input text-xs w-full"
-              value={lesson.sortOrder ?? 0}
-              onChange={(e) => patchLesson({ sortOrder: Number(e.target.value) }, { immediate: true })}
-            >
-              <option value={0}>بدون ترتيب محدد</option>
-              {LESSON_ORDER_LABELS.map((label, i) => (
-                <option key={i} value={i + 1}>{label}</option>
-              ))}
-            </select>
-          </label>
+
 
           {/* وصول الدرس — Access Lock على مستوى الدرس (journey_config.isMembersOnly) */}
           <div className="mb-4 p-3 rounded-xl" style={{ background: "#FAF6ED", border: "1px solid #DED4BD" }}>

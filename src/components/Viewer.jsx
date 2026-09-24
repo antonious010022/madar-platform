@@ -191,24 +191,32 @@ export function HotwordRenderer({ text, hotwords = [], onJumpToScene }) {
           line-height: 1.8;
           color: #22291F;
         }
-        /* تصميم التمييز عبر خلفية النص بدلاً من الخط السفلي */
+        /* تصميم متوهج فخم بدلاً من المستطيل الملوّن */
         .ts-richtext-content .ts-hotword-highlight {
           font-size: inherit !important;
           font-family: inherit !important;
-          font-weight: 600 !important;
-          color: #004D40 !important;
-          background-color: #C8E6C9 !important; /* لون خلفية مميز (أخضر فاتح هادئ) */
-          padding: 2px 6px !important;
-          margin: 0 2px !important;
-          border-radius: 6px !important;
+          font-weight: 700 !important;
+          color: #B9791F !important;
+          background: none !important;
+          padding: 0 1px !important;
+          margin: 0 1px !important;
+          border-radius: 0 !important;
+          border-bottom: 1.5px dotted rgba(185,121,31,0.55) !important;
           text-decoration: none !important;
           cursor: pointer !important;
-          transition: all 0.2s ease-in-out !important;
-          box-shadow: inset 0 -1px 0 rgba(0,0,0,0.05);
+          transition: color 0.25s ease, text-shadow 0.25s ease, border-color 0.25s ease !important;
+          text-shadow: 0 0 6px rgba(185,121,31,0.45), 0 0 14px rgba(185,121,31,0.2) !important;
+          animation: ts-hotword-glow 2.6s ease-in-out infinite;
         }
         .ts-richtext-content .ts-hotword-highlight:hover {
-          background-color: #A5D6A7 !important; /* درجة أغمق قليلاً عند المرور */
-          color: #00251A !important;
+          color: #E0A83E !important;
+          border-bottom-color: rgba(224,168,62,0.9) !important;
+          text-shadow: 0 0 10px rgba(224,168,62,0.85), 0 0 22px rgba(224,168,62,0.45) !important;
+          animation-play-state: paused;
+        }
+        @keyframes ts-hotword-glow {
+          0%, 100% { text-shadow: 0 0 6px rgba(185,121,31,0.4), 0 0 14px rgba(185,121,31,0.18); }
+          50% { text-shadow: 0 0 10px rgba(185,121,31,0.75), 0 0 20px rgba(185,121,31,0.4); }
         }
         .ts-richtext-content img {
           display: block !important;
