@@ -217,6 +217,8 @@ export default function TeacherStudioPage() {
   const [completionTemplates, setCompletionTemplates] = useState([]);
   const [seoSectionOpen, setSeoSectionOpen] = useState(false);
   const [seoSlugConflict, setSeoSlugConflict] = useState("");
+  // عرض/تبديل اللوحات على الموبايل فقط (لا تأثير على المنطق أو الحفظ — واجهة فقط)
+  const [mobilePanel, setMobilePanel] = useState("editor"); // "scenes" | "editor" | "preview"
 
   const lessonTimerRef = useRef(null);
   const sceneTimersRef = useRef({});
@@ -399,6 +401,11 @@ export default function TeacherStudioPage() {
     return () => window.removeEventListener("keydown", onKey);
   }, [onKey]);
 
+  // إن أُخفيت المعاينة أثناء عرضها على الموبايل، ارجع تلقائيًا لعرض المحرر
+  useEffect(() => {
+    if (!showPreview && mobilePanel === "preview") setMobilePanel("editor");
+  }, [showPreview, mobilePanel]);
+
   if (lesson === null) {
     return <div className="p-10 text-center" style={{ color: "#8A8570" }}>جاري تحميل الدرس...</div>;
   }
@@ -467,9 +474,22 @@ export default function TeacherStudioPage() {
         </div>
       </div>
 
-      <div className="grid" style={{ gridTemplateColumns: showPreview ? "280px 1fr 380px" : "280px 1fr", minHeight: "calc(100vh - 98px)" }}>
+      {/* شريط تبديل اللوحات — يظهر على الموبايل فقط (< 768px)؛ لا تأثير على أي منطق */}
+      <div className="ts-studio-mobiletabs" role="tablist" aria-label="أقسام الاستوديو">
+        <button type="button" role="tab" aria-selected={mobilePanel === "scenes"} className={mobilePanel === "scenes" ? "active" : ""} onClick={() => setMobilePanel("scenes")}>📑 المشاهد</button>
+        <button type="button" role="tab" aria-selected={mobilePanel === "editor"} className={mobilePanel === "editor" ? "active" : ""} onClick={() => setMobilePanel("editor")}>✏️ المحرر</button>
+        {showPreview && (
+          <button type="button" role="tab" aria-selected={mobilePanel === "preview"} className={mobilePanel === "preview" ? "active" : ""} onClick={() => setMobilePanel("preview")}>👁️ المعاينة</button>
+        )}
+      </div>
+
+      <div
+        className="grid ts-studio-grid"
+        data-mobile-panel={mobilePanel}
+        style={{ gridTemplateColumns: showPreview ? "280px 1fr 380px" : "280px 1fr", minHeight: "calc(100vh - 98px)" }}
+      >
         {/* Scenes Sidebar */}
-        <div className="p-4 ts-scrollbar bg-white border-l" style={{ borderColor: "#DED4BD", overflowY: "auto" }}>
+        <div data-studio-panel="scenes" className="p-4 ts-scrollbar bg-white border-l" style={{ borderColor: "#DED4BD", overflowY: "auto" }}>
           <label className="block mb-3">
             <span className="block text-xs mb-1" style={{ color: "#8A8570" }}>عنوان الدرس</span>
             <input className="ts-input text-xs w-full" value={lesson.title} onChange={(e) => patchLesson({ title: e.target.value })} />
@@ -668,7 +688,7 @@ export default function TeacherStudioPage() {
 
         {/* Scene Editor Content */}
         {scene && (
-          <div key={scene.id} className="p-6 ts-scrollbar" style={{ overflowY: "auto" }}>
+          <div key={scene.id} data-studio-panel="editor" className="p-6 ts-scrollbar" style={{ overflowY: "auto" }}>
             <div className="max-w-2xl mx-auto">
               
               {/* عنوان المشهد */}
@@ -967,12 +987,107 @@ export default function TeacherStudioPage() {
         )}
 
         {showPreview && (
-          <div className="ts-scrollbar border-r bg-white" style={{ borderColor: "#DED4BD", overflowY: "auto" }}>
-            <div className="px-4 py-2.5 bg-[#22291F] text-white text-xs font-bold text-center">معاينة حية (Live Preview)</div>
+          <div data-studio-panel="preview" className="ts-scrollbar border-r bg-white ts-studio-preview" style={{ borderColor: "#DED4BD", overflowY: "auto" }}>
+            <div className="px-4 py-2.5 bg-[#22291F] text-white text-xs font-bold flex items-center justify-between gap-2">
+              <span className="flex-1 text-center">معاينة حية (Live Preview)</span>
+              <button
+                type="button"
+                onClick={() => setShowPreview(false)}
+                className="ts-studio-preview-close"
+                aria-label="إغلاق المعاينة"
+                title="إغلاق المعاينة"
+              >
+                ✕
+              </button>
+            </div>
             <StudentView lesson={lesson} embedded isTeacherView />
           </div>
         )}
       </div>
+
+      <style>{`
+        /* =========================
+           TeacherStudio — Responsive
+           Desktop (>=1024px) هو الأساس ولا يتغيّر.
+           ========================= */
+        .ts-studio-mobiletabs { display: none; }
+
+        /* ---- Tablet: 768px - 1023px ---- */
+        @media (max-width: 1023px) {
+          .ts-studio-grid { grid-template-columns: 240px 1fr !important; }
+          /* لوحة المعاينة تتحول إلى Drawer عائم بدل عمود ثالث يضغط المحرر */
+          .ts-studio-grid [data-studio-panel="preview"] {
+            position: fixed;
+            top: 0;
+            bottom: 0;
+            left: 0;
+            width: min(380px, 92vw);
+            z-index: 45;
+            box-shadow: 8px 0 28px rgba(34,41,31,0.22);
+          }
+          .ts-studio-preview-close { display: inline-flex; }
+        }
+
+        /* ---- Mobile: < 768px ---- */
+        @media (max-width: 767px) {
+          .ts-studio-mobiletabs {
+            display: flex;
+            gap: 6px;
+            padding: 8px 12px;
+            background: #fff;
+            border-bottom: 1px solid #DED4BD;
+            overflow-x: auto;
+            -webkit-overflow-scrolling: touch;
+          }
+          .ts-studio-mobiletabs button {
+            flex: 1 1 auto;
+            white-space: nowrap;
+            font-size: 12px;
+            font-weight: 700;
+            padding: 8px 10px;
+            min-height: 40px;
+            border-radius: 10px;
+            background: #FAF6ED;
+            color: #8A8570;
+            border: 1px solid #DED4BD;
+          }
+          .ts-studio-mobiletabs button.active {
+            background: #E4F0EC;
+            color: #10665A;
+            border-color: #10665A;
+          }
+
+          .ts-studio-grid { grid-template-columns: 1fr !important; }
+          /* عمود واحد فقط في كل مرة — لا يظهر عمودان جنبًا إلى جنب أبدًا على الموبايل */
+          .ts-studio-grid [data-studio-panel] { display: none; }
+          .ts-studio-grid[data-mobile-panel="scenes"] [data-studio-panel="scenes"] { display: block; }
+          .ts-studio-grid[data-mobile-panel="editor"] [data-studio-panel="editor"] { display: block; }
+          .ts-studio-grid[data-mobile-panel="preview"] [data-studio-panel="preview"] { display: block; }
+
+          .ts-studio-grid [data-studio-panel="scenes"],
+          .ts-studio-grid [data-studio-panel="editor"] {
+            width: 100%;
+          }
+          .ts-studio-grid [data-studio-panel="preview"] {
+            position: static;
+            width: 100%;
+            box-shadow: none;
+          }
+          .ts-studio-preview-close { display: inline-flex; }
+        }
+
+        .ts-studio-preview-close {
+          display: none;
+          align-items: center;
+          justify-content: center;
+          width: 28px;
+          height: 28px;
+          border-radius: 8px;
+          background: rgba(255,255,255,0.12);
+          color: #fff;
+          flex-shrink: 0;
+        }
+      `}</style>
     </div>
   );
 }

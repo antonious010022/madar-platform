@@ -94,10 +94,10 @@ export default function AuthModal({ open, onClose, onSuccess, title, subtitle })
   };
 
   return (
-    <div className="fixed inset-0 z-[100] flex items-center justify-center p-4" style={{ background: "rgba(14, 23, 18, 0.45)" }}
+    <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 overflow-y-auto" style={{ background: "rgba(14, 23, 18, 0.45)" }}
       role="dialog" aria-modal="true" aria-labelledby="auth-modal-title"
       onClick={(e) => { if (e.target === e.currentTarget) onClose?.(); }}>
-      <div className="w-full max-w-sm rounded-3xl p-6 sm:p-8 bg-white shadow-lg dir-rtl text-right" style={{ border: "1px solid #DED4BD" }}
+      <div className="w-full max-w-sm rounded-3xl p-6 sm:p-8 bg-white shadow-lg dir-rtl text-right my-auto" style={{ border: "1px solid #DED4BD", maxHeight: "90vh", overflowY: "auto" }}
         onClick={(e) => e.stopPropagation()}>
         <div className="flex justify-between items-start mb-4">
           <div>
@@ -164,9 +164,9 @@ export default function AuthModal({ open, onClose, onSuccess, title, subtitle })
 export function RegistrationGate({ open, onClose, onRequestAuth, featureLabel }) {
   if (!open) return null;
   return (
-    <div className="fixed inset-0 z-[90] flex items-center justify-center p-4" style={{ background: "rgba(14, 23, 18, 0.4)" }}
+    <div className="fixed inset-0 z-[90] flex items-center justify-center p-4 overflow-y-auto" style={{ background: "rgba(14, 23, 18, 0.4)" }}
       role="dialog" aria-modal="true" onClick={(e) => { if (e.target === e.currentTarget) onClose?.(); }}>
-      <div className="w-full max-w-sm rounded-3xl p-6 bg-white shadow-lg dir-rtl text-right" style={{ border: "1px solid #DED4BD" }} onClick={(e) => e.stopPropagation()}>
+      <div className="w-full max-w-sm rounded-3xl p-6 bg-white shadow-lg dir-rtl text-right my-auto" style={{ border: "1px solid #DED4BD", maxHeight: "90vh", overflowY: "auto" }} onClick={(e) => e.stopPropagation()}>
         <h3 className="font-black text-lg mb-1" style={{ color: "#10665A" }}>افتح الميزة مجانًا</h3>
         <p className="text-sm mb-4" style={{ color: "#5C5A4A" }}>
           سجّل حسابك للاستمتاع بكل مميزات مَدَار مجانًا وحفظ تقدمك.

@@ -1439,6 +1439,7 @@ export default function PresentationTools({ onExit, children }) {
   const recPanelStyle = (() => {
     const base = {
       width: 300,
+      maxWidth: "calc(100vw - 24px)",
       maxHeight: "calc(100vh - 90px)",
       overflowY: "auto",
       background: "rgba(20,26,20,0.97)",
@@ -1448,6 +1449,10 @@ export default function PresentationTools({ onExit, children }) {
       direction: "rtl",
       textAlign: "right",
     };
+    // موضع أفقي آمن على الشاشات الضيقة: لا يدع اللوحة تخرج من حدود منطقة العرض
+    const safeLeft = (preferred) =>
+      area.w ? Math.max(8, Math.min(preferred, area.w - 300 - 8)) : preferred;
+
     // بدون إطار: بجانب أزرار التحكم العلوية اليسرى (خارج منطقة المحتوى قدر الإمكان)
     if (!framed || !box || !area.w) {
       return { ...base, top: 12, left: GUTTER.left + 8, right: "auto" };
@@ -1459,7 +1464,7 @@ export default function PresentationTools({ onExit, children }) {
     const spaceBelow = area.h - (box.top + box.height);
     const spaceLeft = box.left;
     if (spaceRight >= panelW + gap) {
-      return { ...base, top: Math.max(8, box.top), left: box.left + box.width + gap, right: "auto" };
+      return { ...base, top: Math.max(8, box.top), left: safeLeft(box.left + box.width + gap), right: "auto" };
     }
     if (spaceBelow >= Math.min(panelH, 180) + gap) {
       return {
@@ -1470,10 +1475,10 @@ export default function PresentationTools({ onExit, children }) {
       };
     }
     if (spaceLeft >= panelW + gap) {
-      return { ...base, top: Math.max(8, box.top), left: Math.max(8, box.left - panelW - gap), right: "auto" };
+      return { ...base, top: Math.max(8, box.top), left: safeLeft(box.left - panelW - gap), right: "auto" };
     }
     // احتياطي: بجانب شريط الأدوات الأيسر فوق/بجانب الإطار دون الاعتماد على يمين الشاشة
-    return { ...base, top: 12, left: GUTTER.left + 8, right: "auto" };
+    return { ...base, top: 12, left: safeLeft(GUTTER.left + 8), right: "auto" };
   })();
 
   const boxStyle = framed
@@ -1699,6 +1704,7 @@ export default function PresentationTools({ onExit, children }) {
             left: "50%",
             transform: "translateX(-50%)",
             width: 320,
+            maxWidth: "calc(100vw - 24px)",
             background: "rgba(20,26,20,0.97)",
             color: "#FAF6ED",
             zIndex: Z.menu,
@@ -2032,8 +2038,9 @@ export default function PresentationTools({ onExit, children }) {
               className="fixed rounded-2xl p-3 shadow-lg flex flex-col gap-3"
               style={{
                 top: 96,
-                left: 128,
+                left: area.w ? Math.max(8, Math.min(128, area.w - 250 - 8)) : 128,
                 width: 250,
+                maxWidth: "calc(100vw - 24px)",
                 maxHeight: "calc(100vh - 120px)",
                 overflowY: "auto",
                 background: "rgba(20,26,20,0.96)",

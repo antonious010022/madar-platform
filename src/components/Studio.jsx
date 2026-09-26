@@ -854,8 +854,8 @@ export function CreateLessonModal({ onCreate, onClose }) {
   const canSubmit = title.trim() && stageId && gradeId && termId && subjectId;
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4" style={{ background: "rgba(34,41,31,0.5)" }}>
-      <div className="ts-fade w-full rounded-3xl p-6 shadow-2xl bg-white border max-w-md" style={{ borderColor: "#DED4BD" }}>
+    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 overflow-y-auto" style={{ background: "rgba(34,41,31,0.5)" }}>
+      <div className="ts-fade w-full rounded-3xl p-6 shadow-2xl bg-white border max-w-md my-auto" style={{ borderColor: "#DED4BD", maxHeight: "90vh", overflowY: "auto" }}>
         <h2 className="font-black text-xl mb-4" style={{ color: "#10665A" }}>إنشاء درس جديد</h2>
 
         {loadError && (
@@ -874,7 +874,7 @@ export function CreateLessonModal({ onCreate, onClose }) {
               <input className="ts-input" value={title} onChange={(e) => setTitle(e.target.value)} />
             </label>
 
-            <div className="grid grid-cols-2 gap-2 mb-3">
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 mb-3">
               <select
                 className="ts-input text-xs"
                 value={stageId}

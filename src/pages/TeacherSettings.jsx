@@ -483,15 +483,15 @@ export default function TeacherSettings() {
                   className="flex items-center justify-between gap-2 py-2 border-b text-sm"
                   style={{ borderColor: "#F0EBE0", paddingInlineStart: (n.depth || 0) * 14 }}
                 >
-                  <span>
-                    <span className="text-[10px] font-bold ml-2 px-1.5 py-0.5 rounded" style={{ background: "#E4F0EC", color: "#0E5348" }}>
+                  <span className="min-w-0 flex-1 break-words">
+                    <span className="text-[10px] font-bold ml-2 px-1.5 py-0.5 rounded inline-block" style={{ background: "#E4F0EC", color: "#0E5348" }}>
                       {KIND_LABEL[n.kind] || n.kind}
                     </span>
                     {n.name}
                   </span>
                   <button
                     type="button"
-                    className="text-[11px] font-bold"
+                    className="text-[11px] font-bold shrink-0"
                     style={{ color: "#C53030" }}
                     onClick={async () => {
                       if (!confirm("حذف هذا العنصر؟")) return;

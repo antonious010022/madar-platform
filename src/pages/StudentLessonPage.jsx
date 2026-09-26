@@ -401,10 +401,25 @@ export default function StudentLessonPage() {
   );
 
   if (lesson === null) {
+    // نفس ارتفاع/بنية الهيدر الموجود في العرض النهائي (سطر lesson.title لاحقًا) حتى لا تقفز
+    // الصفحة (Layout Shift) لحظة انتهاء التحميل — Visual/Layout فقط، لا تأثير على تحميل الدرس.
     return (
-      <div className="p-10 text-center dir-rtl" style={{ color: "#8A8570" }}>
-        <p className="font-bold text-sm mb-1" style={{ color: "#10665A" }}>مَدَار</p>
-        <p>جاري تحميل الدرس...</p>
+      <div className="min-h-screen flex flex-col" style={{ background: "#FAF6ED" }}>
+        <div
+          className="bg-white px-4 sm:px-6 py-3 border-b flex justify-between items-center gap-2 flex-wrap"
+          style={{ borderColor: "#DED4BD" }}
+        >
+          <span className="text-sm font-bold" style={{ color: "#10665A" }}>مَدَار</span>
+          <span className="text-xs font-medium truncate max-w-[40%]" style={{ color: "#8A8570" }}>
+            جاري التحميل...
+          </span>
+          <span className="text-xs" style={{ color: "#8A8570", opacity: 0 }} aria-hidden="true">
+            تسجيل الدخول
+          </span>
+        </div>
+        <div className="flex-1 flex items-center justify-center p-10 dir-rtl" style={{ color: "#8A8570" }}>
+          <p>جاري تحميل الدرس...</p>
+        </div>
       </div>
     );
   }

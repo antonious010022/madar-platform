@@ -1805,10 +1805,14 @@ export default function StudentPlatform() {
     border-bottom: 1px solid var(--md-border);
   }
 
-  .md-account-btn { transition: box-shadow 0.2s ease, transform 0.2s ease; }
+  .md-account-btn { min-height: 44px; transition: box-shadow 0.2s ease, transform 0.2s ease; }
   .md-account-btn:hover { box-shadow: var(--md-shadow-md); transform: translateY(-1px); }
 
   .md-topbar .md-login-btn {
+    min-height: 44px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
     padding: 9px 22px;
     border-radius: 999px;
     font-size: 0.82rem;
