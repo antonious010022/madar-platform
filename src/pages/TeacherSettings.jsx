@@ -1,567 +1,611 @@
-import { useEffect, useMemo, useState } from "react";
-import { Link } from "react-router-dom";
-import {
-  listCurriculumNodes,
-  saveCurriculumNode,
-  deleteCurriculumNode,
-  listCompletionTemplates,
-  saveCompletionTemplate,
-  listPlatformPages,
-  savePlatformPage,
-  listAllFooterLinks,
-  saveFooterLink,
-  getBrandSettings,
-  saveBrandSettings,
-} from "../lib/db";
+import { useEffect, useState, useCallback, useMemo } from "react";
+import { useNavigate, useParams, useLocation } from "react-router-dom";
+import { getLessonWithScenes, signOut, listCompletionTemplates } from "../lib/db";
+import { useAuth } from "../lib/hooks";
+import { StudentView, isLessonMembersOnly } from "../components/Viewer";
+import Footer from "../components/Footer";
+import AuthModal, { GuestWelcomeBanner, LetterAvatar } from "../components/AuthModal";
+import { slugify } from "../lib/slugify";
 
-/**
- * صفحة واضحة لإدارة:
- * 1) صفحات الفوتر (عن مَدَار / الخصوصية / الشروط / تواصل معنا / الحساب)
- * 2) بيانات التواصل واسم المنصة
- * 3) المنهج (مراحل وصفوف ومواد)
- * 4) رسائل إكمال الدرس
- */
+const PROGRESS_KEY = "ts_student_progress_v2";
+// Same origin already used for canonical links elsewhere in this project.
+const SITE_ORIGIN = "https://madar-platform-five.vercel.app";
 
-const PAGE_HELP = {
-  about: "تظهر في الفوتر باسم «عن مَدَار». اكتب تعريف المنصة هنا.",
-  privacy: "تظهر في الفوتر باسم «سياسة الخصوصية».",
-  terms: "تظهر في الفوتر باسم «الشروط والأحكام».",
-  contact: "تظهر في الفوتر باسم «تواصل معنا». البريد يظهر أيضًا من تبويب التواصل.",
-  security: "اختياري: صفحة «الحساب والأمان». يمكن إخفاؤها من روابط الفوتر.",
-};
+/** Resolves the slug to use in the lesson's URL: the teacher-controlled
+ * seo_slug when set, otherwise one derived from the lesson title. Always
+ * re-run through slugify() even when seo_slug is already set, so a slug
+ * saved before validation existed (or edited directly in the DB) still
+ * produces a safe URL segment. Cosmetic only — never used for lookup. */
+function lessonSlug(lesson) {
+  const raw = (lesson?.seoSlug && lesson.seoSlug.trim()) || lesson?.title || "";
+  return slugify(raw);
+}
 
-const KIND_LABEL = {
-  stage: "مرحلة",
-  grade: "صف",
-  term: "ترم / فصل",
-  subject: "مادة / قسم",
-};
+/** Builds the SEO-friendly lesson path. lesson.id is always the real lookup key —
+ * the slug is cosmetic only, so an empty/unslugifiable title still yields a valid path. */
+function lessonPath(lesson) {
+  const slug = lessonSlug(lesson);
+  return slug ? `/lessons/${lesson.id}/${slug}` : `/lessons/${lesson.id}`;
+}
 
-export default function TeacherSettings() {
-  // ابدأ بصفحات الفوتر — هذا ما يهمك أولًا
-  const [tab, setTab] = useState("pages");
-  const [nodes, setNodes] = useState([]);
-  const [templates, setTemplates] = useState([]);
-  const [pages, setPages] = useState([]);
-  const [links, setLinks] = useState([]);
-  const [brand, setBrand] = useState({ name: "مَدَار", description: "", contactEmail: "" });
-  const [msg, setMsg] = useState("");
-  const [err, setErr] = useState("");
-  const [loading, setLoading] = useState(true);
-  const [saving, setSaving] = useState(false);
-  const [form, setForm] = useState({ kind: "stage", name: "", parentId: "", sortOrder: 0 });
+/** Effective SEO title/description/language with the documented fallback chain:
+ * seo_* field when set → lesson.title/description → a generated description
+ * as a last resort (never invents facts, only wraps the existing title). */
+function resolveSeo(lesson) {
+  const title = (lesson.seoTitle && lesson.seoTitle.trim()) || lesson.title || "";
+  const description =
+    (lesson.seoDescription && lesson.seoDescription.trim()) ||
+    (lesson.description && lesson.description.trim()) ||
+    (lesson.title ? `تعلّم درس "${lesson.title}" على منصة مَدَار التعليمية.` : "");
+  const language = lesson.seoLanguage || "ar";
+  return { title, description: description || null, language };
+}
 
-  const reload = async () => {
-    setLoading(true);
-    setErr("");
-    try {
-      const results = await Promise.allSettled([
-        listCurriculumNodes(),
-        listCompletionTemplates(),
-        listPlatformPages(),
-        listAllFooterLinks(),
-        getBrandSettings(),
-      ]);
-      const val = (i, fallback) =>
-        results[i].status === "fulfilled" ? results[i].value : fallback;
-      const errMsg = results
-        .map((r, i) => (r.status === "rejected" ? `${["منهج","قوالب","صفحات","فوتر","هوية"][i]}: ${r.reason?.message || r.reason}` : null))
-        .filter(Boolean)
-        .join(" | ");
-
-      const n = val(0, []);
-      const tpls = val(1, []);
-      const pgs = val(2, []);
-      const lks = val(3, []);
-      const b = val(4, {});
-
-      setNodes(Array.isArray(n) ? n : []);
-      setTemplates(Array.isArray(tpls) ? tpls : []);
-      setPages(Array.isArray(pgs) ? pgs : []);
-      setLinks(Array.isArray(lks) ? lks : []);
-      setBrand({
-        name: b?.name || "مَدَار",
-        description: b?.description || "",
-        contactEmail: b?.contactEmail || "",
-      });
-      if (errMsg) {
-        setErr("خطأ من قاعدة البيانات: " + errMsg);
-      } else if ((!pgs || pgs.length === 0) && (!lks || lks.length === 0)) {
-        setErr(
-          "الجداول موجودة غالبًا لكن فارغة. نفّذ SQL «زرع الصفحات» من الرسالة التالية في Supabase، ثم حدّث الصفحة."
-        );
-      }
-    } catch (e) {
-      setErr(e.message || "تعذر تحميل الإعدادات.");
-    } finally {
-      setLoading(false);
-    }
+function defaultProgress() {
+  return {
+    currentScene: 0,
+    completedScenes: [],
+    unlockedScenes: [0],
+    finalReviewUnlocked: false,
+    finalReviewCompleted: false,
+    lessonCompleted: false,
+    view: "scene", // "scene" | "final" | "done"
   };
+}
+
+function loadProgress(lessonId, sceneCount) {
+  try {
+    const raw = localStorage.getItem(PROGRESS_KEY);
+    if (!raw) return defaultProgress();
+    const parsed = JSON.parse(raw);
+    if (!parsed || parsed.lessonId !== lessonId) return defaultProgress();
+    const p = { ...defaultProgress(), ...parsed };
+    // migrate from v1 shape
+    if (typeof parsed.sceneIndex === "number" && !Array.isArray(parsed.completedScenes)) {
+      p.currentScene = Math.min(Math.max(0, parsed.sceneIndex), Math.max(0, sceneCount - 1));
+      p.unlockedScenes = Array.from({ length: p.currentScene + 1 }, (_, i) => i);
+      p.completedScenes = [];
+    }
+    p.unlockedScenes = Array.from(new Set([0, ...(p.unlockedScenes || [])])).filter(
+      (i) => i >= 0 && i < sceneCount
+    );
+    p.completedScenes = (p.completedScenes || []).filter((i) => i >= 0 && i < sceneCount);
+    if (p.completedScenes.length >= sceneCount && sceneCount > 0) {
+      p.finalReviewUnlocked = true;
+    }
+    return p;
+  } catch {
+    return defaultProgress();
+  }
+}
+
+function saveProgress(lessonId, progress) {
+  try {
+    localStorage.setItem(
+      PROGRESS_KEY,
+      JSON.stringify({ lessonId, ...progress, savedAt: Date.now() })
+    );
+  } catch (_) {}
+}
+
+function displayName(session) {
+  if (!session?.user) return "";
+  const u = session.user;
+  return (
+    u.user_metadata?.full_name ||
+    u.user_metadata?.name ||
+    u.email?.split("@")[0] ||
+    "طالب"
+  );
+}
+
+export default function StudentLessonPage() {
+  const { id, slug: slugParam } = useParams();
+  const navigate = useNavigate();
+  const location = useLocation();
+  const session = useAuth();
+  const [lesson, setLesson] = useState(null);
+  const [authOpen, setAuthOpen] = useState(false);
+  const [menuOpen, setMenuOpen] = useState(false);
+  const [progress, setProgress] = useState(defaultProgress);
+  const [templates, setTemplates] = useState([]);
 
   useEffect(() => {
-    reload();
+    let mounted = true;
+    Promise.all([getLessonWithScenes(id), listCompletionTemplates().catch(() => [])])
+      .then(([data, tpls]) => {
+        if (!mounted) return;
+        if (!data || data.status !== "Published") {
+          setLesson(false);
+          return;
+        }
+        setLesson(data);
+        setTemplates(tpls || []);
+        const sc = data.scenes?.length || 0;
+        setProgress(loadProgress(id, sc));
+      })
+      .catch(() => mounted && setLesson(false));
+    return () => {
+      mounted = false;
+    };
+  }, [id]);
+
+  useEffect(() => {
+    if (lesson && id) saveProgress(id, progress);
+  }, [id, lesson, progress]);
+
+  // URL freshening: lesson.id is always the real lookup key — the slug segment
+  // is cosmetic — so an outdated or missing slug never breaks access; it's just
+  // silently corrected in the address bar (replace, no history entry).
+  useEffect(() => {
+    if (!lesson || !id) return;
+
+    // Legacy URL: /student/lesson/:id → /lessons/:id/:slug
+    if (location.pathname.startsWith("/student/lesson/")) {
+      navigate(lessonPath(lesson), { replace: true });
+      return;
+    }
+
+    // Slug drifted (e.g. seo_slug or title changed since a link was shared/indexed):
+    // the lesson still loaded fine by id — just freshen the visible slug segment.
+    const canonicalSlug = lessonSlug(lesson);
+    if (location.pathname.startsWith("/lessons/") && slugParam !== undefined && slugParam !== canonicalSlug) {
+      navigate(lessonPath(lesson), { replace: true });
+    }
+  }, [lesson, id, slugParam, location.pathname, navigate]);
+
+  // SEO: dynamic <title>, <meta name="description">، canonical، Open Graph،
+  // Twitter Card، robots (noindex للدروس غير المنشورة) و JSON-LD (LearningResource).
+  // يعمل فقط عند توفر بيانات درس فعلية (lesson !== null && lesson !== false).
+  // يُعيد كل قيمة إلى حالتها السابقة عند المغادرة أو تغيير الدرس (cleanup).
+  useEffect(() => {
+    if (!lesson) return;
+
+    const seo = resolveSeo(lesson);
+
+    const prevTitle = document.title;
+    if (seo.title) {
+      document.title = `${seo.title} | مَدَار`;
+    }
+
+    // SEO-only language signal for this page (crawlers/screen readers).
+    // Does NOT touch the platform's own UI language/RTL layout.
+    const prevLang = document.documentElement.getAttribute("lang");
+    document.documentElement.setAttribute("lang", seo.language);
+
+    // Generic helper: create-or-update a <meta> tag identified by attrName="value",
+    // returning enough info to restore/remove it on cleanup.
+    function upsertMeta(attrName, attrValue, content) {
+      let el = document.querySelector(`meta[${attrName}="${attrValue}"]`);
+      const created = !el;
+      if (!el) {
+        el = document.createElement("meta");
+        el.setAttribute(attrName, attrValue);
+        document.head.appendChild(el);
+      }
+      const prevContent = el.getAttribute("content");
+      if (content !== null && content !== undefined) {
+        el.setAttribute("content", content);
+      }
+      return { el, created, prevContent };
+    }
+
+    const descriptionText = seo.description;
+
+    const metaDescriptionState = upsertMeta("name", "description", descriptionText);
+
+    const canonicalPath = lessonPath(lesson);
+    const canonicalUrl = `${SITE_ORIGIN}${canonicalPath}`;
+
+    let canonicalLink = document.querySelector('link[rel="canonical"]');
+    const createdCanonical = !canonicalLink;
+    if (!canonicalLink) {
+      canonicalLink = document.createElement("link");
+      canonicalLink.setAttribute("rel", "canonical");
+      document.head.appendChild(canonicalLink);
+    }
+    const prevCanonicalHref = canonicalLink.getAttribute("href");
+    if (id) {
+      canonicalLink.setAttribute("href", canonicalUrl);
+    }
+
+    // Open Graph
+    const ogTitleState = upsertMeta("property", "og:title", seo.title || null);
+    const ogDescriptionState = upsertMeta("property", "og:description", descriptionText);
+    const ogTypeState = upsertMeta("property", "og:type", "article");
+    const ogUrlState = upsertMeta("property", "og:url", canonicalUrl);
+
+    // Twitter Card
+    const twitterCardState = upsertMeta("name", "twitter:card", "summary");
+    const twitterTitleState = upsertMeta("name", "twitter:title", seo.title || null);
+    const twitterDescriptionState = upsertMeta("name", "twitter:description", descriptionText);
+
+    // Robots: noindex الدروس غير المنشورة (لا تغيّر صلاحيات الوصول، فقط الفهرسة).
+    let robotsState = null;
+    if (lesson.status !== "Published") {
+      robotsState = upsertMeta("name", "robots", "noindex,nofollow");
+    } else {
+      robotsState = upsertMeta("name", "robots", "index,follow");
+    }
+
+    // Structured Data: LearningResource JSON-LD — بيانات الدرس المتوفرة فعلًا فقط.
+    const ldJson = {
+      "@context": "https://schema.org",
+      "@type": "LearningResource",
+      name: seo.title || undefined,
+      description: descriptionText || undefined,
+      inLanguage: seo.language,
+      isAccessibleForFree: !isLessonMembersOnly(lesson),
+      url: canonicalUrl,
+    };
+    const ldScript = document.createElement("script");
+    ldScript.type = "application/ld+json";
+    ldScript.setAttribute("data-lesson-jsonld", "true");
+    ldScript.text = JSON.stringify(ldJson);
+    document.head.appendChild(ldScript);
+
+    return () => {
+      document.title = prevTitle;
+
+      if (prevLang !== null) {
+        document.documentElement.setAttribute("lang", prevLang);
+      } else {
+        document.documentElement.removeAttribute("lang");
+      }
+
+      function restoreMeta(state) {
+        if (!state) return;
+        const { el, created, prevContent } = state;
+        if (created) {
+          el.remove();
+        } else if (prevContent !== null) {
+          el.setAttribute("content", prevContent);
+        } else {
+          el.removeAttribute("content");
+        }
+      }
+
+      restoreMeta(metaDescriptionState);
+      restoreMeta(ogTitleState);
+      restoreMeta(ogDescriptionState);
+      restoreMeta(ogTypeState);
+      restoreMeta(ogUrlState);
+      restoreMeta(twitterCardState);
+      restoreMeta(twitterTitleState);
+      restoreMeta(twitterDescriptionState);
+      restoreMeta(robotsState);
+
+      if (createdCanonical) {
+        canonicalLink.remove();
+      } else if (prevCanonicalHref !== null) {
+        canonicalLink.setAttribute("href", prevCanonicalHref);
+      } else {
+        canonicalLink.removeAttribute("href");
+      }
+
+      ldScript.remove();
+    };
+  }, [lesson, id]);
+
+  const sceneCount = lesson?.scenes?.length || 0;
+
+  const setCurrentScene = useCallback((i) => {
+    setProgress((prev) => ({
+      ...prev,
+      currentScene: i,
+      view: "scene",
+    }));
   }, []);
 
-  const parentsFor = useMemo(() => {
-    const need = { stage: null, grade: "stage", term: "grade", subject: "term" }[form.kind];
-    if (!need) return [];
-    return nodes.filter((n) => n.kind === need);
-  }, [form.kind, nodes]);
+  const completeScene = useCallback(() => {
+    setProgress((prev) => {
+      const i = prev.currentScene;
+      const completed = Array.from(new Set([...(prev.completedScenes || []), i]));
+      const unlocked = Array.from(new Set([...(prev.unlockedScenes || []), i]));
+      const next = i + 1;
+      const cfg = lesson?.journeyConfig || {};
+      const after = cfg.completionAfterSceneIndex;
+      const tpl = cfg.completionTemplateKey || "none";
+      const shouldCompletion =
+        after !== null &&
+        after !== undefined &&
+        Number(after) === i &&
+        tpl &&
+        tpl !== "none" &&
+        !(prev.completionDismissedFor || []).includes(i);
 
-  const treeLines = useMemo(() => {
-    const byParent = {};
-    nodes.forEach((n) => {
-      const k = n.parentId || "root";
-      (byParent[k] ||= []).push(n);
-    });
-    const out = [];
-    const walk = (parentKey, depth) => {
-      const list = (byParent[parentKey] || []).sort((a, b) => (a.sortOrder || 0) - (b.sortOrder || 0));
-      for (const n of list) {
-        out.push({ ...n, depth });
-        walk(n.id, depth + 1);
+      if (shouldCompletion) {
+        return {
+          ...prev,
+          completedScenes: completed,
+          unlockedScenes: Array.from(new Set(unlocked)).sort((a, b) => a - b),
+          view: "completion",
+        };
       }
-    };
-    walk("root", 0);
-    return out;
-  }, [nodes]);
+      if (next < sceneCount) {
+        unlocked.push(next);
+        return {
+          ...prev,
+          completedScenes: completed,
+          unlockedScenes: Array.from(new Set(unlocked)).sort((a, b) => a - b),
+          currentScene: next,
+          view: "scene",
+        };
+      }
+      return {
+        ...prev,
+        completedScenes: completed,
+        unlockedScenes: Array.from(new Set(unlocked)).sort((a, b) => a - b),
+        view: "done",
+        lessonCompleted: true,
+      };
+    });
+  }, [sceneCount, lesson?.journeyConfig]);
 
-  const flash = (text) => {
-    setMsg(text);
-    setTimeout(() => setMsg(""), 2500);
-  };
+  const openFinalReview = useCallback(() => {
+    setProgress((prev) => {
+      if (!prev.finalReviewUnlocked && (prev.completedScenes || []).length < sceneCount) {
+        return prev;
+      }
+      return { ...prev, view: "final", finalReviewUnlocked: true };
+    });
+  }, [sceneCount]);
 
-  const tabs = [
-    { key: "pages", label: "صفحات الفوتر", desc: "عن مَدَار · الخصوصية · الشروط · تواصل معنا" },
-    { key: "contact", label: "التواصل والاسم", desc: "البريد واسم المنصة" },
-    { key: "footer", label: "إظهار الروابط", desc: "إخفاء أو إظهار رابط في الفوتر" },
-    { key: "curriculum", label: "المنهج", desc: "مراحل · صفوف · مواد" },
-    { key: "journey", label: "رسائل الإكمال", desc: "نصوص تظهر للطالب بعد مشهد" },
-  ];
+  const completeFinalReview = useCallback(() => {
+    setProgress((prev) => ({
+      ...prev,
+      finalReviewCompleted: true,
+      lessonCompleted: true,
+      view: "done",
+    }));
+  }, []);
+
+  const journeyConfig = lesson?.journeyConfig || {};
+  const journey = useMemo(
+    () => ({
+      ...progress,
+      sceneCount,
+      journeyConfig,
+      completionTitle: (templates.find((x) => x.key === (journeyConfig.completionTemplateKey || "")) || {}).title,
+      completionBody: (templates.find((x) => x.key === (journeyConfig.completionTemplateKey || "")) || {}).body,
+      setCurrentScene,
+      completeScene,
+      openFinalReview,
+      completeFinalReview,
+      dismissCompletion: () =>
+        setProgress((prev) => {
+          const nextIdx = (prev.currentScene ?? 0) + 1;
+          if (nextIdx < sceneCount) {
+            return {
+              ...prev,
+              view: "scene",
+              currentScene: nextIdx,
+              unlockedScenes: Array.from(new Set([...(prev.unlockedScenes || []), nextIdx])),
+              completionDismissedFor: Array.from(
+                new Set([...(prev.completionDismissedFor || []), prev.currentScene])
+              ),
+            };
+          }
+          return {
+            ...prev,
+            view: "done",
+            lessonCompleted: true,
+            finalReviewCompleted: true,
+            completionDismissedFor: Array.from(
+              new Set([...(prev.completionDismissedFor || []), prev.currentScene])
+            ),
+          };
+        }),
+    }),
+    [progress, sceneCount, setCurrentScene, completeScene, openFinalReview, completeFinalReview]
+  );
+
+  if (lesson === null) {
+    // نفس ارتفاع/بنية الهيدر الموجود في العرض النهائي (سطر lesson.title لاحقًا) حتى لا تقفز
+    // الصفحة (Layout Shift) لحظة انتهاء التحميل — Visual/Layout فقط، لا تأثير على تحميل الدرس.
+    return (
+      <div className="min-h-screen w-full max-w-full overflow-x-hidden flex flex-col" style={{ background: "#FAF6ED" }}>
+        <div
+          className="bg-white px-4 sm:px-6 py-3 border-b flex justify-between items-center gap-2 flex-wrap w-full max-w-full"
+          style={{ borderColor: "#DED4BD" }}
+        >
+          <span className="text-sm font-bold" style={{ color: "#10665A" }}>مَدَار</span>
+          <span className="text-xs font-medium truncate max-w-[40%]" style={{ color: "#8A8570" }}>
+            جاري التحميل...
+          </span>
+          <span className="text-xs" style={{ color: "#8A8570", opacity: 0 }} aria-hidden="true">
+            تسجيل الدخول
+          </span>
+        </div>
+        <div className="flex-1 flex items-center justify-center p-10 dir-rtl" style={{ color: "#8A8570" }}>
+          <p>جاري تحميل الدرس...</p>
+        </div>
+      </div>
+    );
+  }
+  if (lesson === false) {
+    return (
+      <div className="p-6 sm:p-10 text-center dir-rtl w-full max-w-full overflow-x-hidden">
+        <p className="font-bold mb-2" style={{ color: "#C53030" }}>تعذّر عرض هذا الدرس</p>
+        <p className="text-sm mb-4" style={{ color: "#8A8570" }}>
+          قد يكون غير منشور أو غير موجود. يمكنك العودة واختيار درس آخر.
+        </p>
+        <button
+          onClick={() => navigate("/student")}
+          className="mt-2 px-4 py-2 rounded-xl text-sm font-bold text-white"
+          style={{ background: "#10665A" }}
+        >
+          ← العودة لمنصة الطالب
+        </button>
+      </div>
+    );
+  }
+
+  const name = displayName(session);
+  const doneCount = (progress.completedScenes || []).length;
+  const progressLabel =
+    progress.lessonCompleted
+      ? "مكتمل"
+      : progress.view === "final"
+        ? "المراجعة النهائية"
+        : `العنوان ${Math.min(progress.currentScene + 1, sceneCount)} من ${sceneCount}`;
+
+  // Lesson-level Access Lock: exclusive lesson + guest → login required (not sequence message)
+  const lessonAccessLocked =
+    !!lesson &&
+    isLessonMembersOnly(lesson) &&
+    session === null; // explicit guest (undefined = still loading auth)
+
+  if (lessonAccessLocked) {
+    return (
+      <div className="min-h-screen w-full max-w-full overflow-x-hidden flex flex-col" style={{ background: "#FAF6ED" }}>
+        <div
+          className="bg-white px-4 sm:px-6 py-3 border-b flex justify-between items-center gap-2 flex-wrap w-full max-w-full"
+          style={{ borderColor: "#DED4BD" }}
+        >
+          <button onClick={() => navigate("/student")} className="text-sm font-bold" style={{ color: "#10665A" }}>
+            ← العودة لقائمة الدروس
+          </button>
+          <span className="text-xs font-medium truncate max-w-[40%]" style={{ color: "#8A8570" }}>
+            {lesson?.title || "منصة الطالب التعليمية"}
+          </span>
+          <button
+            type="button"
+            onClick={() => setAuthOpen(true)}
+            className="text-xs font-bold px-3 py-1.5 rounded-xl text-white"
+            style={{ background: "#10665A" }}
+          >
+            تسجيل الدخول
+          </button>
+        </div>
+        <div className="flex-1 flex items-center justify-center p-4 sm:p-6 w-full max-w-full">
+          <div className="max-w-md w-full rounded-3xl p-6 sm:p-8 text-center bg-white shadow-sm dir-rtl" style={{ border: "1px solid #DED4BD" }}>
+            <p className="text-4xl mb-3">🔐</p>
+            <p className="font-black text-lg mb-2" style={{ color: "#10665A" }}>تسجيل الدخول مطلوب</p>
+            <p className="text-sm mb-6" style={{ color: "#5C5A4A" }}>
+              هذا الدرس حصري للمستخدمين المسجّلين. سجّل دخولك للوصول إليه.
+            </p>
+            <button
+              type="button"
+              onClick={() => setAuthOpen(true)}
+              className="w-full px-5 py-3 rounded-2xl text-sm font-bold text-white"
+              style={{ background: "#10665A" }}
+            >
+              تسجيل الدخول / إنشاء حساب
+            </button>
+            <button
+              type="button"
+              onClick={() => navigate("/student")}
+              className="w-full mt-2 px-5 py-2 rounded-2xl text-xs font-bold"
+              style={{ color: "#8A8570" }}
+            >
+              ← العودة لقائمة الدروس
+            </button>
+          </div>
+        </div>
+        <AuthModal open={authOpen} onClose={() => setAuthOpen(false)} />
+      </div>
+    );
+  }
 
   return (
-    <div className="min-h-screen dir-rtl text-right p-4 sm:p-6" style={{ background: "#FAF6ED" }}>
-      <div className="max-w-3xl mx-auto">
-        <div className="flex flex-wrap items-center justify-between gap-3 mb-2">
-          <h1 className="font-black text-xl" style={{ color: "#10665A" }}>
-            إعدادات المنصة
-          </h1>
-          <Link to="/teacher" className="text-xs font-bold" style={{ color: "#10665A" }}>
-            ← رجوع لمكتبة الدروس
-          </Link>
-        </div>
-        <p className="text-sm mb-5 leading-6" style={{ color: "#5C5A4A" }}>
-          من هنا تغيّر <strong>محتوى صفحات الفوتر</strong> (عن مَدَار، الخصوصية، الشروط، تواصل معنا)
-          وبيانات التواصل، والمنهج الدراسي. التعديل يظهر للطالب بعد الحفظ.
-        </p>
-
-        {msg && (
-          <div className="mb-4 px-4 py-2 rounded-xl text-sm font-bold text-white" style={{ background: "#10665A" }}>
-            {msg}
-          </div>
-        )}
-        {err && (
-          <div className="mb-4 px-4 py-3 rounded-xl text-sm" style={{ background: "#FDE8E8", color: "#9B1C1C" }}>
-            {err}
-          </div>
-        )}
-        {loading && (
-          <p className="text-sm mb-4" style={{ color: "#8A8570" }}>
-            جاري تحميل الإعدادات...
-          </p>
-        )}
-
-        {/* تبويبات بشرح */}
-        <div className="flex flex-col gap-2 mb-6">
-          {tabs.map((t) => (
-            <button
-              key={t.key}
-              type="button"
-              onClick={() => setTab(t.key)}
-              className="text-right rounded-2xl px-4 py-3 border transition-all"
-              style={{
-                background: tab === t.key ? "#10665A" : "#FFFFFF",
-                color: tab === t.key ? "#FFFFFF" : "#22291F",
-                borderColor: tab === t.key ? "#10665A" : "#DED4BD",
-              }}
-            >
-              <span className="block text-sm font-bold">{t.label}</span>
-              <span className="block text-[11px] mt-0.5 opacity-80">{t.desc}</span>
-            </button>
-          ))}
-        </div>
-
-        {/* ========== صفحات الفوتر ========== */}
-        {tab === "pages" && (
-          <section className="space-y-4">
-            <div className="rounded-2xl p-4 bg-white border" style={{ borderColor: "#DED4BD" }}>
-              <p className="text-sm font-bold mb-1" style={{ color: "#10665A" }}>
-                محتوى الصفحات التي يفتحها الطالب من الفوتر
-              </p>
-              <p className="text-xs leading-5" style={{ color: "#8A8570" }}>
-                عدّل العنوان والنص ثم اضغط «حفظ هذه الصفحة». الروابط في الفوتر تبقى كما هي؛ أنت تغيّر ما يظهر داخل الصفحة فقط.
-              </p>
-            </div>
-
-            {pages.length === 0 && !loading && (
-              <p className="text-sm" style={{ color: "#C53030" }}>
-                لا توجد صفحات محفوظة. تأكد أنك شغّلت migration_data_driven.sql في Supabase.
-              </p>
-            )}
-
-            {pages.map((pg) => (
-              <div key={pg.id} className="rounded-2xl p-5 bg-white border space-y-3" style={{ borderColor: "#DED4BD" }}>
-                <div className="flex flex-wrap items-center justify-between gap-2">
-                  <div>
-                    <p className="font-black text-base" style={{ color: "#10665A" }}>
-                      {pg.title || pg.slug}
-                    </p>
-                    <p className="text-[11px] mt-1" style={{ color: "#8A8570" }}>
-                      {PAGE_HELP[pg.slug] || `المعرّف: ${pg.slug}`}
-                    </p>
-                  </div>
-                  <label className="text-xs flex items-center gap-2 font-bold" style={{ color: "#5C5A4A" }}>
-                    <input
-                      type="checkbox"
-                      checked={pg.is_visible !== false}
-                      onChange={(e) =>
-                        setPages(pages.map((x) => (x.id === pg.id ? { ...x, is_visible: e.target.checked } : x)))
-                      }
-                    />
-                    الصفحة ظاهرة للطلاب
-                  </label>
-                </div>
-
-                <label className="block">
-                  <span className="text-xs font-bold mb-1 block" style={{ color: "#8A8570" }}>
-                    عنوان الصفحة
-                  </span>
-                  <input
-                    className="w-full text-sm rounded-xl px-3 py-2 border"
-                    style={{ borderColor: "#DED4BD" }}
-                    value={pg.title || ""}
-                    onChange={(e) => setPages(pages.map((x) => (x.id === pg.id ? { ...x, title: e.target.value } : x)))}
-                  />
-                </label>
-
-                <label className="block">
-                  <span className="text-xs font-bold mb-1 block" style={{ color: "#8A8570" }}>
-                    نص الصفحة (يظهر للطالب)
-                  </span>
-                  <textarea
-                    className="w-full text-sm rounded-xl px-3 py-2 border leading-7"
-                    style={{ borderColor: "#DED4BD", minHeight: 140 }}
-                    value={pg.body || ""}
-                    onChange={(e) => setPages(pages.map((x) => (x.id === pg.id ? { ...x, body: e.target.value } : x)))}
-                    placeholder="اكتب المحتوى هنا..."
-                  />
-                </label>
-
-                <button
-                  type="button"
-                  disabled={saving}
-                  className="px-4 py-2 rounded-xl text-xs font-bold text-white"
-                  style={{ background: "#10665A" }}
-                  onClick={async () => {
-                    setSaving(true);
-                    try {
-                      await savePlatformPage(pg);
-                      flash("تم حفظ الصفحة ✓");
-                      await reload();
-                    } catch (e) {
-                      setErr(e.message || "فشل الحفظ");
-                    } finally {
-                      setSaving(false);
-                    }
-                  }}
-                >
-                  حفظ هذه الصفحة
-                </button>
-              </div>
-            ))}
-          </section>
-        )}
-
-        {/* ========== التواصل ========== */}
-        {tab === "contact" && (
-          <section className="rounded-2xl p-5 bg-white border space-y-3" style={{ borderColor: "#DED4BD" }}>
-            <p className="text-sm font-bold" style={{ color: "#10665A" }}>
-              اسم المنصة والبريد الظاهر في الفوتر
-            </p>
-            <label className="block">
-              <span className="text-xs font-bold mb-1 block" style={{ color: "#8A8570" }}>
-                اسم المنصة
-              </span>
-              <input
-                className="w-full text-sm rounded-xl px-3 py-2 border"
-                value={brand.name || ""}
-                onChange={(e) => setBrand({ ...brand, name: e.target.value })}
-              />
-            </label>
-            <label className="block">
-              <span className="text-xs font-bold mb-1 block" style={{ color: "#8A8570" }}>
-                وصف قصير تحت الاسم
-              </span>
-              <textarea
-                className="w-full text-sm rounded-xl px-3 py-2 border"
-                rows={2}
-                value={brand.description || ""}
-                onChange={(e) => setBrand({ ...brand, description: e.target.value })}
-              />
-            </label>
-            <label className="block">
-              <span className="text-xs font-bold mb-1 block" style={{ color: "#8A8570" }}>
-                بريد التواصل (تواصل معنا)
-              </span>
-              <input
-                className="w-full text-sm rounded-xl px-3 py-2 border"
-                type="email"
-                value={brand.contactEmail || ""}
-                onChange={(e) => setBrand({ ...brand, contactEmail: e.target.value })}
-                placeholder="name@example.com"
-              />
-            </label>
-            <button
-              type="button"
-              className="px-4 py-2 rounded-xl text-xs font-bold text-white"
-              style={{ background: "#10665A" }}
-              onClick={async () => {
-                try {
-                  await saveBrandSettings(brand);
-                  flash("تم حفظ بيانات التواصل ✓");
-                } catch (e) {
-                  setErr(e.message || "فشل الحفظ");
-                }
-              }}
-            >
-              حفظ
-            </button>
-          </section>
-        )}
-
-        {/* ========== إظهار/إخفاء روابط الفوتر ========== */}
-        {tab === "footer" && (
-          <section className="space-y-3">
-            <p className="text-sm leading-6" style={{ color: "#5C5A4A" }}>
-              كل صف = رابط في أسفل صفحات الطالب. ألغِ التفعيل ليختفي الرابط من الفوتر دون حذف الصفحة.
-            </p>
-            {links.length === 0 && (
-              <p className="text-sm" style={{ color: "#C53030" }}>
-                لا توجد روابط. شغّل migration_data_driven.sql إن لزم.
-              </p>
-            )}
-            {links.map((lk) => (
-              <div
-                key={lk.id}
-                className="rounded-2xl p-4 bg-white border flex flex-wrap items-center gap-3"
-                style={{ borderColor: "#DED4BD" }}
-              >
-                <input
-                  className="text-sm rounded-xl px-3 py-2 border flex-1 min-w-[140px]"
-                  value={lk.label || ""}
-                  onChange={(e) => setLinks(links.map((x) => (x.id === lk.id ? { ...x, label: e.target.value } : x)))}
-                />
-                <span className="text-[11px]" style={{ color: "#8A8570" }}>
-                  {lk.page_slug ? `→ /student/page/${lk.page_slug}` : lk.external_url || ""}
-                </span>
-                <label className="text-xs font-bold flex items-center gap-1">
-                  <input
-                    type="checkbox"
-                    checked={lk.is_visible !== false}
-                    onChange={(e) =>
-                      setLinks(links.map((x) => (x.id === lk.id ? { ...x, is_visible: e.target.checked } : x)))
-                    }
-                  />
-                  ظاهر في الفوتر
-                </label>
-                <button
-                  type="button"
-                  className="px-3 py-1.5 rounded-xl text-xs font-bold text-white"
-                  style={{ background: "#10665A" }}
-                  onClick={async () => {
-                    try {
-                      await saveFooterLink(lk);
-                      flash("تم حفظ الرابط ✓");
-                      await reload();
-                    } catch (e) {
-                      setErr(e.message || "فشل الحفظ");
-                    }
-                  }}
-                >
-                  حفظ
-                </button>
-              </div>
-            ))}
-          </section>
-        )}
-
-        {/* ========== المنهج ========== */}
-        {tab === "curriculum" && (
-          <section className="space-y-4">
-            <div className="rounded-2xl p-4 bg-white border" style={{ borderColor: "#DED4BD" }}>
-              <p className="text-sm font-bold mb-1" style={{ color: "#10665A" }}>
-                شجرة المنهج
-              </p>
-              <p className="text-xs leading-5" style={{ color: "#8A8570" }}>
-                مثال: مرحلة «الإعدادية» → صف «الثالث» → ترم «الأول» → مادة «التاريخ».
-                هذه الأسماء تظهر لاحقًا عند تصنيف الدروس في الاستوديو.
-              </p>
-            </div>
-
-            <div className="rounded-2xl p-4 bg-white border space-y-2" style={{ borderColor: "#DED4BD" }}>
-              <p className="text-xs font-bold" style={{ color: "#8A8570" }}>
-                إضافة عنصر جديد
-              </p>
-              <select
-                className="w-full text-sm rounded-xl px-3 py-2 border"
-                value={form.kind}
-                onChange={(e) => setForm({ ...form, kind: e.target.value, parentId: "" })}
-              >
-                <option value="stage">المرحلة</option>
-                <option value="grade">الصف</option>
-                <option value="term">الترم</option>
-                <option value="subject">الـوحـدة</option>
-              </select>
-              {form.kind !== "stage" && (
-                <select
-                  className="w-full text-sm rounded-xl px-3 py-2 border"
-                  value={form.parentId}
-                  onChange={(e) => setForm({ ...form, parentId: e.target.value })}
-                >
-                  <option value="">—— العنصر الاساسي ——</option>
-                  {parentsFor.map((n) => (
-                    <option key={n.id} value={n.id}>
-                      {n.name}
-                    </option>
-                  ))}
-                </select>
-              )}
-              <input
-                className="w-full text-sm rounded-xl px-3 py-2 border"
-                placeholder="الاسم الذي سيظهر"
-                value={form.name}
-                onChange={(e) => setForm({ ...form, name: e.target.value })}
-              />
+    <div className="min-h-screen w-full max-w-full overflow-x-hidden flex flex-col" style={{ background: "#FAF6ED" }}>
+      <div
+        className="bg-white px-4 sm:px-6 py-3 border-b flex justify-between items-center gap-2 flex-wrap w-full max-w-full"
+        style={{ borderColor: "#DED4BD" }}
+      >
+        <button onClick={() => navigate("/student")} className="text-sm font-bold" style={{ color: "#10665A" }}>
+          ← العودة لقائمة الدروس
+        </button>
+        <span className="text-xs font-medium truncate max-w-[40%]" style={{ color: "#8A8570" }}>
+          {lesson?.title || "منصة الطالب التعليمية"}
+        </span>
+        <div className="relative">
+          {session === undefined ? (
+            <span className="text-xs" style={{ color: "#8A8570" }}>...</span>
+          ) : session ? (
+            <>
               <button
                 type="button"
-                className="px-4 py-2 rounded-xl text-xs font-bold text-white"
-                style={{ background: "#10665A" }}
-                onClick={async () => {
-                  if (!form.name.trim()) return;
-                  try {
-                    await saveCurriculumNode({
-                      kind: form.kind,
-                      name: form.name.trim(),
-                      parentId: form.parentId || null,
-                      sortOrder: Number(form.sortOrder) || 0,
-                      isActive: true,
-                    });
-                    setForm({ ...form, name: "" });
-                    flash("تمت الإضافة ✓");
-                    await reload();
-                  } catch (e) {
-                    setErr(e.message || "فشلت الإضافة");
-                  }
-                }}
+                onClick={() => setMenuOpen((v) => !v)}
+                className="flex items-center gap-2 rounded-full py-1 px-2"
+                aria-expanded={menuOpen}
               >
-                إضافة
+                <LetterAvatar name={name} email={session.user?.email} size={28} />
+                <span className="text-xs font-bold hidden sm:inline" style={{ color: "#22291F" }}>
+                  {name}
+                </span>
               </button>
-            </div>
-
-            <div className="rounded-2xl p-4 bg-white border" style={{ borderColor: "#DED4BD" }}>
-              <p className="text-xs font-bold mb-3" style={{ color: "#8A8570" }}>
-                العناصر الحالية
-              </p>
-              {treeLines.length === 0 && (
-                <p className="text-sm" style={{ color: "#8A8570" }}>
-                  لا يوجد منهج بعد. أضف مرحلة ثم صفًا ثم ترمًا ثم مادة.
-                </p>
-              )}
-              {treeLines.map((n) => (
+              {menuOpen && (
                 <div
-                  key={n.id}
-                  className="flex items-center justify-between gap-2 py-2 border-b text-sm"
-                  style={{ borderColor: "#F0EBE0", paddingInlineStart: (n.depth || 0) * 14 }}
+                  className="absolute left-0 mt-2 w-48 max-w-[85vw] rounded-2xl bg-white shadow-lg py-2 z-50 dir-rtl text-right"
+                  style={{ border: "1px solid #DED4BD" }}
                 >
-                  <span className="min-w-0 flex-1 break-words">
-                    <span className="text-[10px] font-bold ml-2 px-1.5 py-0.5 rounded inline-block" style={{ background: "#E4F0EC", color: "#0E5348" }}>
-                      {KIND_LABEL[n.kind] || n.kind}
-                    </span>
-                    {n.name}
-                  </span>
+                  <p className="px-4 py-1 text-xs font-bold" style={{ color: "#10665A" }}>
+                    {name}
+                  </p>
                   <button
                     type="button"
-                    className="text-[11px] font-bold shrink-0"
-                    style={{ color: "#C53030" }}
-                    onClick={async () => {
-                      if (!confirm("حذف هذا العنصر؟")) return;
-                      try {
-                        await deleteCurriculumNode(n.id);
-                        flash("تم الحذف");
-                        await reload();
-                      } catch (e) {
-                        setErr(e.message || "فشل الحذف");
-                      }
+                    className="w-full text-right px-4 py-2 text-xs"
+                    style={{ color: "#5C5A4A" }}
+                    onClick={() => {
+                      setMenuOpen(false);
+                      navigate("/student");
                     }}
                   >
-                    حذف
+                    لوحة الطالب
+                  </button>
+                  <button
+                    type="button"
+                    className="w-full text-right px-4 py-2 text-xs"
+                    style={{ color: "#C53030" }}
+                    onClick={async () => {
+                      setMenuOpen(false);
+                      try {
+                        await signOut();
+                      } catch (_) {}
+                    }}
+                  >
+                    تسجيل الخروج
                   </button>
                 </div>
-              ))}
-            </div>
-          </section>
-        )}
-
-        {/* ========== قوالب الإكمال ========== */}
-        {tab === "journey" && (
-          <section className="space-y-3">
-            <p className="text-sm leading-6" style={{ color: "#5C5A4A" }}>
-              هذه نصوص اختيارية يمكن ربطها من داخل استوديو الدرس («إشعار بعد مشهد معيّن»).
-              عدّل العنوان والنص ثم احفظ.
-            </p>
-            {templates.length === 0 && (
-              <p className="text-sm" style={{ color: "#8A8570" }}>
-                لا توجد قوالب. شغّل migration_data_driven.sql لزرع القوالب الافتراضية.
-              </p>
-            )}
-            {templates.map((tpl) => (
-              <div key={tpl.id} className="rounded-2xl p-4 bg-white border space-y-2" style={{ borderColor: "#DED4BD" }}>
-                <p className="text-xs font-bold" style={{ color: "#10665A" }}>
-                  {tpl.label || tpl.key}
-                </p>
-                <input
-                  className="w-full text-sm rounded-xl px-3 py-2 border"
-                  value={tpl.title || ""}
-                  onChange={(e) => setTemplates(templates.map((x) => (x.id === tpl.id ? { ...x, title: e.target.value } : x)))}
-                  placeholder="عنوان الرسالة"
-                />
-                <textarea
-                  className="w-full text-sm rounded-xl px-3 py-2 border"
-                  rows={2}
-                  value={tpl.body || ""}
-                  onChange={(e) => setTemplates(templates.map((x) => (x.id === tpl.id ? { ...x, body: e.target.value } : x)))}
-                  placeholder="نص الرسالة"
-                />
-                <button
-                  type="button"
-                  className="px-3 py-1.5 rounded-xl text-xs font-bold text-white"
-                  style={{ background: "#10665A" }}
-                  onClick={async () => {
-                    try {
-                      await saveCompletionTemplate(tpl);
-                      flash("تم حفظ القالب ✓");
-                    } catch (e) {
-                      setErr(e.message || "فشل الحفظ");
-                    }
-                  }}
-                >
-                  حفظ
-                </button>
-              </div>
-            ))}
-          </section>
-        )}
+              )}
+            </>
+          ) : (
+            <button
+              type="button"
+              onClick={() => setAuthOpen(true)}
+              className="text-xs font-bold px-3 py-1.5 rounded-xl text-white"
+              style={{ background: "#10665A" }}
+            >
+              تسجيل الدخول
+            </button>
+          )}
+        </div>
       </div>
+
+      {sceneCount > 0 && (
+        <div
+          className="px-4 py-2 text-center text-xs font-bold w-full max-w-full break-words"
+          style={{ background: "#E4F0EC", color: "#0E5348" }}
+        >
+          التقدّم : {progressLabel}
+          {sceneCount > 0 && !progress.lessonCompleted ? ` · عناوين مكتملة ${doneCount}/${sceneCount}` : ""}
+        </div>
+      )}
+
+      <div className="w-full max-w-full overflow-x-hidden [&_img]:max-w-full [&_img]:h-auto [&_table]:block [&_table]:max-w-full [&_table]:overflow-x-auto [&_pre]:max-w-full [&_pre]:overflow-x-auto [&_iframe]:max-w-full">
+        <StudentView
+          lesson={lesson}
+          requireAuthForTools
+          session={session}
+          journey={journey}
+        />
+      </div>
+
+      <Footer />
+      <GuestWelcomeBanner session={session} />
+      <AuthModal open={authOpen} onClose={() => setAuthOpen(false)} />
     </div>
   );
 }
