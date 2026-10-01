@@ -2063,13 +2063,34 @@ export default function StudentPlatform() {
     align-items: center;
     gap: 16px;
     min-height: 68px;
-    padding: 12px 14px;
+    padding: 12px 16px;
     border-radius: 18px;
-    background: transparent;
-    border: 0;
+    /* visible button surface so students recognise it as clickable */
+    background: #FFFFFF;
+    border: 1.5px solid var(--md-border-strong);
+    box-shadow: 0 4px 12px rgba(6, 59, 52, 0.08);
     cursor: pointer;
     text-align: right;
-    transition: background 0.22s ease, transform 0.22s ease, box-shadow 0.22s ease;
+    transition: background 0.22s ease, transform 0.22s ease, box-shadow 0.22s ease, border-color 0.22s ease;
+  }
+
+  /* arrow affordance (points forward in RTL, turns down when the unit is open) */
+  .md-unit-card::after {
+    content: "‹";
+    flex-shrink: 0;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 30px;
+    height: 30px;
+    border-radius: 50%;
+    background: var(--md-teal-soft);
+    color: var(--md-teal-deep);
+    font-size: 1.4rem;
+    font-weight: 900;
+    line-height: 1;
+    padding-bottom: 3px;
+    transition: transform 0.22s ease, background 0.22s ease, color 0.22s ease;
   }
 
   .md-unit-card::before {
@@ -2085,13 +2106,27 @@ export default function StudentPlatform() {
 
   .md-unit-card:hover {
     background: var(--md-teal-soft);
+    border-color: var(--md-teal);
+    box-shadow: 0 10px 24px rgba(6, 59, 52, 0.14);
     transform: translateX(-4px);
+  }
+
+  .md-unit-card:hover::after {
+    background: var(--md-teal);
+    color: #FFFFFF;
   }
 
   .md-unit-card.selected {
     background: linear-gradient(135deg, var(--md-teal-deep), var(--md-teal-dark));
+    border-color: var(--md-teal-deep);
     box-shadow: 0 14px 30px rgba(6, 59, 52, 0.26);
     transform: none;
+  }
+
+  .md-unit-card.selected::after {
+    background: rgba(255, 255, 255, 0.16);
+    color: #FFFFFF;
+    transform: rotate(-90deg);
   }
 
   .md-unit-card.selected::before { color: var(--md-gold-light); opacity: 1; }
