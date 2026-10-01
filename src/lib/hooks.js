@@ -13,8 +13,25 @@ export function useAuth() {
   useEffect(() => {
     let mounted = true;
 
+    // Keep the SAME session reference when the auth event describes the same
+    // user (e.g. SIGNED_IN / TOKEN_REFRESHED re-broadcast from another tab or on
+    // tab focus). A new object identity would re-run every `[session]` effect
+    // (staff check, grade meta, ...) and reset the page state.
     const apply = (s) => {
-      if (mounted) setSession(s ?? null);
+      if (!mounted) return;
+      const next = s ?? null;
+      setSession((prev) => {
+        if (
+          prev &&
+          next &&
+          prev.user?.id &&
+          prev.user.id === next.user?.id &&
+          prev.user.updated_at === next.user?.updated_at
+        ) {
+          return prev;
+        }
+        return next;
+      });
     };
 
     const unsubscribe = onAuthStateChange((s) => apply(s));
@@ -94,7 +111,7 @@ export function useStaffStatus(session) {
     return () => {
       mounted = false;
     };
-  }, [session]);
+  }, [session === undefined ? undefined : session?.user?.id ?? null]);
 
   return staff;
 }

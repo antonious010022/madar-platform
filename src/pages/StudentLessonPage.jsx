@@ -64,12 +64,14 @@ function loadProgress(lessonId, sceneCount) {
     if (typeof parsed.sceneIndex === "number" && !Array.isArray(parsed.completedScenes)) {
       p.currentScene = Math.min(Math.max(0, parsed.sceneIndex), Math.max(0, sceneCount - 1));
       p.unlockedScenes = Array.from({ length: p.currentScene + 1 }, (_, i) => i);
-      p.completedScenes = [];
+      // v1 had no completion list: scenes before the reached one count as passed
+      p.completedScenes = Array.from({ length: p.currentScene }, (_, i) => i);
     }
-    p.unlockedScenes = Array.from(new Set([0, ...(p.unlockedScenes || [])])).filter(
-      (i) => i >= 0 && i < sceneCount
-    );
     p.completedScenes = (p.completedScenes || []).filter((i) => i >= 0 && i < sceneCount);
+    // unlockedScenes is kept only as a mirror of completedScenes (+ next scene)
+    p.unlockedScenes = Array.from(
+      new Set([0, ...(p.unlockedScenes || []), ...p.completedScenes, ...p.completedScenes.map((i) => i + 1)])
+    ).filter((i) => i >= 0 && i < sceneCount);
     if (p.completedScenes.length >= sceneCount && sceneCount > 0) {
       p.finalReviewUnlocked = true;
     }
@@ -297,9 +299,10 @@ export default function StudentLessonPage() {
     }));
   }, []);
 
-  const completeScene = useCallback(() => {
+  const completeScene = useCallback((sceneIdx) => {
     setProgress((prev) => {
-      const i = prev.currentScene;
+      // Explicit index (the scene the student is viewing) wins over stored currentScene
+      const i = Number.isInteger(sceneIdx) ? sceneIdx : prev.currentScene;
       const completed = Array.from(new Set([...(prev.completedScenes || []), i]));
       const unlocked = Array.from(new Set([...(prev.unlockedScenes || []), i]));
       const next = i + 1;
@@ -315,6 +318,7 @@ export default function StudentLessonPage() {
         !(prev.completionDismissedFor || []).includes(i);
 
       if (shouldCompletion) {
+        if (next < sceneCount) unlocked.push(next);
         return {
           ...prev,
           completedScenes: completed,
@@ -404,13 +408,13 @@ export default function StudentLessonPage() {
     // نفس ارتفاع/بنية الهيدر الموجود في العرض النهائي (سطر lesson.title لاحقًا) حتى لا تقفز
     // الصفحة (Layout Shift) لحظة انتهاء التحميل — Visual/Layout فقط، لا تأثير على تحميل الدرس.
     return (
-      <div className="min-h-screen flex flex-col" style={{ background: "#FAF6ED" }}>
+      <div className="min-h-screen flex flex-col md-lesson-page" style={{ background: "#FAF6ED" }}>
         <div
-          className="bg-white px-4 sm:px-6 py-3 border-b flex justify-between items-center gap-2 flex-wrap"
+          className="md-lv-topbar bg-white px-4 sm:px-6 py-3 border-b flex justify-between items-center gap-2 flex-wrap"
           style={{ borderColor: "#DED4BD" }}
         >
           <span className="text-sm font-bold" style={{ color: "#10665A" }}>مَدَار</span>
-          <span className="text-xs font-medium truncate max-w-[40%]" style={{ color: "#8A8570" }}>
+          <span className="md-lv-topbar-title text-xs font-medium truncate max-w-[40%]" style={{ color: "#8A8570" }}>
             جاري التحميل...
           </span>
           <span className="text-xs" style={{ color: "#8A8570", opacity: 0 }} aria-hidden="true">
@@ -425,14 +429,14 @@ export default function StudentLessonPage() {
   }
   if (lesson === false) {
     return (
-      <div className="p-10 text-center dir-rtl">
+      <div className="md-lesson-page min-h-screen p-10 text-center dir-rtl">
         <p className="font-bold mb-2" style={{ color: "#C53030" }}>تعذّر عرض هذا الدرس</p>
         <p className="text-sm mb-4" style={{ color: "#8A8570" }}>
           قد يكون غير منشور أو غير موجود. يمكنك العودة واختيار درس آخر.
         </p>
         <button
           onClick={() => navigate("/student")}
-          className="mt-2 px-4 py-2 rounded-xl text-sm font-bold text-white"
+          className="md-lv-btn md-lv-btn-primary mt-2 px-4 py-2 rounded-xl text-sm font-bold text-white"
           style={{ background: "#10665A" }}
         >
           ← العودة لمنصة الطالب
@@ -458,28 +462,28 @@ export default function StudentLessonPage() {
 
   if (lessonAccessLocked) {
     return (
-      <div className="min-h-screen flex flex-col" style={{ background: "#FAF6ED" }}>
+      <div className="min-h-screen flex flex-col md-lesson-page" style={{ background: "#FAF6ED" }}>
         <div
-          className="bg-white px-4 sm:px-6 py-3 border-b flex justify-between items-center gap-2 flex-wrap"
+          className="md-lv-topbar bg-white px-4 sm:px-6 py-3 border-b flex justify-between items-center gap-2 flex-wrap"
           style={{ borderColor: "#DED4BD" }}
         >
-          <button onClick={() => navigate("/student")} className="text-sm font-bold" style={{ color: "#10665A" }}>
+          <button onClick={() => navigate("/student")} className="md-lv-back text-sm font-bold" style={{ color: "#10665A" }}>
             ← العودة لقائمة الدروس
           </button>
-          <span className="text-xs font-medium truncate max-w-[40%]" style={{ color: "#8A8570" }}>
+          <span className="md-lv-topbar-title text-xs font-medium truncate max-w-[40%]" style={{ color: "#8A8570" }}>
             {lesson?.title || "منصة الطالب التعليمية"}
           </span>
           <button
             type="button"
             onClick={() => setAuthOpen(true)}
-            className="text-xs font-bold px-3 py-1.5 rounded-xl text-white"
+            className="md-lv-login text-xs font-bold px-3 py-1.5 rounded-xl text-white"
             style={{ background: "#10665A" }}
           >
             تسجيل الدخول
           </button>
         </div>
         <div className="flex-1 flex items-center justify-center p-6">
-          <div className="max-w-md w-full rounded-3xl p-8 text-center bg-white shadow-sm dir-rtl" style={{ border: "1px solid #DED4BD" }}>
+          <div className="md-lv-lock max-w-md w-full rounded-3xl p-8 text-center bg-white shadow-sm dir-rtl" style={{ border: "1px solid #DED4BD" }}>
             <p className="text-4xl mb-3">🔐</p>
             <p className="font-black text-lg mb-2" style={{ color: "#10665A" }}>تسجيل الدخول مطلوب</p>
             <p className="text-sm mb-6" style={{ color: "#5C5A4A" }}>
@@ -488,7 +492,7 @@ export default function StudentLessonPage() {
             <button
               type="button"
               onClick={() => setAuthOpen(true)}
-              className="w-full px-5 py-3 rounded-2xl text-sm font-bold text-white"
+              className="md-lv-btn md-lv-btn-primary w-full px-5 py-3 rounded-2xl text-sm font-bold text-white"
               style={{ background: "#10665A" }}
             >
               تسجيل الدخول / إنشاء حساب
@@ -496,7 +500,7 @@ export default function StudentLessonPage() {
             <button
               type="button"
               onClick={() => navigate("/student")}
-              className="w-full mt-2 px-5 py-2 rounded-2xl text-xs font-bold"
+              className="md-lv-btn md-lv-btn-text w-full mt-2 px-5 py-2 rounded-2xl text-xs font-bold"
               style={{ color: "#8A8570" }}
             >
               ← العودة لقائمة الدروس
@@ -509,15 +513,15 @@ export default function StudentLessonPage() {
   }
 
   return (
-    <div className="min-h-screen flex flex-col" style={{ background: "#FAF6ED" }}>
+    <div className="min-h-screen flex flex-col md-lesson-page" style={{ background: "#FAF6ED" }}>
       <div
-        className="bg-white px-4 sm:px-6 py-3 border-b flex justify-between items-center gap-2 flex-wrap"
+        className="md-lv-topbar bg-white px-4 sm:px-6 py-3 border-b flex justify-between items-center gap-2 flex-wrap"
         style={{ borderColor: "#DED4BD" }}
       >
-        <button onClick={() => navigate("/student")} className="text-sm font-bold" style={{ color: "#10665A" }}>
+        <button onClick={() => navigate("/student")} className="md-lv-back text-sm font-bold" style={{ color: "#10665A" }}>
           ← العودة لقائمة الدروس
         </button>
-        <span className="text-xs font-medium truncate max-w-[40%]" style={{ color: "#8A8570" }}>
+        <span className="md-lv-topbar-title text-xs font-medium truncate max-w-[40%]" style={{ color: "#8A8570" }}>
           {lesson?.title || "منصة الطالب التعليمية"}
         </span>
         <div className="relative">
@@ -528,7 +532,7 @@ export default function StudentLessonPage() {
               <button
                 type="button"
                 onClick={() => setMenuOpen((v) => !v)}
-                className="flex items-center gap-2 rounded-full py-1 px-2"
+                className="md-lv-account flex items-center gap-2 rounded-full py-1 px-2"
                 aria-expanded={menuOpen}
               >
                 <LetterAvatar name={name} email={session.user?.email} size={28} />
@@ -538,7 +542,7 @@ export default function StudentLessonPage() {
               </button>
               {menuOpen && (
                 <div
-                  className="absolute left-0 mt-2 w-48 rounded-2xl bg-white shadow-lg py-2 z-50 dir-rtl text-right"
+                  className="md-lv-menu absolute left-0 mt-2 w-48 rounded-2xl bg-white shadow-lg py-2 z-50 dir-rtl text-right"
                   style={{ border: "1px solid #DED4BD" }}
                 >
                   <p className="px-4 py-1 text-xs font-bold" style={{ color: "#10665A" }}>
@@ -575,7 +579,7 @@ export default function StudentLessonPage() {
             <button
               type="button"
               onClick={() => setAuthOpen(true)}
-              className="text-xs font-bold px-3 py-1.5 rounded-xl text-white"
+              className="md-lv-login text-xs font-bold px-3 py-1.5 rounded-xl text-white"
               style={{ background: "#10665A" }}
             >
               تسجيل الدخول
@@ -585,7 +589,7 @@ export default function StudentLessonPage() {
       </div>
 
       {sceneCount > 0 && (
-        <div className="px-4 py-2 text-center text-xs font-bold" style={{ background: "#E4F0EC", color: "#0E5348" }}>
+        <div className="md-lv-progress px-4 py-2 text-center text-xs font-bold" style={{ background: "#E4F0EC", color: "#0E5348" }}>
           التقدّم : {progressLabel}
           {sceneCount > 0 && !progress.lessonCompleted ? ` · عناوين مكتملة ${doneCount}/${sceneCount}` : ""}
         </div>

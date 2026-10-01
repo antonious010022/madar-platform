@@ -16,7 +16,7 @@ export function Pill({ children, tone = "teal" }) {
   return (
     <span
       style={{ background: t.bg, color: t.color }}
-      className="px-3 py-1 rounded-full text-sm font-medium whitespace-nowrap inline-block"
+      className="md-lv-pill px-3 py-1 rounded-full text-sm font-medium whitespace-nowrap inline-block"
     >
       {children}
     </span>
@@ -333,7 +333,7 @@ export function MindMapViewerNode({
           e.stopPropagation();
           if (onSelectNode) onSelectNode(node);
         }}
-        className="flex items-center gap-2 py-1.5 px-3 rounded-xl cursor-pointer transition-all border"
+        className="md-lv-mm-node flex items-center gap-2 py-1.5 px-3 rounded-xl cursor-pointer transition-all border"
         style={{
           background: isSelected ? "#F6E9D3" : "#FFFFFF",
           borderColor: isSelected ? "#B9791F" : "#DED4BD",
@@ -424,7 +424,7 @@ export function QuestionItem({ q }) {
   if (q.type === "mcq") {
     return (
       <div
-        className="p-4 rounded-2xl border text-right dir-rtl"
+        className="md-lv-q p-4 rounded-2xl border text-right dir-rtl"
         style={{ background: "#FAF6ED", borderColor: "#DED4BD" }}
       >
         <p className="font-bold mb-3" style={{ color: "#22291F" }}>
@@ -440,7 +440,7 @@ export function QuestionItem({ q }) {
                 type="button"
                 key={`mcq-opt-${i}`}
                 onClick={() => !showAnswer && setSelectedOption(i)}
-                className="text-right px-4 py-2.5 rounded-xl border text-sm font-medium transition-all cursor-pointer"
+                className="md-lv-opt text-right px-4 py-2.5 rounded-xl border text-sm font-medium transition-all cursor-pointer"
                 style={{
                   background: isCorrect
                     ? "#E4F0EC"
@@ -469,7 +469,7 @@ export function QuestionItem({ q }) {
             type="button"
             disabled={selectedOption === null}
             onClick={() => setShowAnswer(true)}
-            className="mt-3 px-4 py-2 rounded-xl text-xs font-bold text-white transition-opacity disabled:opacity-50 cursor-pointer"
+            className="md-lv-btn-sm mt-3 px-4 py-2 rounded-xl text-xs font-bold text-white transition-opacity disabled:opacity-50 cursor-pointer"
             style={{
               background: selectedOption === null ? "#DED4BD" : "#10665A",
             }}
@@ -504,7 +504,7 @@ export function QuestionItem({ q }) {
 
   return (
     <div
-      className="p-4 rounded-2xl border text-right dir-rtl"
+      className="md-lv-q p-4 rounded-2xl border text-right dir-rtl"
       style={{ background: "#FAF6ED", borderColor: "#DED4BD" }}
     >
       <p className="font-bold mb-3" style={{ color: "#22291F" }}>
@@ -522,7 +522,7 @@ export function QuestionItem({ q }) {
         <button
           type="button"
           onClick={() => setShowAnswer(true)}
-          className="px-4 py-2 rounded-xl text-xs font-bold text-white cursor-pointer"
+          className="md-lv-btn-sm px-4 py-2 rounded-xl text-xs font-bold text-white cursor-pointer"
           style={{ background: "#10665A" }}
         >
           عرض الإجابة النموذجية
@@ -573,7 +573,7 @@ function YouTubePlayer({ videoId }) {
   const [show, setShow] = useState(false);
   if (!videoId) return null;
   return (
-    <div className="mb-6 rounded-3xl overflow-hidden bg-black shadow-sm" style={{ border: "1px solid #DED4BD" }}>
+    <div className="md-lv-video mb-6 rounded-3xl overflow-hidden bg-black shadow-sm" style={{ border: "1px solid #DED4BD" }}>
       {!show ? (
         <button type="button" onClick={() => setShow(true)}
           className="relative w-full flex items-center justify-center cursor-pointer"
@@ -647,6 +647,19 @@ export function isLessonMembersOnly(lesson) {
 }
 
 /**
+ * Journey / sequence lock — independent from Members-Only (auth) lock.
+ * A scene is open when it is the first one, is itself completed, or the
+ * PREVIOUS scene is inside journey.completedScenes. `completedScenes` is the
+ * single source of truth (unlockedScenes is no longer consulted), so a scene
+ * can never stay locked after its predecessor was completed.
+ */
+export function isSceneSequenceUnlocked(journey, index) {
+  if (index <= 0) return true;
+  const done = Array.isArray(journey?.completedScenes) ? journey.completedScenes : [];
+  return done.includes(index) || done.includes(index - 1);
+}
+
+/**
  * Resolve lock kind for a scene index.
  * Priority: COMPLETED → ACCESS_LOCK → SEQUENCE_LOCK → AVAILABLE
  */
@@ -669,10 +682,9 @@ export function getSceneLockKind(scene, index, opts) {
     return "ACCESS_LOCK";
   }
 
-  // Sequence Lock (must complete previous / be in unlockedScenes)
+  // Sequence Lock (previous scene must be inside completedScenes)
   if (hasJourney && journey) {
-    const unlocked = journey.unlockedScenes || [0];
-    if (!unlocked.includes(index)) return "SEQUENCE_LOCK";
+    if (!isSceneSequenceUnlocked(journey, index)) return "SEQUENCE_LOCK";
   }
 
   return "AVAILABLE";
@@ -786,8 +798,7 @@ export function StudentView({
   const authOpts = { requireAuthForTools, session, isTeacherView };
   const isSceneUnlocked = useCallback((i) => {
     if (isTeacherView || !hasJourney) return true;
-    const unlocked = journey.unlockedScenes || [0];
-    return unlocked.includes(i);
+    return isSceneSequenceUnlocked(journey, i);
   }, [isTeacherView, hasJourney, journey]);
 
   const isSceneCompleted = useCallback((i) => {
@@ -872,7 +883,7 @@ export function StudentView({
     
   return (
     <div
-      className="ts-root ts-scrollbar dir-rtl text-right"
+      className="ts-root ts-scrollbar dir-rtl text-right md-lv"
       style={{
         minHeight: embedded ? "100%" : undefined,
         background: "#FAF6ED",
@@ -887,6 +898,7 @@ export function StudentView({
         }
       `}</style>
       <div className={embedded ? "px-4 py-4" : "max-w-3xl mx-auto px-5 py-8"}>
+        <div className="md-lv-hero">
         <div className="text-center mb-3">
           <Pill tone="teal">
             {[lesson.stage, lesson.grade, lesson.term, lesson.subject]
@@ -897,23 +909,24 @@ export function StudentView({
 
         <div className="text-center mb-6">
           <h1
-            className="ts-display font-black"
+            className="ts-display font-black md-lv-h1"
             style={{ color: "#22291F", fontSize: embedded ? 24 : 32 }}
           >
             {lesson.title}
           </h1>
           {lesson.description && (
-            <p className="text-sm mt-1" style={{ color: "#5C5A4A" }}>
+            <p className="md-lv-desc text-sm mt-1" style={{ color: "#5C5A4A" }}>
               {lesson.description}
             </p>
           )}
+        </div>
         </div>
 
 
         {/* فيديو الدرس — ثابت أعلى الرحلة (مستوى الدرس) */}
         {youtubeId && !recordingMode && !sceneContentLocked && (
           <div className="mb-6">
-            <p className="text-xs font-bold mb-2 text-center" style={{ color: "#8A8570" }}>🎥 شاهد فيديو الدرس
+            <p className="md-lv-video-note text-xs font-bold mb-2 text-center" style={{ color: "#8A8570" }}>🎥 شاهد فيديو الدرس
 
 تابع الشرح خطوة بخطوة وركّز في ترتيب الأفكار والأمثلة. خُد وقتك في الفهم قبل الانتقال للجزء التالي، لأن الفيديو هو بداية رحلتك لفهم الدرس بشكل كامل.
 </p>
@@ -922,8 +935,8 @@ export function StudentView({
         )}
 
         {/* رحلة الدرس */}
-        <div className="mb-6">
-          {sceneCount > 0 && (
+        <div className="mb-6 md-lv-journey">
+          {sceneCount > 0 && !recordingMode && (
             <div className="text-center mb-3">
               <p className="text-xs font-bold" style={{ color: "#8A8570" }}>
                 {isLessonDone
@@ -939,7 +952,15 @@ export function StudentView({
               )}
             </div>
           )}
-          <div className="flex flex-wrap gap-2 justify-center">
+          {hasJourney && sceneCount > 0 && (
+            <div className="md-lv-track" aria-hidden="true">
+              <div
+                className="md-lv-fill"
+                style={{ width: `${Math.round((((journey.completedScenes || []).length) / sceneCount) * 100)}%` }}
+              />
+            </div>
+          )}
+          <div className="flex flex-wrap gap-2 justify-center md-lv-steps">
           {lesson.scenes.map((s, i) => {
             const kind = getSceneLockKind(s, i, {
               session,
@@ -972,7 +993,8 @@ export function StudentView({
               onClick={() => tryOpenScene(i)}
               disabled={disabled}
               title={titleHint}
-              className="px-4 py-2 rounded-2xl text-sm font-bold transition-all shadow-sm"
+              data-state={done ? "done" : current ? "current" : kind === "ACCESS_LOCK" ? "access" : kind === "SEQUENCE_LOCK" ? "sequence" : "available"}
+              className="md-lv-step px-4 py-2 rounded-2xl text-sm font-bold transition-all shadow-sm"
               style={{
                 background: current ? "#10665A" : done ? "#E4F0EC" : "#FFFFFF",
                 color: current ? "#FAF6ED" : "#22291F",
@@ -996,7 +1018,8 @@ export function StudentView({
               type="button"
               onClick={() => tryOpenScene(sceneCount)}
               disabled={!isTeacherView && !journey.finalReviewUnlocked && (journey.completedScenes || []).length < sceneCount}
-              className="px-4 py-2 rounded-2xl text-sm font-bold transition-all shadow-sm"
+              data-state={isFinalReview ? "current" : (journey.finalReviewUnlocked || (journey.completedScenes || []).length >= sceneCount || isTeacherView) ? "available" : "sequence"}
+              className="md-lv-step px-4 py-2 rounded-2xl text-sm font-bold transition-all shadow-sm"
               style={{
                 background: isFinalReview ? "#10665A" : "#FFFFFF",
                 color: isFinalReview ? "#FAF6ED" : "#22291F",
@@ -1009,13 +1032,15 @@ export function StudentView({
             </button>
           )}
           </div>
-          <p className="text-center text-[11px] mt-2" style={{ color: "#8A8570" }}>
-            ✓ مكتمل · ● الحالي · ○ متاح · 🔒 أكمل العنوان السابق · 🔐 تسجيل الدخول مطلوب
-          </p>
+          {!recordingMode && (
+            <p className="md-lv-legend text-center text-[11px] mt-2" style={{ color: "#8A8570" }}>
+              ✓ مكتمل · ● الحالي · ○ متاح · 🔒 أكمل العنوان السابق · 🔐 تسجيل الدخول مطلوب
+            </p>
+          )}
         </div>
 
         {isCompletionStep && hasJourney && (
-          <div className="rounded-3xl p-8 mb-6 text-center bg-white shadow-sm" style={{ border: "1px solid #10665A" }}>
+          <div className="md-lv-notice rounded-3xl p-8 mb-6 text-center bg-white shadow-sm" style={{ border: "1px solid #10665A" }}>
             <p className="text-3xl mb-3">🎉</p>
             <p className="font-black text-lg mb-2" style={{ color: "#10665A" }}>
               {(journey.completionTitle) || "تم إكمال هذا الجزء"}
@@ -1026,7 +1051,7 @@ export function StudentView({
             <button
               type="button"
               onClick={() => journey.dismissCompletion?.()}
-              className="px-6 py-3 rounded-2xl text-sm font-bold text-white"
+              className="md-lv-btn md-lv-btn-primary px-6 py-3 rounded-2xl text-sm font-bold text-white"
               style={{ background: "#10665A" }}
             >
               التالي →
@@ -1036,14 +1061,14 @@ export function StudentView({
 
 
         {sceneContentLocked && (
-          <div className="rounded-3xl p-8 mb-6 text-center shadow-sm bg-white" style={{ border: "1px solid #DED4BD" }}>
+          <div className="md-lv-lock rounded-3xl p-8 mb-6 text-center shadow-sm bg-white" style={{ border: "1px solid #DED4BD" }}>
             <p className="text-3xl mb-2">🔐</p>
             <p className="font-black text-lg mb-2" style={{ color: "#10665A" }}>تسجيل الدخول مطلوب</p>
             <p className="text-sm mb-4" style={{ color: "#5C5A4A" }}>
               هذا العنوان حصري للمستخدمين المسجّلين. سجّل دخولك للوصول إليه — وليس بسبب ترتيب المشاهد.
             </p>
             <button type="button" onClick={() => setAuthOpen(true)}
-              className="px-5 py-2.5 rounded-2xl text-sm font-bold text-white" style={{ background: "#10665A" }}>
+              className="md-lv-btn md-lv-btn-primary px-5 py-2.5 rounded-2xl text-sm font-bold text-white" style={{ background: "#10665A" }}>
               تسجيل الدخول / إنشاء حساب
             </button>
           </div>
@@ -1067,7 +1092,7 @@ export function StudentView({
         {/* التذكر السريع */}
         {!sceneContentLocked && scene && isQuickRecallVisible && quickRecallItems.length > 0 && (
           <div
-            className="rounded-2xl p-4 mb-5 quick-recall-hidden"
+            className="md-lv-recall rounded-2xl p-4 mb-5 quick-recall-hidden"
             style={{ background: "#E4F0EC", border: "1px solid #10665A" }}
           >
             <p className="font-bold text-sm mb-2" style={{ color: "#0E5348" }}>
@@ -1088,11 +1113,11 @@ export function StudentView({
         {!sceneContentLocked && scene && scene.text && String(scene.text).replace(/<[^>]+>/g, "").trim() && (
         <div
           key={scene.id || activeIndex}
-          className="ts-fade rounded-3xl p-6 sm:p-8 mb-6 shadow-sm bg-white"
+          className="md-lv-card md-lv-card--accent ts-fade rounded-3xl p-6 sm:p-8 mb-6 shadow-sm bg-white"
           style={{ border: "1px solid #DED4BD" }}
         >
           <h2
-            className="text-xl font-bold mb-4 pb-2 border-b"
+            className="md-lv-scene-title text-xl font-bold mb-4 pb-2 border-b"
             style={{
               color: "#10665A",
               borderColor: "#DED4BD",
@@ -1117,10 +1142,10 @@ export function StudentView({
         {/* 📚 المراجعة النهائية — محتوى مجمّع من كل مشاهد الدرس (خريطة ذهنية + خط زمني + أسئلة) */}
         {!sceneContentLocked && scene && isFinalReviewScene && (
           <div
-            className="rounded-3xl p-5 mb-6 shadow-sm bg-white"
+            className="md-lv-card md-lv-card--accent rounded-3xl p-5 mb-6 shadow-sm bg-white"
             style={{ border: "1px solid #DED4BD" }}
           >
-            <h3 className="font-bold text-lg mb-1" style={{ color: "#10665A" }}>📚 المراجعة النهائية</h3>
+            <h3 className="md-lv-card-title font-bold text-lg mb-1" style={{ color: "#10665A" }}>📚 المراجعة النهائية</h3>
             <p className="text-xs mb-4" style={{ color: "#8A8570" }}>ملخص من كل مشاهد الدرس: خريطة ذهنية وخط زمني وأسئلة.</p>
             {fullMindMap && fullMindMap.label && (
               <div className="mb-6">
@@ -1137,7 +1162,7 @@ export function StudentView({
                 <p className="font-bold text-sm mb-2" style={{ color: "#0E5348" }}>🕒 الخط الزمني الكامل</p>
                 <div className="flex flex-col gap-3">
                   {fullTimeline.map((item, idx) => (
-                    <div key={item.id || `fr-ft-${idx}`} className="p-3 rounded-xl" style={{ background: "#FAF6ED", border: "1px solid #DED4BD" }}>
+                    <div key={item.id || `fr-ft-${idx}`} className="md-lv-tl-item p-3 rounded-xl" style={{ background: "#FAF6ED", border: "1px solid #DED4BD" }}>
                       <p className="font-bold text-xs" style={{ color: "#10665A" }}>{item.date}</p>
                       <p className="text-sm font-bold" style={{ color: "#22291F" }}>{item.title}</p>
                       {item.description && <p className="text-xs mt-1" style={{ color: "#5C5A4A" }}>{item.description}</p>}
@@ -1165,17 +1190,17 @@ export function StudentView({
         {/* الخريطة الذهنية */}
         {!sceneContentLocked && scene && !isFinalReviewScene && scene.mindmap && scene.mindmap.label && (
           <div
-            className="rounded-3xl p-6 mb-6 shadow-sm bg-white"
+            className="md-lv-card rounded-3xl p-6 mb-6 shadow-sm bg-white"
             style={{ border: "1px solid #DED4BD" }}
           >
             <div className="flex justify-between items-center mb-4">
-              <h3 className="font-bold text-lg" style={{ color: "#10665A" }}>
+              <h3 className="md-lv-card-title font-bold text-lg" style={{ color: "#10665A" }}>
                 🧠 الخريطة الذهنية للدرس
               </h3>
               <button
                 type="button"
                 onClick={() => setShowMap((prev) => !prev)}
-                className="text-xs px-3 py-1.5 rounded-xl font-bold cursor-pointer"
+                className="md-lv-toggle text-xs px-3 py-1.5 rounded-xl font-bold cursor-pointer"
                 style={{ background: "#EAE6F1", color: "#4C3F63" }}
               >
                 {showMap ? "إخفاء" : "إظهار"}
@@ -1190,7 +1215,7 @@ export function StudentView({
                 />
                 {selectedMindNode && (
                   <div
-                    className="ts-fade mt-4 p-4 rounded-2xl"
+                    className="md-lv-detail ts-fade mt-4 p-4 rounded-2xl"
                     style={{
                       background: "#F6E9D3",
                       border: "1px solid #B9791F",
@@ -1231,17 +1256,17 @@ export function StudentView({
         {/* الشريط الزمني */}
         {!sceneContentLocked && scene && !isFinalReviewScene && Array.isArray(scene.timeline) && scene.timeline.length > 0 && (
           <div
-            className="rounded-3xl p-6 mb-6 shadow-sm bg-white"
+            className="md-lv-card rounded-3xl p-6 mb-6 shadow-sm bg-white"
             style={{ border: "1px solid #DED4BD" }}
           >
             <div className="flex justify-between items-center mb-4">
-              <h3 className="font-bold text-lg" style={{ color: "#10665A" }}>
+              <h3 className="md-lv-card-title font-bold text-lg" style={{ color: "#10665A" }}>
                 🕒 الخط الزمني والأحداث
               </h3>
               <button
                 type="button"
                 onClick={() => setShowTimeline((prev) => !prev)}
-                className="text-xs px-3 py-1.5 rounded-xl font-bold cursor-pointer"
+                className="md-lv-toggle text-xs px-3 py-1.5 rounded-xl font-bold cursor-pointer"
                 style={{ background: "#EAE6F1", color: "#4C3F63" }}
               >
                 {showTimeline ? "إخفاء" : "إظهار"}
@@ -1252,11 +1277,11 @@ export function StudentView({
                 {scene.timeline.map((item, idx) => (
                   <div
                     key={item.id || `timeline-item-${idx}`}
-                    className="flex gap-4 p-4 rounded-2xl border"
+                    className="md-lv-tl-item flex gap-4 p-4 rounded-2xl border"
                     style={{ background: "#FAF6ED", borderColor: "#DED4BD" }}
                   >
                     <div
-                      className="font-black px-3 py-2 rounded-xl h-fit text-sm whitespace-nowrap"
+                      className="md-lv-tl-date font-black px-3 py-2 rounded-xl h-fit text-sm whitespace-nowrap"
                       style={{ background: "#10665A", color: "#FAF6ED" }}
                     >
                       {item.date}
@@ -1297,10 +1322,10 @@ export function StudentView({
         {/* قسم الأسئلة والتحقق من الفهم */}
         {!sceneContentLocked && scene && !isFinalReviewScene && Array.isArray(scene.questions) && scene.questions.length > 0 && (
           <div
-            className="rounded-3xl p-6 mb-6 shadow-sm bg-white"
+            className="md-lv-card rounded-3xl p-6 mb-6 shadow-sm bg-white"
             style={{ border: "1px solid #DED4BD" }}
           >
-            <h3 className="font-bold text-lg mb-4" style={{ color: "#10665A" }}>
+            <h3 className="md-lv-card-title font-bold text-lg mb-4" style={{ color: "#10665A" }}>
               ❓ تحقق من فهمك
             </h3>
             <div className="flex flex-col gap-4">
@@ -1324,9 +1349,11 @@ export function StudentView({
                     else if (showAggregatedReviewFlow) tryOpenScene(sceneCount);
                     return;
                   }
-                  journey.completeScene?.();
+                  // Record THIS scene in completedScenes first (and open the next one
+                  // in the same state update) — index is passed explicitly.
+                  journey.completeScene?.(sceneIndex);
                 }}
-                className="w-full px-5 py-3 rounded-2xl text-sm font-bold text-white"
+                className={`md-lv-btn md-lv-btn-primary${isSceneCompleted(sceneIndex) ? " md-lv-btn-done" : ""} w-full px-5 py-3 rounded-2xl text-sm font-bold text-white`}
                 style={{ background: isSceneCompleted(sceneIndex) ? "#0E5348" : "#10665A" }}
               >
                 {isSceneCompleted(sceneIndex)
@@ -1338,12 +1365,12 @@ export function StudentView({
                   : "✓ أكمل المشهد"}
               </button>
             )}
-            <div className="flex justify-between gap-3 flex-wrap">
+            <div className="md-lv-navrow flex justify-between gap-3 flex-wrap">
               <button
                 type="button"
                 onClick={() => tryOpenScene(sceneIndex - 1)}
                 disabled={sceneIndex <= 0}
-                className="px-5 py-2.5 rounded-2xl text-sm font-bold disabled:opacity-40"
+                className="md-lv-btn md-lv-btn-ghost px-5 py-2.5 rounded-2xl text-sm font-bold disabled:opacity-40"
                 style={{ background: "#EAE6F1", color: "#4C3F63" }}
               >
                 ← السابق
@@ -1367,7 +1394,7 @@ export function StudentView({
                       : !showAggregatedReviewFlow || !(journey.finalReviewUnlocked || (journey.completedScenes || []).length >= sceneCount)
                     : sceneIndex >= sceneCount - 1
                 }
-                className="px-5 py-2.5 rounded-2xl text-sm font-bold text-white disabled:opacity-40"
+                className="md-lv-btn md-lv-btn-primary px-5 py-2.5 rounded-2xl text-sm font-bold text-white disabled:opacity-40"
                 style={{ background: "#10665A" }}
               >
                 {sceneIndex + 1 >= sceneCount && showAggregatedReviewFlow ? "المراجعة النهائية →" : "التالي →"}
@@ -1380,14 +1407,14 @@ export function StudentView({
         {isFinalReview && !sceneContentLocked && (
           <div className="space-y-6 mb-6">
             {isLessonDone && (
-              <div className="rounded-3xl p-6 text-center bg-white shadow-sm" style={{ border: "1px solid #10665A" }}>
+              <div className="md-lv-notice rounded-3xl p-6 text-center bg-white shadow-sm" style={{ border: "1px solid #10665A" }}>
                 <p className="text-3xl mb-2">🎉</p>
                 <p className="font-black text-lg" style={{ color: "#10665A" }}>تم إكمال الدرس</p>
                 <p className="text-sm mt-1" style={{ color: "#5C5A4A" }}>أحسنت — أنهيت رحلة هذا الدرس على مَدَار.</p>
               </div>
             )}
-            <div className="rounded-3xl p-5 bg-white shadow-sm" style={{ border: "1px solid #DED4BD" }}>
-              <h3 className="font-bold text-lg mb-3" style={{ color: "#10665A" }}>🧠 المراجعة النهائية</h3>
+            <div className="md-lv-card md-lv-card--accent rounded-3xl p-5 bg-white shadow-sm" style={{ border: "1px solid #DED4BD" }}>
+              <h3 className="md-lv-card-title font-bold text-lg mb-3" style={{ color: "#10665A" }}>🧠 المراجعة النهائية</h3>
               <p className="text-xs mb-4" style={{ color: "#8A8570" }}>ملخص من كل مشاهد الدرس: خريطة ذهنية وخط زمني وأسئلة.</p>
               {fullMindMap && fullMindMap.label && (
                 <div className="mb-6">
@@ -1404,7 +1431,7 @@ export function StudentView({
                   <p className="font-bold text-sm mb-2" style={{ color: "#0E5348" }}>الخط الزمني الكامل</p>
                   <div className="flex flex-col gap-3">
                     {fullTimeline.map((item, idx) => (
-                      <div key={item.id || `ft-${idx}`} className="p-3 rounded-xl" style={{ background: "#FAF6ED", border: "1px solid #DED4BD" }}>
+                      <div key={item.id || `ft-${idx}`} className="md-lv-tl-item p-3 rounded-xl" style={{ background: "#FAF6ED", border: "1px solid #DED4BD" }}>
                         <p className="font-bold text-xs" style={{ color: "#10665A" }}>{item.date}</p>
                         <p className="text-sm font-bold" style={{ color: "#22291F" }}>{item.title}</p>
                         {item.description && <p className="text-xs mt-1" style={{ color: "#5C5A4A" }}>{item.description}</p>}
@@ -1431,7 +1458,7 @@ export function StudentView({
               <button
                 type="button"
                 onClick={() => journey.completeFinalReview?.()}
-                className="w-full px-5 py-3 rounded-2xl text-sm font-bold text-white"
+                className="md-lv-btn md-lv-btn-primary w-full px-5 py-3 rounded-2xl text-sm font-bold text-white"
                 style={{ background: "#10665A" }}
               >
                 ✓ إنهاء المراجعة وإكمال الدرس
@@ -1440,7 +1467,7 @@ export function StudentView({
             <button
               type="button"
               onClick={() => tryOpenScene(Math.max(0, sceneCount - 1))}
-              className="w-full px-5 py-2.5 rounded-2xl text-sm font-bold"
+              className="md-lv-btn md-lv-btn-ghost w-full px-5 py-2.5 rounded-2xl text-sm font-bold"
               style={{ background: "#EAE6F1", color: "#4C3F63" }}
             >
               ← العودة لآخر مشهد

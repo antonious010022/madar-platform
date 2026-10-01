@@ -37,9 +37,27 @@ const KIND_LABEL = {
   subject: "مادة / قسم",
 };
 
+const TEACHER_SETTINGS_TAB_KEY = "madar_teacher_settings_tab_v1";
+const TEACHER_SETTINGS_TABS = ["pages", "contact", "footer", "curriculum", "journey"];
+
 export default function TeacherSettings() {
   // ابدأ بصفحات الفوتر — هذا ما يهمك أولًا
-  const [tab, setTab] = useState("pages");
+  const [tab, setTab] = useState(() => {
+    // Teacher-only key: remember the active settings tab across refresh
+    try {
+      const v = localStorage.getItem(TEACHER_SETTINGS_TAB_KEY);
+      return TEACHER_SETTINGS_TABS.includes(v) ? v : "pages";
+    } catch (_) {
+      return "pages";
+    }
+  });
+  useEffect(() => {
+    try {
+      localStorage.setItem(TEACHER_SETTINGS_TAB_KEY, tab);
+    } catch (_) {
+      /* ignore */
+    }
+  }, [tab]);
   const [nodes, setNodes] = useState([]);
   const [templates, setTemplates] = useState([]);
   const [pages, setPages] = useState([]);

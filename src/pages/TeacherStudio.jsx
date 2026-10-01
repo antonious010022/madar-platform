@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useRef, useState } from "react";
-import { useNavigate, useParams } from "react-router-dom";
+import { useLocation, useNavigate, useParams } from "react-router-dom";
 import { Pill, StudentView } from "../components/Viewer";
 import {
   RichTextEditor,
@@ -201,16 +201,57 @@ function SeoSettingsSection({ lesson, patchLesson, open, setOpen, slugConflict, 
   );
 }
 
+// Teacher-only UI persistence (separate keys from anything student-related).
+// Remembers the active scene + active panel per lesson so a browser refresh
+// keeps the Studio on the same section.
+const TEACHER_STUDIO_UI_KEY = (lessonId) => `madar_teacher_studio_ui_v1:${lessonId}`;
+const TEACHER_PANELS = ["scenes", "editor", "preview"];
+
+function readTeacherStudioUi(lessonId) {
+  try {
+    const raw = localStorage.getItem(TEACHER_STUDIO_UI_KEY(lessonId));
+    const v = raw ? JSON.parse(raw) : null;
+    return v && typeof v === "object" ? v : {};
+  } catch (_) {
+    return {};
+  }
+}
+
+function writeTeacherStudioUi(lessonId, value) {
+  try {
+    localStorage.setItem(TEACHER_STUDIO_UI_KEY(lessonId), JSON.stringify(value));
+  } catch (_) {
+    /* storage unavailable — ignore */
+  }
+}
+
+// Recording mode has its own URL (/teacher/lesson/:id/record) so a refresh stays in it.
+// The scene being recorded is remembered per lesson under a teacher-only key.
+const TEACHER_RECORD_SCENE_KEY = (lessonId) => `madar_teacher_record_scene_v1:${lessonId}`;
+
+function readTeacherRecordScene(lessonId) {
+  try {
+    const n = parseInt(localStorage.getItem(TEACHER_RECORD_SCENE_KEY(lessonId)) || "0", 10);
+    return Number.isFinite(n) && n >= 0 ? n : 0;
+  } catch (_) {
+    return 0;
+  }
+}
+
 export default function TeacherStudioPage() {
   const { id } = useParams();
   const navigate = useNavigate();
+  const location = useLocation();
 
   const [lesson, setLesson] = useState(null); // null = loading, false = not found
   const [selectedSceneId, setSelectedSceneId] = useState(null);
   const [showTypePicker, setShowTypePicker] = useState(false);
   const [addSceneError, setAddSceneError] = useState("");
-  const [recording, setRecording] = useState(false);
-  const [recIndex, setRecIndex] = useState(0);
+  // Recording mode is driven by the URL, not local state: refresh keeps the teacher inside it
+  const recording = /\/record\/?$/.test(location.pathname);
+  const setRecording = (on) =>
+    navigate(on ? `/teacher/lesson/${id}/record` : `/teacher/lesson/${id}`, { replace: !on });
+  const [recIndex, setRecIndex] = useState(() => readTeacherRecordScene(id));
   const [showPreview, setShowPreview] = useState(true);
   const [saveStatus, setSaveStatus] = useState("saved"); // saving | saved | error
   const [curriculumNodes, setCurriculumNodes] = useState([]);
@@ -222,6 +263,7 @@ export default function TeacherStudioPage() {
 
   const lessonTimerRef = useRef(null);
   const sceneTimersRef = useRef({});
+  const uiRestoredForIdRef = useRef(null); // lesson id whose saved UI state was already applied
 
   useEffect(() => {
     let mounted = true;
@@ -229,7 +271,12 @@ export default function TeacherStudioPage() {
       .then(([data, nodes, tpls]) => {
         if (!mounted) return;
         setLesson(data);
-        setSelectedSceneId(data.scenes[0]?.id || null);
+        // Restore the section the teacher was on before refresh (only if it still exists)
+        const savedUi = readTeacherStudioUi(id);
+        const savedSceneOk = savedUi.sceneId && data.scenes.some((s) => s.id === savedUi.sceneId);
+        setSelectedSceneId(savedSceneOk ? savedUi.sceneId : data.scenes[0]?.id || null);
+        if (TEACHER_PANELS.includes(savedUi.mobilePanel)) setMobilePanel(savedUi.mobilePanel);
+        uiRestoredForIdRef.current = id;
         setCurriculumNodes(nodes || []);
         setCompletionTemplates(tpls || []);
       })
@@ -400,6 +447,26 @@ export default function TeacherStudioPage() {
     window.addEventListener("keydown", onKey);
     return () => window.removeEventListener("keydown", onKey);
   }, [onKey]);
+
+  // Remember the recorded scene (teacher-only key) and keep it inside the scene range
+  useEffect(() => {
+    if (!lesson || !lesson.scenes?.length) return;
+    if (recIndex > lesson.scenes.length - 1) {
+      setRecIndex(lesson.scenes.length - 1);
+      return;
+    }
+    try {
+      localStorage.setItem(TEACHER_RECORD_SCENE_KEY(id), String(recIndex));
+    } catch (_) {
+      /* ignore */
+    }
+  }, [id, lesson, recIndex]);
+
+  // Persist the active section (scene + panel) for this lesson — teacher-only key
+  useEffect(() => {
+    if (uiRestoredForIdRef.current !== id || !selectedSceneId) return;
+    writeTeacherStudioUi(id, { sceneId: selectedSceneId, mobilePanel });
+  }, [id, selectedSceneId, mobilePanel]);
 
   // إن أُخفيت المعاينة أثناء عرضها على الموبايل، ارجع تلقائيًا لعرض المحرر
   useEffect(() => {

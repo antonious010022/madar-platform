@@ -74,6 +74,7 @@ export default function App() {
           <Route path="/teacher" element={<TeacherGate />}>
             <Route index element={<TeacherLibraryRoute />} />
             <Route path="lesson/:id" element={<TeacherStudioPage />} />
+            <Route path="lesson/:id/record" element={<TeacherStudioPage />} />
             <Route path="settings" element={<TeacherSettings />} />
           </Route>
 

@@ -72,3 +72,430 @@ body {
   pointer-events: none;
   height: 0;
 }
+
+/* ===========================================================================
+   Lesson page — unified with the Student Platform (md-* design language)
+   Scoped under .md-lesson-page so Teacher Studio preview is untouched.
+   Tokens/values mirror the :root tokens defined in StudentPlatform.jsx.
+=========================================================================== */
+.md-lesson-page {
+  --md-surface-2: #F7FAF9;
+  --md-surface-3: #EEF5F3;
+  --md-teal: #117A6B;
+  --md-teal-deep: #0B5147;
+  --md-teal-dark: #063B34;
+  --md-teal-soft: #E5F3F0;
+  --md-gold: #B77A20;
+  --md-gold-deep: #8F5D14;
+  --md-gold-light: #D5A04A;
+  --md-gold-soft: #FBF3E4;
+  --md-text: #14231F;
+  --md-text-soft: #30453F;
+  --md-muted: #687B75;
+  --md-border: #DDE9E5;
+  --md-border-strong: #C5D8D2;
+  --md-shadow-sm: 0 2px 8px rgba(6, 59, 52, 0.06);
+  --md-shadow-md: 0 10px 28px rgba(6, 59, 52, 0.10);
+  --md-shadow-lg: 0 20px 50px rgba(6, 59, 52, 0.14);
+  --md-font: "Segoe UI", "Cairo", "Noto Sans Arabic", system-ui, sans-serif;
+  background:
+    radial-gradient(circle at 50% -8%, rgba(17, 122, 107, 0.045), transparent 40%),
+    radial-gradient(circle at 92% 18%, rgba(17, 122, 107, 0.03), transparent 42%),
+    radial-gradient(circle at 8% 78%, rgba(183, 122, 32, 0.025), transparent 38%),
+    #FFFFFF !important;
+  color: var(--md-text);
+  font-family: var(--md-font);
+  position: relative;
+  overflow-x: hidden;
+  overflow-x: clip;
+}
+
+/* Same typeface as the platform for all lesson chrome (rich text keeps Amiri / inline fonts) */
+.md-lesson-page .ts-root.md-lv *:not(.ts-richtext):not(.ts-richtext *):not(.ProseMirror *) {
+  font-family: var(--md-font);
+}
+.md-lesson-page .ts-root.md-lv { background: transparent !important; }
+
+@keyframes md-lv-rise {
+  from { opacity: 0; transform: translateY(12px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+.md-lesson-page .ts-fade { animation: md-lv-rise 0.45s cubic-bezier(0.22, 1, 0.36, 1) both; }
+
+/* ---------- Top bar (same as .md-topbar) ---------- */
+.md-lesson-page .md-lv-topbar {
+  position: sticky;
+  top: 0;
+  z-index: 40;
+  padding-top: 10px !important;
+  padding-bottom: 10px !important;
+  background: rgba(255, 255, 255, 0.82) !important;
+  backdrop-filter: blur(14px);
+  -webkit-backdrop-filter: blur(14px);
+  border-color: var(--md-border) !important;
+}
+.md-lesson-page .md-lv-back {
+  display: inline-flex;
+  align-items: center;
+  min-height: 40px;
+  padding: 6px 16px;
+  border-radius: 999px;
+  background: var(--md-teal-soft);
+  color: var(--md-teal-deep) !important;
+  font-size: 0.82rem;
+  font-weight: 800;
+  transition: background 0.2s ease, color 0.2s ease, transform 0.2s ease;
+}
+.md-lesson-page .md-lv-back:hover { background: var(--md-teal); color: #FFFFFF !important; transform: translateY(-1px); }
+.md-lesson-page .md-lv-topbar-title { color: var(--md-muted) !important; font-weight: 700; }
+.md-lesson-page .md-lv-login {
+  min-height: 44px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 9px 22px !important;
+  border-radius: 999px !important;
+  box-shadow: 0 6px 16px rgba(6, 59, 52, 0.20);
+  transition: transform 0.2s ease, box-shadow 0.2s ease, filter 0.2s ease;
+}
+.md-lesson-page .md-lv-login:hover { transform: translateY(-1px); filter: brightness(1.1); box-shadow: 0 10px 22px rgba(6, 59, 52, 0.26); }
+.md-lesson-page .md-lv-account {
+  min-height: 44px;
+  background: rgba(255, 255, 255, 0.9);
+  border: 1px solid var(--md-border);
+  box-shadow: var(--md-shadow-sm);
+  transition: box-shadow 0.2s ease, transform 0.2s ease;
+}
+.md-lesson-page .md-lv-account:hover { box-shadow: var(--md-shadow-md); transform: translateY(-1px); }
+.md-lesson-page .md-lv-menu {
+  border: 1px solid var(--md-border) !important;
+  border-radius: 18px !important;
+  box-shadow: var(--md-shadow-lg) !important;
+  animation: md-lv-rise 0.25s ease both;
+}
+
+/* ---------- Progress strip (same pill as .md-continue meta) ---------- */
+.md-lesson-page .md-lv-progress {
+  background: var(--md-teal-soft) !important;
+  color: var(--md-teal-deep) !important;
+  border-bottom: 1px solid rgba(17, 122, 107, 0.16);
+  font-size: 0.85rem;
+  font-weight: 800;
+}
+
+/* ---------- Hero (same orbit band as .md-hero) ---------- */
+.md-lesson-page .md-lv-hero {
+  position: relative;
+  isolation: isolate;
+  overflow: hidden;
+  width: 100vw;
+  margin: -2rem calc(50% - 50vw) 28px;
+  padding: clamp(30px, 5vw, 52px) 20px clamp(40px, 6vw, 64px);
+  text-align: center;
+  background:
+    radial-gradient(circle at 82% 8%, rgba(213, 160, 74, 0.20), transparent 38%),
+    linear-gradient(160deg, var(--md-teal-dark) 0%, var(--md-teal-deep) 55%, var(--md-teal) 130%);
+  border-radius: 0 0 clamp(28px, 5vw, 56px) clamp(28px, 5vw, 56px);
+  box-shadow: 0 24px 60px rgba(6, 59, 52, 0.22);
+}
+.md-lesson-page .md-lv-hero > * { position: relative; z-index: 1; animation: md-lv-rise 0.6s cubic-bezier(0.22, 1, 0.36, 1) both; }
+.md-lesson-page .md-lv-hero > *:nth-child(2) { animation-delay: 0.08s; }
+.md-lesson-page .md-lv-hero::before {
+  content: "";
+  position: absolute;
+  z-index: 0;
+  width: 420px;
+  height: 420px;
+  top: -210px;
+  inset-inline-start: -120px;
+  border-radius: 50%;
+  border: 1px solid rgba(255, 255, 255, 0.07);
+  box-shadow: 0 0 0 46px rgba(255, 255, 255, 0.025), 0 0 0 92px rgba(255, 255, 255, 0.015);
+  pointer-events: none;
+}
+.md-lesson-page .md-lv-pill {
+  display: inline-flex !important;
+  align-items: center;
+  gap: 9px;
+  padding: 7px 18px !important;
+  background: rgba(255, 255, 255, 0.08) !important;
+  color: var(--md-gold-light) !important;
+  border: 1px solid rgba(213, 160, 74, 0.45);
+  font-size: 0.85rem !important;
+  font-weight: 700 !important;
+  white-space: normal !important;
+  backdrop-filter: blur(8px);
+  -webkit-backdrop-filter: blur(8px);
+}
+.md-lesson-page .md-lv-pill::before {
+  content: "";
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: var(--md-gold-light);
+  box-shadow: 0 0 0 3px rgba(213, 160, 74, 0.22);
+}
+.md-lesson-page .md-lv-h1 {
+  color: #FFFFFF !important;
+  font-size: clamp(1.7rem, 5vw, 2.6rem) !important;
+  font-weight: 900;
+  line-height: 1.35;
+  text-wrap: balance;
+}
+.md-lesson-page .md-lv-desc {
+  color: rgba(255, 255, 255, 0.82) !important;
+  font-size: clamp(0.95rem, 2.2vw, 1.08rem) !important;
+  line-height: 1.9;
+  max-width: 36em;
+  margin: 10px auto 0 !important;
+  text-wrap: balance;
+}
+
+/* ---------- Video ---------- */
+.md-lesson-page .md-lv-video {
+  border: 1px solid var(--md-border) !important;
+  border-radius: 24px !important;
+  box-shadow: 0 24px 60px rgba(6, 59, 52, 0.16), 0 2px 8px rgba(6, 59, 52, 0.06) !important;
+}
+.md-lesson-page .md-lv-video-note {
+  color: var(--md-text-soft) !important;
+  font-size: 0.85rem !important;
+  line-height: 1.9;
+  white-space: pre-line;
+}
+
+/* ---------- Journey / progress (same look as .md-panel + .md-chip) ---------- */
+.md-lesson-page .md-lv-journey {
+  position: relative;
+  overflow: hidden;
+  background: #FFFFFF;
+  border: 1px solid var(--md-border);
+  border-radius: 24px;
+  padding: clamp(18px, 3vw, 26px);
+  box-shadow: 0 2px 10px rgba(6, 59, 52, 0.05);
+}
+.md-lesson-page .md-lv-journey::before,
+.md-lesson-page .md-lv-card--accent::before,
+.md-lesson-page .md-lv-notice::before {
+  content: "";
+  position: absolute;
+  inset-inline: 0;
+  top: 0;
+  height: 4px;
+  background: linear-gradient(90deg, var(--md-teal), var(--md-gold));
+}
+.md-lesson-page .md-lv-journey p { color: var(--md-teal-deep) !important; font-weight: 800; }
+.md-lesson-page .md-lv-track {
+  height: 6px;
+  margin: 2px 0 16px;
+  border-radius: 999px;
+  overflow: hidden;
+  background: var(--md-surface-3);
+}
+.md-lesson-page .md-lv-fill {
+  height: 100%;
+  border-radius: 999px;
+  background-image: linear-gradient(90deg, var(--md-teal), var(--md-gold));
+  transition: width 0.7s cubic-bezier(0.22, 1, 0.36, 1);
+}
+.md-lesson-page .md-lv-steps { gap: 10px !important; }
+.md-lesson-page .md-lv-step {
+  display: inline-flex;
+  align-items: center;
+  min-height: 42px;
+  padding: 8px 18px !important;
+  border-radius: 999px !important;
+  background: #FFFFFF !important;
+  border: 1.5px solid var(--md-border-strong) !important;
+  color: var(--md-text-soft) !important;
+  font-size: 0.92rem !important;
+  font-weight: 700 !important;
+  box-shadow: none !important;
+  transition: transform 0.2s ease, border-color 0.2s ease, background 0.2s ease, box-shadow 0.2s ease, color 0.2s ease;
+}
+.md-lesson-page .md-lv-step:hover:not(:disabled) {
+  border-color: var(--md-teal) !important;
+  background: var(--md-teal-soft) !important;
+  transform: translateY(-2px);
+}
+.md-lesson-page .md-lv-step[data-state="current"] {
+  background: var(--md-teal-deep) !important;
+  border-color: var(--md-teal-deep) !important;
+  color: #FFFFFF !important;
+  box-shadow: 0 10px 24px rgba(6, 59, 52, 0.24) !important;
+}
+.md-lesson-page .md-lv-step[data-state="done"] {
+  background: var(--md-teal-soft) !important;
+  border-color: var(--md-teal) !important;
+  color: var(--md-teal-deep) !important;
+}
+/* 🔐 login / members-only lock — gold */
+.md-lesson-page .md-lv-step[data-state="access"] {
+  background: var(--md-gold-soft) !important;
+  border-color: var(--md-gold) !important;
+  color: var(--md-gold-deep) !important;
+}
+/* 🔒 journey / sequence lock — muted dashed (same as .md-lesson-locked) */
+.md-lesson-page .md-lv-step[data-state="sequence"] {
+  background: var(--md-surface-3) !important;
+  border: 1.5px dashed var(--md-border-strong) !important;
+  color: var(--md-muted) !important;
+  opacity: 0.8 !important;
+  cursor: not-allowed !important;
+}
+.md-lesson-page .md-lv-journey .md-lv-legend { color: var(--md-muted) !important; font-size: 0.75rem !important; font-weight: 500; line-height: 1.9; }
+
+/* ---------- Cards (same as .md-lesson-card surface) ---------- */
+.md-lesson-page .md-lv-card {
+  position: relative;
+  overflow: hidden;
+  background: #FFFFFF !important;
+  border: 1px solid var(--md-border) !important;
+  border-radius: 24px !important;
+  box-shadow: 0 2px 10px rgba(6, 59, 52, 0.05) !important;
+  transition: border-color 0.28s ease, box-shadow 0.28s ease;
+}
+.md-lesson-page .md-lv-card:hover { border-color: rgba(17, 122, 107, 0.3) !important; box-shadow: 0 14px 34px rgba(6, 59, 52, 0.10) !important; }
+.md-lesson-page .md-lv-card--accent { box-shadow: 0 24px 60px rgba(6, 59, 52, 0.12), 0 2px 8px rgba(6, 59, 52, 0.05) !important; }
+.md-lesson-page .md-lv-card-title { color: var(--md-teal-deep) !important; font-weight: 900 !important; }
+.md-lesson-page .md-lv-scene-title {
+  color: var(--md-teal-dark) !important;
+  border-color: var(--md-border) !important;
+  font-weight: 900 !important;
+  line-height: 1.5;
+}
+.md-lesson-page .md-lv-toggle {
+  padding: 6px 16px !important;
+  border-radius: 999px !important;
+  background: var(--md-teal-soft) !important;
+  color: var(--md-teal-deep) !important;
+  transition: background 0.2s ease, color 0.2s ease;
+}
+.md-lesson-page .md-lv-toggle:hover { background: var(--md-teal) !important; color: #FFFFFF !important; }
+.md-lesson-page .md-lv-recall {
+  background: var(--md-teal-soft) !important;
+  border: 1px solid rgba(17, 122, 107, 0.28) !important;
+  border-radius: 20px !important;
+}
+.md-lesson-page .md-lv-detail {
+  background: var(--md-gold-soft) !important;
+  border: 1px solid var(--md-gold-light) !important;
+  border-radius: 18px !important;
+}
+.md-lesson-page .md-lv-mm-node { border-radius: 14px !important; transition: border-color 0.2s ease, background 0.2s ease, transform 0.2s ease; }
+.md-lesson-page .md-lv-mm-node:hover { border-color: var(--md-teal) !important; transform: translateX(-2px); }
+.md-lesson-page .md-lv-tl-item {
+  background: var(--md-surface-2) !important;
+  border: 1px solid var(--md-border) !important;
+  border-radius: 18px !important;
+  transition: border-color 0.2s ease, transform 0.2s ease;
+}
+.md-lesson-page .md-lv-tl-item:hover { border-color: rgba(17, 122, 107, 0.35) !important; transform: translateY(-2px); }
+.md-lesson-page .md-lv-tl-date {
+  background: var(--md-teal-deep) !important;
+  color: #FFFFFF !important;
+  border-radius: 999px !important;
+  padding-inline: 16px !important;
+}
+
+/* ---------- Questions ---------- */
+.md-lesson-page .md-lv-q {
+  background: var(--md-surface-2) !important;
+  border: 1px solid var(--md-border) !important;
+  border-radius: 20px !important;
+}
+.md-lesson-page .md-lv-opt { border-radius: 14px !important; transition: transform 0.2s ease, border-color 0.2s ease, background 0.2s ease; }
+.md-lesson-page .md-lv-opt:hover:not(:disabled) { border-color: var(--md-teal) !important; transform: translateY(-1px); }
+.md-lesson-page .md-lv-btn-sm {
+  padding: 8px 20px !important;
+  border-radius: 999px !important;
+  transition: transform 0.2s ease, box-shadow 0.2s ease, opacity 0.2s ease;
+}
+.md-lesson-page .md-lv-btn-sm:hover:not(:disabled) { transform: translateY(-1px); box-shadow: 0 8px 18px rgba(6, 59, 52, 0.22); }
+
+/* ---------- Completion / lock notices ---------- */
+.md-lesson-page .md-lv-notice {
+  position: relative;
+  overflow: hidden;
+  background: #FFFFFF !important;
+  border: 1px solid transparent !important;
+  border-radius: 28px !important;
+  box-shadow: 0 24px 60px rgba(6, 59, 52, 0.16), 0 2px 8px rgba(6, 59, 52, 0.06) !important;
+  animation: md-lv-rise 0.5s cubic-bezier(0.22, 1, 0.36, 1) both;
+}
+.md-lesson-page .md-lv-notice p.font-black { color: var(--md-teal-deep) !important; }
+/* 🔐 login required: gold-tinted, dashed (distinct from the 🔒 journey lock) */
+.md-lesson-page .md-lv-lock {
+  background: var(--md-gold-soft) !important;
+  border: 1.5px dashed var(--md-gold-light) !important;
+  border-radius: 24px !important;
+  box-shadow: none !important;
+  animation: md-lv-rise 0.5s cubic-bezier(0.22, 1, 0.36, 1) both;
+}
+.md-lesson-page .md-lv-lock p.font-black { color: var(--md-gold-deep) !important; }
+
+/* ---------- Buttons (same as .md-continue-btn / .md-chip) ---------- */
+.md-lesson-page .md-lv-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 48px;
+  padding: 12px 26px !important;
+  border-radius: 999px !important;
+  font-size: 0.95rem !important;
+  font-weight: 800 !important;
+  transition: transform 0.22s ease, box-shadow 0.22s ease, background 0.2s ease, border-color 0.2s ease;
+}
+.md-lesson-page .md-lv-btn-primary { box-shadow: 0 10px 24px rgba(6, 59, 52, 0.26); }
+.md-lesson-page .md-lv-btn-primary:hover:not(:disabled) { transform: translateY(-2px); box-shadow: 0 16px 32px rgba(6, 59, 52, 0.32); }
+.md-lesson-page .md-lv-btn-ghost {
+  background: #FFFFFF !important;
+  color: var(--md-teal-deep) !important;
+  border: 1.5px solid var(--md-border-strong);
+}
+.md-lesson-page .md-lv-btn-ghost:hover:not(:disabled) { background: var(--md-teal-soft) !important; border-color: var(--md-teal); transform: translateY(-2px); }
+.md-lesson-page .md-lv-btn-text { background: transparent !important; box-shadow: none; min-height: 40px; }
+.md-lesson-page .md-lv-btn-text:hover { color: var(--md-teal) !important; }
+.md-lesson-page .md-lv-btn:disabled { opacity: 0.45; cursor: not-allowed; box-shadow: none; transform: none; }
+.md-lesson-page .md-lv-btn-done { background: var(--md-teal-deep) !important; }
+
+.md-lesson-page button:focus-visible,
+.md-lesson-page a:focus-visible {
+  outline: 3px solid rgba(213, 160, 74, 0.6);
+  outline-offset: 3px;
+}
+
+/* ---------- Footer ---------- */
+.md-lesson-page footer { border-top: 1px solid var(--md-border) !important; }
+
+/* ---------- Responsive ---------- */
+@media (max-width: 640px) {
+  .md-lesson-page .md-lv-step { min-height: 40px; padding: 7px 14px !important; font-size: 0.85rem !important; }
+  .md-lesson-page .md-lv-card { padding: 20px !important; border-radius: 20px !important; }
+  .md-lesson-page .md-lv-navrow { gap: 10px !important; }
+  .md-lesson-page .md-lv-navrow .md-lv-btn { flex: 1 1 0; padding-inline: 16px !important; }
+  .md-lesson-page .md-lv-topbar-title { display: none; }
+}
+@media (max-width: 480px) {
+  .md-lesson-page .md-lv-tl-item { flex-direction: column; }
+  .md-lesson-page .md-lv-tl-date { align-self: flex-start; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .md-lesson-page .ts-fade,
+  .md-lesson-page .md-lv-hero > *,
+  .md-lesson-page .md-lv-notice,
+  .md-lesson-page .md-lv-lock,
+  .md-lesson-page .md-lv-menu,
+  .md-lesson-page .md-lv-fill,
+  .md-lesson-page .md-lv-step,
+  .md-lesson-page .md-lv-btn,
+  .md-lesson-page .md-lv-btn-sm,
+  .md-lesson-page .md-lv-card,
+  .md-lesson-page .md-lv-tl-item,
+  .md-lesson-page .md-lv-mm-node,
+  .md-lesson-page .md-lv-opt {
+    animation: none !important;
+    transition: none !important;
+  }
+}
