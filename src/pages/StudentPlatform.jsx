@@ -69,6 +69,13 @@ function readCompletedLessonIds() {
   return new Set(ids);
 }
 
+function isLessonComingSoon(lesson) {
+  if (!lesson) return false;
+  if (lesson.comingSoon) return true;
+  const cfg = lesson.journeyConfig || lesson.journey_config || {};
+  return !!cfg.comingSoon;
+}
+
 function isLessonExclusive(lesson) {
   if (!lesson) return false;
   if (lesson.isMembersOnly) return true;
@@ -76,14 +83,25 @@ function isLessonExclusive(lesson) {
   return !!(cfg.isMembersOnly || cfg.exclusive || cfg.is_members_only);
 }
 
+/** Number shown for a lesson: the teacher's number if set, else its position (1-based). */
+function lessonDisplayNumber(lesson, index) {
+  const n = lesson?.sortOrder ?? lesson?.sort_order ?? 0;
+  return n > 0 ? n : index + 1;
+}
+
 /** Stable order within stage+grade+term+subject for sequence. */
 function sortLessonsForSequence(list) {
   return [...list].sort((a, b) => {
-    const sa = a.sortOrder ?? a.sort_order ?? 0;
-    const sb = b.sortOrder ?? b.sort_order ?? 0;
+    // sortOrder > 0 = number set by the teacher (shown as-is); 0 = automatic → after numbered ones
+    const na = a.sortOrder ?? a.sort_order ?? 0;
+    const nb = b.sortOrder ?? b.sort_order ?? 0;
+    const sa = na > 0 ? na : Number.MAX_SAFE_INTEGER;
+    const sb = nb > 0 ? nb : Number.MAX_SAFE_INTEGER;
     if (sa !== sb) return sa - sb;
-    const ta = String(a.updatedAt || a.updated_at || "");
-    const tb = String(b.updatedAt || b.updated_at || "");
+    // Tie-break by CREATION time (oldest first = order of adding), not updatedAt:
+    // editing a lesson must never move it, and a newly added lesson goes last.
+    const ta = String(a.createdAt || a.created_at || a.updatedAt || a.updated_at || "");
+    const tb = String(b.createdAt || b.created_at || b.updatedAt || b.updated_at || "");
     if (ta !== tb) return ta.localeCompare(tb);
     return String(a.title || "").localeCompare(String(b.title || ""), "ar");
   });
@@ -91,7 +109,8 @@ function sortLessonsForSequence(list) {
 
 /**
  * Lock kinds for lessons in one subject context.
- * Priority per lesson: COMPLETED → ACCESS_LOCK (guest+exclusive) → SEQUENCE → CURRENT
+ * Priority per lesson: COMING_SOON → COMPLETED → ACCESS_LOCK (guest+exclusive) → SEQUENCE → CURRENT
+ * A "coming soon" lesson never blocks the lessons after it (it can't be completed yet).
  * Exclusive+guest does not block sequence of later public lessons.
  */
 function buildLessonLockStates(lessons, completedSet, isGuest) {
@@ -99,6 +118,9 @@ function buildLessonLockStates(lessons, completedSet, isGuest) {
   let blockingIncomplete = false;
   return ordered.map((lesson) => {
     const id = String(lesson.id);
+    if (isLessonComingSoon(lesson)) {
+      return { lesson, kind: "COMING_SOON" };
+    }
     if (completedSet.has(id)) {
       return { lesson, kind: "COMPLETED" };
     }
@@ -115,6 +137,8 @@ function buildLessonLockStates(lessons, completedSet, isGuest) {
 
 function lessonLockUi(kind) {
   switch (kind) {
+    case "COMING_SOON":
+      return { mark: "⏳", cta: "قريبًا", hint: "هذا الدرس سيتوفر قريبًا" };
     case "COMPLETED":
       return { mark: "✓", cta: "مكتمل", hint: "مكتمل" };
     case "ACCESS_LOCK":
@@ -576,7 +600,22 @@ export default function StudentPlatform() {
 
   const availableSubjects = useMemo(() => {
     if (!termScopedLessons.length) return [];
-    return Array.from(new Set(termScopedLessons.map((l) => l.subject).filter(Boolean)));
+    // Units keep the order they were added in (earliest lesson creation per unit),
+    // instead of the "recently updated first" order the lessons list arrives in.
+    const firstSeen = new Map();
+    for (const l of termScopedLessons) {
+      if (!l.subject) continue;
+      const created = String(l.createdAt || l.created_at || l.updatedAt || l.updated_at || "");
+      const cur = firstSeen.get(l.subject);
+      if (!cur) firstSeen.set(l.subject, { created });
+      else if (created && (!cur.created || created < cur.created)) cur.created = created;
+    }
+    return Array.from(firstSeen.keys()).sort((a, b) => {
+      const A = firstSeen.get(a);
+      const B = firstSeen.get(b);
+      if (A.created !== B.created) return A.created.localeCompare(B.created);
+      return a.localeCompare(b, "ar");
+    });
   }, [termScopedLessons]);
 
   // Per-unit ("subject") lesson list — used for the plain-text preview shown
@@ -626,7 +665,7 @@ export default function StudentPlatform() {
     const pool = termScopedLessons.length ? termScopedLessons : gradeScopedLessons;
     if (!pool.length || !localProgress?.lessonId) return null;
     const lesson = pool.find((l) => String(l.id) === String(localProgress.lessonId));
-    if (!lesson) return null;
+    if (!lesson || isLessonComingSoon(lesson)) return null;
     const sceneIdx =
       typeof localProgress.currentScene === "number"
         ? localProgress.currentScene
@@ -666,7 +705,7 @@ export default function StudentPlatform() {
 
   const recentLessons = useMemo(() => {
     if (!termScopedLessons.length) return [];
-    const sorted = [...termScopedLessons].sort((a, b) => {
+    const sorted = termScopedLessons.filter((l) => !isLessonComingSoon(l)).sort((a, b) => {
       const ta = a.updatedAt || a.updated_at || "";
       const tb = b.updatedAt || b.updated_at || "";
       return String(tb).localeCompare(String(ta));
@@ -1033,7 +1072,7 @@ export default function StudentPlatform() {
                             <ul className="md-unit-preview">
                               {subLessons.map((l, i) => (
                                 <li key={l.id}>
-                                  <span className="md-unit-preview-num">الدرس {arabicLessonOrdinal(i)}:</span> {l.title}
+                                  <span className="md-unit-preview-num">الدرس {arabicLessonOrdinal(lessonDisplayNumber(l, i) - 1)}:</span> {l.title}
                                 </li>
                               ))}
                             </ul>
@@ -1057,9 +1096,10 @@ export default function StudentPlatform() {
                   <p className="md-empty">لا توجد دروس منشورة حالياً في هذه المادة.</p>
                 ) : (
                   <div className="md-lessons-grid">
-                    {sequentialLessons.map(({ lesson: l, kind }) => {
+                    {sequentialLessons.map(({ lesson: l, kind }, lessonIdx) => {
                       const ui = lessonLockUi(kind);
-                      const lockedSeq = kind === "SEQUENCE_LOCK";
+                      const comingSoon = kind === "COMING_SOON";
+                      const lockedSeq = kind === "SEQUENCE_LOCK" || comingSoon;
                       const lockedAccess = kind === "ACCESS_LOCK";
                       const openLesson = () => {
                         if (lockedSeq) return;
@@ -1072,7 +1112,8 @@ export default function StudentPlatform() {
                       return (
                       <article
                         key={l.id}
-                        className={`md-lesson-card${lockedSeq ? " md-lesson-locked" : ""}`}
+                        data-num={String(lessonDisplayNumber(l, lessonIdx)).padStart(2, "0")}
+                        className={`md-lesson-card${lockedSeq ? " md-lesson-locked" : ""}${comingSoon ? " md-lesson-soon" : ""}`}
                         role="button"
                         tabIndex={lockedSeq ? -1 : 0}
                         title={ui.hint}
@@ -1097,6 +1138,7 @@ export default function StudentPlatform() {
                           <div className="flex items-center gap-2 mb-1 flex-wrap">
                             <span className="text-sm" aria-hidden="true">{ui.mark}</span>
                             <h3 style={{ margin: 0 }}>{l.title}</h3>
+                            {comingSoon ? <span className="md-soon-badge">قريبًا</span> : null}
                           </div>
                           <p>{l.description || "درس تعليمي شامل مع خريطة ذهنية وأسئلة تفاعلية."}</p>
                           <div className="md-lesson-cta" style={lockedSeq ? { color: "#8A8570" } : lockedAccess ? { color: "#B77A20" } : undefined}>
@@ -2250,7 +2292,7 @@ export default function StudentPlatform() {
   }
 
   .md-lesson-card::after {
-    content: counter(lesson, decimal-leading-zero);
+    content: attr(data-num);
     position: absolute;
     top: 12px;
     inset-inline-end: 20px;
@@ -2287,6 +2329,25 @@ export default function StudentPlatform() {
     background: var(--md-surface-3);
     border-style: dashed;
     box-shadow: none;
+  }
+
+  /* "Coming soon" lesson — card stays visible, clearly not openable */
+  .md-lesson-soon {
+    background: var(--md-gold-soft);
+    border-color: rgba(183, 122, 32, 0.45);
+  }
+
+  .md-soon-badge {
+    display: inline-flex;
+    align-items: center;
+    padding: 3px 12px;
+    border-radius: 999px;
+    background: var(--md-gold-soft);
+    border: 1px solid var(--md-gold-light);
+    color: var(--md-gold-deep);
+    font-size: 0.72rem;
+    font-weight: 800;
+    line-height: 1.4;
   }
 
   .md-lesson-glow {

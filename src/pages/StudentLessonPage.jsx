@@ -460,6 +460,45 @@ export default function StudentLessonPage() {
     isLessonMembersOnly(lesson) &&
     session === null; // explicit guest (undefined = still loading auth)
 
+  // "Coming soon" lesson opened via direct link: show a friendly notice instead of the content
+  const lessonComingSoon = !!lesson && !!(lesson.comingSoon || lesson.journeyConfig?.comingSoon);
+
+  if (lessonComingSoon) {
+    return (
+      <div className="min-h-screen flex flex-col md-lesson-page" style={{ background: "#FAF6ED" }}>
+        <div
+          className="md-lv-topbar bg-white px-4 sm:px-6 py-3 border-b flex justify-between items-center gap-2 flex-wrap"
+          style={{ borderColor: "#DED4BD" }}
+        >
+          <button onClick={() => navigate("/student")} className="md-lv-back text-sm font-bold" style={{ color: "#10665A" }}>
+            ← العودة لقائمة الدروس
+          </button>
+          <span className="md-lv-topbar-title text-xs font-medium truncate max-w-[40%]" style={{ color: "#8A8570" }}>
+            {lesson?.title || "منصة الطالب التعليمية"}
+          </span>
+          <span />
+        </div>
+        <div className="flex-1 flex items-center justify-center p-6">
+          <div className="md-lv-lock max-w-md w-full rounded-3xl p-8 text-center bg-white shadow-sm dir-rtl" style={{ border: "1px solid #DED4BD" }}>
+            <p className="text-4xl mb-3">⏳</p>
+            <p className="font-black text-lg mb-2" style={{ color: "#10665A" }}>قريبًا</p>
+            <p className="text-sm mb-6" style={{ color: "#5C5A4A" }}>
+              هذا الدرس سيتوفر قريبًا. تابعنا لاحقًا.
+            </p>
+            <button
+              type="button"
+              onClick={() => navigate("/student")}
+              className="md-lv-btn md-lv-btn-primary w-full px-5 py-3 rounded-2xl text-sm font-bold text-white"
+              style={{ background: "#10665A" }}
+            >
+              ← العودة لقائمة الدروس
+            </button>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
   if (lessonAccessLocked) {
     return (
       <div className="min-h-screen flex flex-col md-lesson-page" style={{ background: "#FAF6ED" }}>

@@ -23,6 +23,7 @@ import {
   listCompletionTemplates,
   updateLessonJourney,
   setLessonMembersOnly,
+  setLessonComingSoon,
 } from "../lib/db";
 import PresentationTools from "../components/PresentationTools";
 
@@ -645,7 +646,30 @@ export default function TeacherStudioPage() {
             </select>
           </div>
 
-
+          {/* رقم الدرس داخل الوحدة — يحدّده المعلم يدويًا (عمود sort_order الموجود) */}
+          <label className="block mb-4 p-3 rounded-xl" style={{ background: "#FAF6ED", border: "1px solid #DED4BD" }}>
+            <span className="block text-xs mb-1 font-bold" style={{ color: "#10665A" }}>رقم الدرس داخل الوحدة</span>
+            <input
+              className="ts-input text-xs w-full"
+              type="number"
+              min="1"
+              step="1"
+              inputMode="numeric"
+              placeholder="تلقائي (حسب ترتيب الإضافة)"
+              value={lesson.sortOrder > 0 ? lesson.sortOrder : ""}
+              onChange={(e) => {
+                const n = parseInt(e.target.value, 10);
+                patchLesson({ sortOrder: Number.isFinite(n) && n > 0 ? n : 0 });
+              }}
+              onBlur={(e) => {
+                const n = parseInt(e.target.value, 10);
+                patchLesson({ sortOrder: Number.isFinite(n) && n > 0 ? n : 0 }, { immediate: true });
+              }}
+            />
+            <p className="text-[11px] mt-1" style={{ color: "#8A8570" }}>
+              الرقم الذي تكتبه هو الذي يظهر للطالب على بطاقة الدرس ويحدد ترتيبه داخل الوحدة. اتركه فارغًا للترتيب التلقائي (الدروس غير المرقّمة تأتي بعد المرقّمة بحسب وقت الإضافة).
+            </p>
+          </label>
 
           {/* وصول الدرس — Access Lock على مستوى الدرس (journey_config.isMembersOnly) */}
           <div className="mb-4 p-3 rounded-xl" style={{ background: "#FAF6ED", border: "1px solid #DED4BD" }}>
@@ -654,11 +678,11 @@ export default function TeacherStudioPage() {
               <input
                 type="radio"
                 name="lesson-access"
-                checked={!(lesson.isMembersOnly || lesson.journeyConfig?.isMembersOnly)}
+                checked={!(lesson.isMembersOnly || lesson.journeyConfig?.isMembersOnly) && !(lesson.comingSoon || lesson.journeyConfig?.comingSoon)}
                 onChange={async () => {
                   try {
                     const cfg = await setLessonMembersOnly(lesson.id, false, lesson.journeyConfig || {});
-                    setLesson((prev) => ({ ...prev, journeyConfig: cfg, isMembersOnly: false }));
+                    setLesson((prev) => ({ ...prev, journeyConfig: cfg, isMembersOnly: false, comingSoon: false }));
                     setSaveStatus("saved");
                   } catch {
                     setSaveStatus("error");
@@ -671,11 +695,11 @@ export default function TeacherStudioPage() {
               <input
                 type="radio"
                 name="lesson-access"
-                checked={!!(lesson.isMembersOnly || lesson.journeyConfig?.isMembersOnly)}
+                checked={!!(lesson.isMembersOnly || lesson.journeyConfig?.isMembersOnly) && !(lesson.comingSoon || lesson.journeyConfig?.comingSoon)}
                 onChange={async () => {
                   try {
                     const cfg = await setLessonMembersOnly(lesson.id, true, lesson.journeyConfig || {});
-                    setLesson((prev) => ({ ...prev, journeyConfig: cfg, isMembersOnly: true }));
+                    setLesson((prev) => ({ ...prev, journeyConfig: cfg, isMembersOnly: true, comingSoon: false }));
                     setSaveStatus("saved");
                   } catch {
                     setSaveStatus("error");
@@ -684,8 +708,28 @@ export default function TeacherStudioPage() {
               />
               🔐 للمستخدمين المسجّلين فقط
             </label>
+            <label className="text-xs flex items-center gap-2 cursor-pointer mt-1">
+              <input
+                type="radio"
+                name="lesson-access"
+                checked={!!(lesson.comingSoon || lesson.journeyConfig?.comingSoon)}
+                onChange={async () => {
+                  try {
+                    const cfg = await setLessonComingSoon(lesson.id, lesson.journeyConfig || {});
+                    setLesson((prev) => ({ ...prev, journeyConfig: cfg, isMembersOnly: false, comingSoon: true }));
+                    setSaveStatus("saved");
+                  } catch {
+                    setSaveStatus("error");
+                  }
+                }}
+              />
+              ⏳ قريبًا
+            </label>
             <p className="text-[11px] mt-2" style={{ color: "#8A8570" }}>
               عند التفعيل، الزائر (Guest) يرى قفل تسجيل الدخول وليس «أكمل الدرس السابق».
+            </p>
+            <p className="text-[11px] mt-1" style={{ color: "#8A8570" }}>
+              «قريبًا»: تظهر بطاقة الدرس للطلاب بشارة «قريبًا» ولا يمكن فتح الدرس حتى تغيّر هذا الخيار.
             </p>
           </div>
 

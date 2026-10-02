@@ -307,6 +307,8 @@ function lessonRowToApp(row, scenes) {
     journeyConfig,
     /** Lesson requires login (Access Lock). Persisted as journey_config.isMembersOnly */
     isMembersOnly,
+    /** "Coming soon" lesson — visible on the card but not openable. Persisted as journey_config.comingSoon */
+    comingSoon: !!journeyConfig.comingSoon,
     /** SEO fields — independent columns, never stored inside journey_config.
      * Raw values (may be empty string); fallback-to-title/description logic
      * lives where they're consumed (StudentLessonPage, StudentPlatform, sitemap). */
@@ -874,6 +876,21 @@ export async function setLessonMembersOnly(lessonId, isMembersOnly, currentJourn
   const cfg = {
     ...(currentJourneyConfig && typeof currentJourneyConfig === "object" ? currentJourneyConfig : {}),
     isMembersOnly: !!isMembersOnly,
+    comingSoon: false, // choosing public / members-only always ends "coming soon"
+  };
+  await updateLessonJourney(lessonId, cfg);
+  return cfg;
+}
+
+/**
+ * Mark a lesson as "coming soon" (card shown, lesson not openable).
+ * Uses existing journey_config JSON — no schema change.
+ */
+export async function setLessonComingSoon(lessonId, currentJourneyConfig = {}) {
+  const cfg = {
+    ...(currentJourneyConfig && typeof currentJourneyConfig === "object" ? currentJourneyConfig : {}),
+    isMembersOnly: false,
+    comingSoon: true,
   };
   await updateLessonJourney(lessonId, cfg);
   return cfg;
