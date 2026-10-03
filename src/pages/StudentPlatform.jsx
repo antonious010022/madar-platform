@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { listPublishedLessons, signOut, getStudentGradeMeta, saveStudentGradeMeta } from "../lib/db";
 import { useAuth } from "../lib/hooks";
@@ -458,9 +458,70 @@ function ComingSoonAssistantBubble() {
 /* ---------------------------------------------------------------------------
    Step Row
 --------------------------------------------------------------------------- */
+const FEATURE_SVG = {
+  width: 28,
+  height: 28,
+  viewBox: "0 0 24 24",
+  fill: "none",
+  stroke: "currentColor",
+  strokeWidth: 1.8,
+  strokeLinecap: "round",
+  strokeLinejoin: "round",
+};
+
+/* Feature boxes at the bottom of the home page (presentation only) */
+const MADAR_FEATURES = [
+  {
+    title: "شرح مرئي مبسّط",
+    text: "فيديو وصور وشرح واضح يرافق كل فكرة في الدرس.",
+    icon: (
+      <svg {...FEATURE_SVG}>
+        <rect x="2.5" y="6" width="13" height="12" rx="3" />
+        <path d="M15.5 10.5l6-3.5v10l-6-3.5z" />
+      </svg>
+    ),
+  },
+  {
+    title: "خرائط ذهنية",
+    text: "تربط الأفكار ببعضها لتتذكّرها وتفهمها بسهولة.",
+    icon: (
+      <svg {...FEATURE_SVG}>
+        <circle cx="12" cy="12" r="3" />
+        <circle cx="4.5" cy="5.5" r="2" />
+        <circle cx="19.5" cy="5.5" r="2" />
+        <circle cx="12" cy="20" r="2" />
+        <path d="M10 10L6 7M14 10l4-3M12 15v3" />
+      </svg>
+    ),
+  },
+  {
+    title: "خطوط زمنية",
+    text: "تتبّع الأحداث بترتيبها الصحيح عبر الزمن.",
+    icon: (
+      <svg {...FEATURE_SVG}>
+        <path d="M3 12h18" />
+        <circle cx="6" cy="12" r="1.6" />
+        <circle cx="12" cy="12" r="1.6" />
+        <circle cx="18" cy="12" r="1.6" />
+        <path d="M6 6v3M12 15v3M18 6v3" />
+      </svg>
+    ),
+  },
+  {
+    title: "أسئلة ومراجعة",
+    text: "اختبر فهمك أولًا بأول وراجع قبل أن تنتقل للتالي.",
+    icon: (
+      <svg {...FEATURE_SVG}>
+        <circle cx="12" cy="12" r="9" />
+        <path d="M8 12.5l2.7 2.7L16 9.5" />
+      </svg>
+    ),
+  },
+];
+
 function StepRow({ number, done, active, label, children }) {
   return (
-    <div className={`md-step ${done ? "done" : ""} ${active ? "active" : ""}`}>
+    <div className={`md-step ${done ? "done" : ""} ${active ? "active" : ""}`} data-step={number}>
       <div className="md-step-indicator">
         <div className="md-step-number">{done ? "✓" : number}</div>
         <div className="md-step-line" />
@@ -484,6 +545,9 @@ export default function StudentPlatform() {
   const [error, setError] = useState("");
   const [authOpen, setAuthOpen] = useState(false);
   const [menuOpen, setMenuOpen] = useState(false);
+  // UX only: after the student taps a unit, bring the lessons list into view
+  const lessonsSectionRef = useRef(null);
+  const scrollToLessonsRef = useRef(false);
 
   const [selectedStage, setSelectedStage] = useState("");
   const [selectedGrade, setSelectedGrade] = useState("");
@@ -676,6 +740,31 @@ export default function StudentPlatform() {
     return { lesson, sceneIdx, done };
   }, [termScopedLessons, gradeScopedLessons, localProgress]);
 
+  // Learning path in order (unit by unit, lesson by lesson) → one segment per lesson
+  const progressPath = useMemo(() => {
+    const done = completedLessonIds instanceof Set ? completedLessonIds : new Set(completedLessonIds || []);
+    const segments = [];
+    for (const sub of availableSubjects) {
+      let first = true;
+      for (const l of lessonsBySubject[sub] || []) {
+        if (isLessonComingSoon(l)) continue;
+        segments.push({ id: String(l.id), unit: sub, title: l.title, done: done.has(String(l.id)), unitStart: first });
+        first = false;
+      }
+    }
+    const resumeId = continueLesson && !continueLesson.done ? String(continueLesson.lesson.id) : null;
+    const current =
+      (resumeId && segments.find((x) => x.id === resumeId && !x.done)) || segments.find((x) => !x.done) || null;
+    const completed = segments.filter((x) => x.done).length;
+    return {
+      segments,
+      current,
+      completed,
+      total: segments.length,
+      pct: segments.length ? Math.round((completed / segments.length) * 100) : 0,
+    };
+  }, [availableSubjects, lessonsBySubject, completedLessonIds, continueLesson]);
+
   const isLoggedIn = !!session;
   // Progress counters are per selected term only — same subject name in another term is separate
   const progressBySubject = useMemo(() => {
@@ -704,14 +793,39 @@ export default function StudentPlatform() {
   }, [isLoggedIn, selectedGrade, selectedTerm, termScopedLessons]);
 
   const recentLessons = useMemo(() => {
-    if (!termScopedLessons.length) return [];
-    const sorted = termScopedLessons.filter((l) => !isLessonComingSoon(l)).sort((a, b) => {
-      const ta = a.updatedAt || a.updated_at || "";
-      const tb = b.updatedAt || b.updated_at || "";
+    // Latest 3 lessons (by creation time) of the grade the student selected
+    if (!gradeScopedLessons.length) return [];
+    const sorted = gradeScopedLessons.filter((l) => !isLessonComingSoon(l)).sort((a, b) => {
+      const ta = a.createdAt || a.created_at || a.updatedAt || a.updated_at || "";
+      const tb = b.createdAt || b.created_at || b.updatedAt || b.updated_at || "";
       return String(tb).localeCompare(String(ta));
     });
-    return sorted.slice(0, 4);
-  }, [termScopedLessons]);
+    return sorted.slice(0, 3);
+  }, [gradeScopedLessons]);
+
+  // Progress shown in the top bar. Uses the same completed-lesson ids that drive the ✓ marks on
+  // the lesson cards, so the numbers always match what the student sees (guests included).
+  const progressView = useMemo(() => {
+    if (!selectedGrade || !selectedTerm || !termScopedLessons.length) return [];
+    const done = completedLessonIds instanceof Set ? completedLessonIds : new Set(completedLessonIds || []);
+    const map = {};
+    for (const l of termScopedLessons) {
+      if (isLessonComingSoon(l)) continue; // can't be completed yet
+      const sub = l.subject || "أخرى";
+      map[sub] = map[sub] || { subject: sub, total: 0, completed: 0 };
+      map[sub].total += 1;
+      if (done.has(String(l.id))) map[sub].completed += 1;
+    }
+    const order = availableSubjects.filter((x) => map[x]);
+    const rest = Object.keys(map).filter((x) => !order.includes(x));
+    return [...order, ...rest].map((x) => map[x]);
+  }, [selectedGrade, selectedTerm, termScopedLessons, completedLessonIds, availableSubjects]);
+
+  const progressTotals = useMemo(() => {
+    const total = progressView.reduce((n, r) => n + (r.total || 0), 0);
+    const completed = progressView.reduce((n, r) => n + (r.completed || 0), 0);
+    return { total, completed, pct: total ? Math.round((completed / total) * 100) : 0 };
+  }, [progressView]);
 
   const studentName =
     session?.user?.user_metadata?.full_name ||
@@ -740,6 +854,18 @@ export default function StudentPlatform() {
       setGradeSaving(false);
     }
   }
+
+  useEffect(() => {
+    if (!selectedSubject || !scrollToLessonsRef.current) return;
+    scrollToLessonsRef.current = false;
+    const id = window.requestAnimationFrame(() => {
+      const el = lessonsSectionRef.current;
+      if (!el) return;
+      const reduce = window.matchMedia && window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+      el.scrollIntoView({ behavior: reduce ? "auto" : "smooth", block: "start" });
+    });
+    return () => window.cancelAnimationFrame(id);
+  }, [selectedSubject]);
 
   function openChangeGrade() {
     setMenuOpen(false);
@@ -773,7 +899,25 @@ export default function StudentPlatform() {
 
   return (
     <div className="md-platform">
-      <div className="md-topbar flex justify-end items-center px-4 sm:px-6 py-2 relative z-20" style={{ background: "transparent" }}>
+      <div className="md-topbar flex justify-end items-center gap-2 px-4 sm:px-6 py-2 relative z-20" style={{ background: "transparent" }}>
+        {lessons && lessons.length > 0 && gradeMetaReady && selectedGrade && !pickingGrade && continueLesson && (
+          <button
+            type="button"
+            className="md-continue-chip"
+            onClick={() => navigate(lessonPath(continueLesson.lesson))}
+            title={`متابعة التعلم: ${continueLesson.lesson.title}`}
+            aria-label={`متابعة التعلم: ${continueLesson.lesson.title}`}
+          >
+            <span className="md-continue-chip-icon" aria-hidden="true">▶</span>
+            <span className="md-continue-chip-label">استكمل التعلم</span>
+            <span className="md-continue-chip-text">
+              <b>{continueLesson.lesson.title}</b>
+              <small>
+                {continueLesson.done ? "مكتمل ✓" : `آخر موضع: المشهد ${continueLesson.sceneIdx + 1}`}
+              </small>
+            </span>
+          </button>
+        )}
         {session === undefined ? null : session ? (
           <div className="relative">
             <button type="button" onClick={() => setMenuOpen((v) => !v)}
@@ -906,29 +1050,39 @@ export default function StudentPlatform() {
         {/* لوحة متابعة — فقط بعد تحديد الصف، ومحتوى الصف فقط */}
         {lessons && lessons.length > 0 && selectedGrade && !pickingGrade && (
           <section className="md-dashboard mb-6" aria-label="متابعة التعلم">
-            {continueLesson && (
+            {progressPath.total > 0 && (
               <div
-                className="md-continue rounded-2xl p-4 mb-4 bg-white shadow-sm flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3"
-                style={{ border: "1px solid #DED4BD" }}
+                className="md-jp"
+                role="progressbar"
+                aria-label="تقدّمك في المسار"
+                aria-valuemin={0}
+                aria-valuemax={100}
+                aria-valuenow={progressPath.pct}
               >
-                <div>
-                  <p className="text-[11px] font-bold mb-1" style={{ color: "#8A8570" }}>متابعة التعلم</p>
-                  <p className="font-black text-sm" style={{ color: "#10665A" }}>{continueLesson.lesson.title}</p>
-                  <p className="text-xs mt-1" style={{ color: "#5C5A4A" }}>
-                    {continueLesson.done
-                      ? "مكتمل ✓"
-                      : `آخر موضع: المشهد ${continueLesson.sceneIdx + 1}`}
-                    {continueLesson.lesson.subject ? ` · ${continueLesson.lesson.subject}` : ""}
-                  </p>
+                <p className="md-jp-where">
+                  {progressPath.current ? (
+                    <>
+                      <span>أنت الآن في</span>
+                      <b>{progressPath.current.unit}</b>
+                      <span className="md-jp-sep">›</span>
+                      <b>{progressPath.current.title}</b>
+                    </>
+                  ) : (
+                    <span>أحسنت! أنهيت كل دروس هذا الفصل</span>
+                  )}
+                </p>
+                <div className="md-jp-row">
+                  <div className="md-jp-bar" aria-hidden="true">
+                    {progressPath.segments.map((seg) => (
+                      <i
+                        key={seg.id}
+                        title={seg.title}
+                        className={`md-jp-seg${seg.done ? " done" : ""}${progressPath.current && progressPath.current.id === seg.id ? " current" : ""}${seg.unitStart ? " unit-start" : ""}`}
+                      />
+                    ))}
+                  </div>
+                  <span className="md-jp-pct">{progressPath.pct}%</span>
                 </div>
-                <button
-                  type="button"
-                  onClick={() => navigate(lessonPath(continueLesson.lesson))}
-                  className="md-continue-btn px-4 py-2.5 rounded-xl text-xs font-bold text-white shrink-0"
-                  style={{ background: "#10665A" }}
-                >
-                  متابعة الدرس ←
-                </button>
               </div>
             )}
             {recentLessons.length > 0 && (
@@ -950,27 +1104,6 @@ export default function StudentPlatform() {
               </div>
             )}
 
-            {progressBySubject.length > 0 && selectedTerm && (
-              <div className="mt-4">
-                <p className="md-section-label text-xs font-bold mb-2" style={{ color: "#8A8570" }}>
-                  التقدّم  · {selectedTerm}
-                </p>
-                <div className="md-progress-grid grid sm:grid-cols-2 gap-2">
-                  {progressBySubject.map((row) => {
-                    const pct = row.total ? Math.round((row.completed / row.total) * 100) : 0;
-                    return (
-                      <div key={row.subject} className="md-progress-row rounded-xl p-3 bg-white text-xs" style={{ border: "1px solid #DED4BD" }}>
-                        <p className="font-bold" style={{ color: "#10665A" }}>{row.subject}</p>
-                        <p style={{ color: "#5C5A4A" }}>{row.completed} / {row.total} دروس مكتملة · متبقي {Math.max(0, row.total - row.completed)}</p>
-                        <div className="md-progress-track mt-2 h-1.5 rounded-full" style={{ background: "#E4F0EC" }}>
-                          <div className="md-progress-fill h-full rounded-full" style={{ width: pct + "%", background: "#10665A" }} />
-                        </div>
-                      </div>
-                    );
-                  })}
-                </div>
-              </div>
-            )}
           </section>
         )}
 
@@ -1058,15 +1191,27 @@ export default function StudentPlatform() {
                     {availableSubjects.map((sub) => {
                       const subLessons = lessonsBySubject[sub] || [];
                       const isOpen = selectedSubject === sub;
+                      const unitProg = progressView.find((r) => r.subject === sub);
+                      const unitPct = unitProg && unitProg.total ? Math.round((unitProg.completed / unitProg.total) * 100) : 0;
                       return (
                         <div key={sub} className="md-unit-row">
                           <button
                             type="button"
                             className={`md-unit-card ${isOpen ? "selected" : ""}`}
-                            onClick={() => setSelectedSubject(isOpen ? "" : sub)}
+                            onClick={() => {
+                              scrollToLessonsRef.current = !isOpen;
+                              setSelectedSubject(isOpen ? "" : sub);
+                            }}
                           >
                             <span className="md-unit-card-title">{sub}</span>
                             <span className="md-unit-card-count">{subLessons.length} درس</span>
+                            <span
+                              className="md-unit-card-progress"
+                              aria-hidden="true"
+                              title={unitProg ? `${unitProg.completed} / ${unitProg.total}` : undefined}
+                            >
+                              <i style={{ width: unitPct + "%" }} />
+                            </span>
                           </button>
                           {!isOpen && subLessons.length > 0 && (
                             <ul className="md-unit-preview">
@@ -1086,7 +1231,7 @@ export default function StudentPlatform() {
             )}
 
             {selectedSubject && (
-              <section className="md-lessons">
+              <section key={selectedSubject} ref={lessonsSectionRef} className="md-lessons">
                 <div className="md-lessons-header">
                   <h2>الدروس المتاحة</h2>
                   <span className="md-count">{filteredLessons.length} درس</span>
@@ -1113,6 +1258,7 @@ export default function StudentPlatform() {
                       <article
                         key={l.id}
                         data-num={String(lessonDisplayNumber(l, lessonIdx)).padStart(2, "0")}
+                        data-kind={kind}
                         className={`md-lesson-card${lockedSeq ? " md-lesson-locked" : ""}${comingSoon ? " md-lesson-soon" : ""}`}
                         role="button"
                         tabIndex={lockedSeq ? -1 : 0}
@@ -1155,6 +1301,22 @@ export default function StudentPlatform() {
             )}
           </div>
         )}
+
+        <section className="md-features" aria-label="ماذا ستجد في مَدَار">
+          <div className="md-features-head">
+            <h2>كل ما تحتاجه لتفهم الدرس</h2>
+            <p>أدوات بسيطة تساعدك على الفهم والمراجعة في مكان واحد</p>
+          </div>
+          <div className="md-features-grid">
+            {MADAR_FEATURES.map((f) => (
+              <div key={f.title} className="md-feature">
+                <span className="md-feature-icon" aria-hidden="true">{f.icon}</span>
+                <h3>{f.title}</h3>
+                <p>{f.text}</p>
+              </div>
+            ))}
+          </div>
+        </section>
       </main>
 
       <HistoryFrieze />
@@ -2594,6 +2756,471 @@ export default function StudentPlatform() {
       animation: none !important;
       transition: none !important;
     }
+  }
+
+  /* =========================================================================
+     MADAR HOME v2 — style layer (no logic changes)
+     One clear path: Continue → Term → Unit → Lesson path.
+     Same identity: petrol + heritage gold, soft shadows, rounded cards.
+     ========================================================================= */
+
+  /* Calmer background so content leads */
+  .md-bg-layer { opacity: 0.38; }
+  .md-corner-compass { opacity: 0.12; }
+
+  /* ---------- Top bar ---------- */
+  .md-topbar { padding-top: 8px !important; padding-bottom: 8px !important; }
+
+  /* ---------- Progress strip (where "continue" used to be) ---------- */
+  .md-jp {
+    position: relative;
+    display: flex;
+    flex-direction: column;
+    gap: 9px;
+    padding: 12px 16px 13px;
+    border-radius: 18px;
+    background: #FFFFFF;
+    border: 1px solid var(--md-border);
+    box-shadow: 0 10px 24px rgba(6, 59, 52, 0.11), 0 1px 3px rgba(6, 59, 52, 0.05);
+  }
+  .md-jp-where {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 4px 8px;
+    margin: 0;
+    font-size: 0.84rem;
+    line-height: 1.6;
+    color: var(--md-muted);
+  }
+  .md-jp-where b { font-weight: 900; color: var(--md-teal-deep); }
+  .md-jp-sep { color: var(--md-gold); font-weight: 900; }
+  .md-jp-row { display: flex; align-items: center; gap: 10px; }
+  .md-jp-bar { flex: 1; display: flex; gap: 3px; height: 9px; min-width: 0; }
+  .md-jp-seg {
+    flex: 1 1 0;
+    min-width: 3px;
+    border-radius: 999px;
+    background: var(--md-surface-3);
+    box-shadow: inset 0 0 0 1px rgba(197, 216, 210, 0.45);
+    transition: background 0.5s ease, box-shadow 0.5s ease;
+  }
+  .md-jp-seg.unit-start:not(:first-child) { margin-inline-start: 5px; }
+  .md-jp-seg.done { background: var(--md-teal); box-shadow: none; }
+  .md-jp-seg.current {
+    background: var(--md-gold-light);
+    box-shadow: 0 0 0 3px rgba(213, 160, 74, 0.25);
+    animation: md-jp-pulse 2.2s ease-in-out infinite;
+  }
+  @keyframes md-jp-pulse {
+    0%, 100% { box-shadow: 0 0 0 2px rgba(213, 160, 74, 0.22); }
+    50% { box-shadow: 0 0 0 5px rgba(213, 160, 74, 0.12); }
+  }
+  .md-jp-pct { flex: 0 0 auto; min-width: 2.6em; text-align: left; font-size: 0.76rem; font-weight: 800; color: var(--md-teal-deep); font-variant-numeric: tabular-nums; }
+
+  /* ---------- Hero: compact, still the petrol "orbit" band ---------- */
+  .md-hero {
+    padding: clamp(22px, 3.5vw, 34px) 20px clamp(40px, 5.5vw, 52px);
+    border-radius: 0 0 clamp(26px, 4vw, 44px) clamp(26px, 4vw, 44px);
+    box-shadow: 0 14px 36px rgba(6, 59, 52, 0.18);
+  }
+  .md-hero-logo-wrap { margin-bottom: 12px; }
+  .md-hero-logo-wrap::before { width: 120px; height: 120px; }
+  .md-hero-logo { height: 36px; padding: 8px 20px; border-radius: 18px; box-shadow: 0 8px 20px rgba(0, 0, 0, 0.2), 0 0 0 4px rgba(255, 255, 255, 0.1); }
+  .md-hero .md-badge { font-size: 0.74rem; padding: 4px 14px; margin-bottom: 8px; }
+  .md-hero h1 { font-size: clamp(1.5rem, 4.4vw, 2.2rem); margin-bottom: 6px; line-height: 1.35; }
+  .md-hero p { font-size: clamp(0.88rem, 2vw, 1rem); line-height: 1.8; max-width: 34em; }
+
+  /* ---------- Dashboard: continue = the primary action ---------- */
+  .md-dashboard { gap: 14px; margin-top: 20px; }
+  .md-hero + .md-dashboard:has(> .md-jp),
+  .md-hero + .md-dashboard:has(> .md-continue),
+  .md-hero + .md-dashboard:has(> .md-panel) { margin-top: calc(-1 * clamp(26px, 4vw, 32px)); }
+
+  .md-panel {
+    border-radius: 22px !important;
+    padding: clamp(18px, 3vw, 26px) !important;
+    box-shadow: 0 12px 30px rgba(6, 59, 52, 0.12), 0 1px 4px rgba(6, 59, 52, 0.05) !important;
+  }
+  .md-panel h2 { font-size: 1.2rem; }
+  .md-panel .md-chips { gap: 10px; }
+  .md-panel .md-chip { min-height: 50px; padding: 10px 24px; font-size: 1rem; }
+
+  /* Continue-learning lives in the top bar now (compact chip) */
+  .md-continue-chip {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    max-width: min(260px, 46vw);
+    min-height: 40px;
+    padding: 4px 14px 4px 6px;
+    border-radius: 999px;
+    border: 1px solid var(--md-gold-light);
+    background: linear-gradient(135deg, #FFFFFF, var(--md-gold-soft));
+    color: var(--md-teal-deep);
+    cursor: pointer;
+    text-align: right;
+    box-shadow: var(--md-shadow-sm);
+    transition: box-shadow 0.2s ease, transform 0.2s ease, border-color 0.2s ease;
+  }
+  .md-continue-chip:hover { box-shadow: var(--md-shadow-md); border-color: var(--md-gold); transform: translateY(-1px); }
+  .md-continue-chip:focus-visible { outline: 3px solid rgba(213, 160, 74, 0.6); outline-offset: 3px; }
+  .md-continue-chip-icon {
+    flex: 0 0 auto;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 30px;
+    height: 30px;
+    padding-inline-end: 2px;
+    border-radius: 50%;
+    background: var(--md-teal-deep);
+    color: #FFFFFF;
+    font-size: 0.62rem;
+  }
+  .md-continue-chip-label { display: none; }
+  .md-continue-chip-text { display: flex; flex-direction: column; min-width: 0; line-height: 1.25; }
+  .md-continue-chip-text b { font-size: 0.78rem; font-weight: 800; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .md-continue-chip-text small { font-size: 0.64rem; font-weight: 700; color: var(--md-gold-deep); }
+
+  .md-dashboard .md-section-label { font-size: 0.78rem; margin-bottom: 8px !important; }
+  .md-dashboard .md-recent-chip {
+    padding: 8px 16px;
+    font-size: 0.82rem;
+    max-width: 100%;
+    text-align: right;
+    background: #FFFFFF;
+    box-shadow: var(--md-shadow-sm);
+  }
+
+  /* ---------- Journey meta + steps ---------- */
+  .md-journey { margin-top: 22px; }
+  .md-journey-meta { margin-bottom: 16px !important; padding: 5px 6px 5px 14px; font-size: 0.8rem !important; }
+
+  .md-step { padding: 0; gap: 0; }
+  .md-step-indicator { display: none; }
+  .md-step-content { padding-bottom: 20px; }
+  .md-step-label {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    margin-bottom: 10px;
+    font-size: 0.98rem;
+    line-height: 1.5;
+    color: var(--md-teal-deep) !important;
+  }
+  .md-step-label::before {
+    content: "";
+    width: 4px;
+    height: 18px;
+    border-radius: 4px;
+    background: linear-gradient(180deg, var(--md-teal), var(--md-gold));
+  }
+
+  /* Term = segmented control */
+  .md-step[data-step="1"] .md-chips {
+    display: inline-flex;
+    flex-wrap: wrap;
+    gap: 4px;
+    padding: 4px;
+    border-radius: 999px;
+    background: var(--md-surface-3);
+    border: 1px solid var(--md-border);
+  }
+  .md-step[data-step="1"] .md-chip {
+    min-height: 40px;
+    padding: 6px 22px;
+    border: 0;
+    background: transparent;
+    font-size: 0.92rem;
+    box-shadow: none;
+    transform: none;
+  }
+  .md-step[data-step="1"] .md-chip:hover { background: rgba(255, 255, 255, 0.7); }
+  .md-step[data-step="1"] .md-chip.selected {
+    background: var(--md-teal-deep);
+    color: #FFFFFF;
+    box-shadow: 0 6px 16px rgba(6, 59, 52, 0.22);
+  }
+  .md-step[data-step="1"] .md-chip.selected::before { display: none; }
+
+  /* ---------- Units: clear cards with a mini progress bar ---------- */
+  .md-units-grid {
+    grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+    gap: 14px;
+    align-items: start;
+  }
+  .md-unit-row { padding: 0; border-bottom: 0; gap: 8px; }
+  .md-unit-card {
+    flex-wrap: wrap;
+    row-gap: 10px;
+    min-height: 64px;
+    padding: 14px 16px;
+    border-radius: 20px;
+    border: 1px solid var(--md-border);
+    box-shadow: 0 2px 10px rgba(6, 59, 52, 0.06);
+  }
+  .md-unit-card::before { font-size: 1.15rem; width: 40px; height: 40px; display: inline-flex; align-items: center; justify-content: center; border-radius: 14px; background: var(--md-gold-soft); color: var(--md-gold-deep); opacity: 1; }
+  .md-unit-card.selected::before { background: rgba(255, 255, 255, 0.14); color: var(--md-gold-light); }
+  .md-unit-card-title { font-size: 1.02rem; }
+  .md-unit-card:hover { transform: translateY(-2px); }
+  .md-unit-card-progress {
+    order: 99;
+    flex: 1 0 100%;
+    height: 5px;
+    border-radius: 999px;
+    overflow: hidden;
+    background: var(--md-surface-3);
+  }
+  .md-unit-card-progress i {
+    display: block;
+    height: 100%;
+    border-radius: 999px;
+    background-image: linear-gradient(90deg, var(--md-teal), var(--md-gold));
+    transition: width 0.7s cubic-bezier(0.22, 1, 0.36, 1);
+  }
+  .md-unit-card.selected .md-unit-card-progress { background: rgba(255, 255, 255, 0.18); }
+  .md-unit-preview { margin: 0 14px 0 0; padding: 0 14px 0 0; gap: 4px; }
+  .md-unit-preview li { font-size: 0.78rem; line-height: 1.7; }
+  .md-unit-preview li:nth-child(n+4) { display: none; }
+
+  /* ---------- Lessons: a connected learning path ---------- */
+  .md-lessons {
+    margin-top: 28px;
+    padding: clamp(26px, 4vw, 40px) calc(50vw - 50%);
+    background: linear-gradient(180deg, var(--md-surface-2), #FFFFFF 70%);
+  }
+  .md-lessons { scroll-margin-top: 64px; animation: md-rise 0.45s cubic-bezier(0.22, 1, 0.36, 1) both; }
+  .md-lessons .md-lessons-header,
+  .md-lessons .md-lessons-grid,
+  .md-lessons > .md-empty { max-width: 860px; margin-inline: auto; }
+  .md-lessons-header { margin-bottom: 20px; }
+  .md-lessons-header h2 { font-size: clamp(1.25rem, 3.4vw, 1.6rem); padding-bottom: 10px; }
+  .md-count { font-size: 0.78rem; padding: 5px 14px; }
+
+  .md-lessons .md-lessons-grid {
+    position: relative;
+    display: flex;
+    flex-direction: column;
+    gap: 14px;
+  }
+  .md-lessons .md-lessons-grid::before {
+    content: "";
+    position: absolute;
+    inset-block: 28px;
+    inset-inline-start: 36px;
+    width: 0;
+    border-inline-start: 2px dashed var(--md-border-strong);
+    z-index: 0;
+  }
+
+  .md-lesson-card {
+    z-index: 1;
+    flex-direction: row;
+    align-items: center;
+    border-radius: 22px;
+    padding-inline-start: 78px;
+    box-shadow: 0 2px 10px rgba(6, 59, 52, 0.06);
+  }
+  .md-lesson-card:hover { transform: translateY(-3px); box-shadow: 0 16px 34px rgba(6, 59, 52, 0.12); }
+  .md-lesson-card::before { display: none; }
+  .md-lesson-glow { display: none; }
+
+  /* number node */
+  .md-lesson-card::after {
+    content: attr(data-num);
+    position: absolute;
+    top: 50%;
+    inset-inline-start: 14px;
+    inset-inline-end: auto;
+    transform: translateY(-50%);
+    width: 46px;
+    height: 46px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border-radius: 50%;
+    background: var(--md-teal-soft);
+    border: 2px solid rgba(17, 122, 107, 0.28);
+    color: var(--md-teal-deep);
+    font-size: 1rem;
+    font-weight: 900;
+    opacity: 1;
+  }
+  .md-lesson-card[data-kind="COMPLETED"]::after {
+    content: "✓";
+    background: var(--md-teal);
+    border-color: var(--md-teal);
+    color: #FFFFFF;
+    font-size: 1.2rem;
+  }
+  .md-lesson-card[data-kind="CURRENT"] {
+    border-color: var(--md-gold-light);
+    box-shadow: 0 14px 32px rgba(183, 122, 32, 0.16);
+  }
+  .md-lesson-card[data-kind="CURRENT"]::after {
+    background: var(--md-gold-soft);
+    border-color: var(--md-gold);
+    color: var(--md-gold-deep);
+    box-shadow: 0 0 0 5px rgba(213, 160, 74, 0.2);
+  }
+  .md-lesson-card[data-kind="SEQUENCE_LOCK"]::after,
+  .md-lesson-card[data-kind="COMING_SOON"]::after {
+    background: var(--md-surface-3);
+    border: 2px dashed var(--md-border-strong);
+    color: var(--md-muted);
+  }
+  .md-lesson-card[data-kind="ACCESS_LOCK"]::after {
+    background: var(--md-gold-soft);
+    border-color: var(--md-gold-light);
+    color: var(--md-gold-deep);
+  }
+
+  .md-lesson-body {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) auto;
+    column-gap: 14px;
+    row-gap: 2px;
+    align-items: center;
+    padding: 16px 18px 16px 16px;
+  }
+  .md-lesson-body > div:first-child { grid-column: 1; }
+  .md-lesson-body h3 { font-size: 1.02rem; margin: 0; }
+  .md-lesson-body p { grid-column: 1; margin: 0; font-size: 0.82rem; line-height: 1.7; }
+  .md-lesson-body .md-lesson-cta {
+    grid-column: 2;
+    grid-row: 1 / span 2;
+    margin: 0;
+    padding: 0;
+    border-top: 0;
+    font-size: 0.85rem;
+    white-space: nowrap;
+  }
+  .md-lesson-body .md-lesson-cta span { width: 34px; height: 34px; }
+  .md-lesson-card[data-kind="CURRENT"] .md-lesson-cta {
+    padding: 5px 5px 5px 16px;
+    border-radius: 999px;
+    background: var(--md-teal-deep);
+    color: #FFFFFF !important;
+    box-shadow: 0 8px 18px rgba(6, 59, 52, 0.22);
+  }
+  .md-lesson-card[data-kind="CURRENT"] .md-lesson-cta span { background: rgba(255, 255, 255, 0.18); }
+
+  /* ---------- Feature boxes (bottom) ---------- */
+  .md-features {
+    position: relative;
+    isolation: isolate;
+    overflow: hidden;
+    margin: 56px calc(50% - 50vw) calc(-1 * var(--md-main-pb));
+    padding: clamp(36px, 6vw, 60px) calc(50vw - 50%);
+    background:
+      radial-gradient(circle at 12% 0%, rgba(213, 160, 74, 0.16), transparent 40%),
+      linear-gradient(160deg, var(--md-teal-dark) 0%, var(--md-teal-deep) 60%, var(--md-teal) 140%);
+    border-radius: clamp(26px, 4vw, 44px) clamp(26px, 4vw, 44px) 0 0;
+  }
+  .md-lessons + .md-features { margin-top: 0; }
+  .md-features::before {
+    content: "";
+    position: absolute;
+    z-index: 0;
+    width: 520px;
+    height: 520px;
+    top: -300px;
+    inset-inline-end: -140px;
+    border-radius: 50%;
+    border: 1px solid rgba(255, 255, 255, 0.07);
+    box-shadow: 0 0 0 54px rgba(255, 255, 255, 0.02), 0 0 0 108px rgba(255, 255, 255, 0.012);
+    pointer-events: none;
+  }
+  .md-features-head, .md-features-grid { position: relative; z-index: 1; max-width: 1040px; margin-inline: auto; }
+  .md-features-head { text-align: center; margin-bottom: clamp(22px, 4vw, 34px); }
+  .md-features-head h2 { margin: 0 0 6px; font-size: clamp(1.25rem, 3.6vw, 1.7rem); font-weight: 900; color: #FFFFFF; }
+  .md-features-head p { margin: 0; font-size: 0.9rem; color: rgba(255, 255, 255, 0.72); }
+  .md-features-grid { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 16px; }
+  .md-feature {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    text-align: center;
+    gap: 10px;
+    padding: 24px 16px 22px;
+    border-radius: 24px;
+    background: rgba(255, 255, 255, 0.06);
+    border: 1px solid rgba(255, 255, 255, 0.14);
+    backdrop-filter: blur(6px);
+    -webkit-backdrop-filter: blur(6px);
+    transition: transform 0.25s ease, background 0.25s ease, border-color 0.25s ease;
+  }
+  .md-feature:hover { transform: translateY(-4px); background: rgba(255, 255, 255, 0.1); border-color: rgba(213, 160, 74, 0.5); }
+  .md-feature-icon {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 58px;
+    height: 58px;
+    border-radius: 18px;
+    color: var(--md-gold-light);
+    background: rgba(213, 160, 74, 0.12);
+    border: 1px solid rgba(213, 160, 74, 0.35);
+    box-shadow: 0 0 22px rgba(213, 160, 74, 0.18);
+  }
+  .md-feature:nth-child(even) .md-feature-icon {
+    color: #8FE0D1;
+    background: rgba(88, 181, 165, 0.14);
+    border-color: rgba(88, 181, 165, 0.4);
+    box-shadow: 0 0 22px rgba(88, 181, 165, 0.2);
+  }
+  .md-feature-icon svg { width: 28px; height: 28px; }
+  .md-feature h3 { margin: 0; font-size: 1.02rem; font-weight: 900; color: #FFFFFF; }
+  .md-feature p { margin: 0; font-size: 0.8rem; line-height: 1.8; color: rgba(255, 255, 255, 0.7); }
+
+  .md-frieze { opacity: 0.55; }
+
+  @media (max-width: 900px) {
+    .md-features-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  }
+
+  @media (max-width: 640px) {
+    .md-hero p { font-size: 0.84rem; line-height: 1.7; margin-top: 2px; }
+    .md-hero { padding-bottom: 50px; }
+    .md-corner-compass { opacity: 0.1; }
+    .md-bg-layer { opacity: 0.26; }
+    .md-dashboard { margin-top: 14px; }
+    .md-dashboard .md-recent-chip { flex: 1 1 100%; border-radius: 16px; }
+    .md-continue-chip { padding: 3px 12px 3px 4px; gap: 6px; max-width: none; flex-shrink: 0; }
+    .md-continue-chip-text { display: none; }
+    .md-continue-chip-label { display: inline; font-size: 0.74rem; font-weight: 800; white-space: nowrap; color: var(--md-teal-deep); }
+    .md-continue-chip-icon { width: 30px; height: 30px; }
+    .md-topbar { gap: 6px !important; padding-inline: 10px !important; }
+    .md-jp { padding: 11px 13px 12px; border-radius: 16px; }
+    .md-jp-where { font-size: 0.8rem; }
+    .md-journey { margin-top: 14px; }
+    .md-step[data-step="1"] .md-chips { display: flex; width: 100%; }
+    .md-step[data-step="1"] .md-chip { flex: 1 1 auto; justify-content: center; padding: 6px 12px; }
+    .md-units-grid { grid-template-columns: 1fr; gap: 12px; }
+    .md-unit-card { min-height: 60px; }
+    .md-unit-preview li { font-size: 0.74rem; }
+    .md-lessons { padding-top: 22px; }
+    .md-lessons .md-lessons-grid { gap: 12px; }
+    .md-lessons .md-lessons-grid::before { inset-inline-start: 30px; }
+    .md-lesson-card { padding-inline-start: 64px; border-radius: 20px; }
+    .md-lesson-card::after { width: 40px; height: 40px; inset-inline-start: 11px; font-size: 0.92rem; }
+    .md-lesson-body { padding: 13px 14px 13px 12px; column-gap: 10px; }
+    .md-lesson-body h3 { font-size: 0.96rem; }
+    .md-lesson-body .md-lesson-cta { font-size: 0; }
+    .md-lesson-body .md-lesson-cta span { font-size: 1rem; width: 34px; height: 34px; }
+    .md-lesson-card[data-kind="CURRENT"] .md-lesson-cta { padding: 0; background: transparent; box-shadow: none; }
+    .md-lesson-card[data-kind="CURRENT"] .md-lesson-cta span { background: var(--md-teal-deep); color: #FFFFFF; }
+    .md-features { margin-top: 40px; }
+    .md-features-grid { gap: 12px; }
+    .md-feature { padding: 18px 12px 16px; border-radius: 20px; }
+    .md-feature-icon { width: 50px; height: 50px; border-radius: 16px; }
+    .md-feature h3 { font-size: 0.94rem; }
+    .md-feature p { font-size: 0.74rem; }
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    .md-feature, .md-unit-card-progress i, .md-lesson-card, .md-jp-seg, .md-lessons { animation: none !important; transition: none !important; }
   }
 `}</style>
     </div>
