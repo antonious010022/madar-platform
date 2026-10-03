@@ -1304,8 +1304,8 @@ export default function StudentPlatform() {
 
         <section className="md-features" aria-label="ماذا ستجد في مَدَار">
           <div className="md-features-head">
-            <h2>كل ما تحتاجه لتفهم الدرس</h2>
-            <p>أدوات بسيطة تساعدك على الفهم والمراجعة في مكان واحد</p>
+            <h2>كل ما تحتاجه لتفهم الدرس علي مَدَار </h2>
+            <p>أدوات بسيطة تساعدك على الفهم والمراجعة علي منصتك</p>
           </div>
           <div className="md-features-grid">
             {MADAR_FEATURES.map((f) => (
