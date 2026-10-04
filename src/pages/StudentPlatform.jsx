@@ -1233,7 +1233,13 @@ export default function StudentPlatform() {
             {selectedSubject && (
               <section key={selectedSubject} ref={lessonsSectionRef} className="md-lessons">
                 <div className="md-lessons-header">
-                  <h2>الدروس المتاحة</h2>
+                  <h2 className="md-lessons-title">
+                    <span>{selectedGrade}</span>
+                    <i aria-hidden="true">·</i>
+                    <span>{selectedTerm}</span>
+                    <i aria-hidden="true">·</i>
+                    <b>{selectedSubject}</b>
+                  </h2>
                   <span className="md-count">{filteredLessons.length} درس</span>
                 </div>
 
@@ -1304,8 +1310,8 @@ export default function StudentPlatform() {
 
         <section className="md-features" aria-label="ماذا ستجد في مَدَار">
           <div className="md-features-head">
-            <h2>كل ما تحتاجه لتفهم الدرس علي مَدَار </h2>
-            <p>أدوات بسيطة تساعدك على الفهم والمراجعة علي منصتك</p>
+            <h2>كل ما تحتاجه لتفهم الدرس</h2>
+            <p>أدوات بسيطة تساعدك على الفهم والمراجعة في مكان واحد</p>
           </div>
           <div className="md-features-grid">
             {MADAR_FEATURES.map((f) => (
@@ -2996,6 +3002,17 @@ export default function StudentPlatform() {
   .md-lessons > .md-empty { max-width: 860px; margin-inline: auto; }
   .md-lessons-header { margin-bottom: 20px; }
   .md-lessons-header h2 { font-size: clamp(1.25rem, 3.4vw, 1.6rem); padding-bottom: 10px; }
+  .md-lessons-header h2.md-lessons-title {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: baseline;
+    gap: 2px 10px;
+    font-size: clamp(1rem, 3vw, 1.3rem);
+    line-height: 1.6;
+  }
+  .md-lessons-title span { font-weight: 700; color: var(--md-text-soft); }
+  .md-lessons-title i { font-style: normal; font-weight: 900; color: var(--md-gold); }
+  .md-lessons-title b { font-weight: 900; color: var(--md-teal-deep); font-size: 1.12em; }
   .md-count { font-size: 0.78rem; padding: 5px 14px; }
 
   .md-lessons .md-lessons-grid {
