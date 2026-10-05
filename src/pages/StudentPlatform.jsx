@@ -861,6 +861,7 @@ export default function StudentPlatform() {
     const id = window.requestAnimationFrame(() => {
       const el = lessonsSectionRef.current;
       if (!el) return;
+      if (el.getBoundingClientRect().top < window.innerHeight - 160) return; // already visible (side-by-side / just below the units)
       const reduce = window.matchMedia && window.matchMedia("(prefers-reduced-motion: reduce)").matches;
       el.scrollIntoView({ behavior: reduce ? "auto" : "smooth", block: "start" });
     });
@@ -1136,35 +1137,27 @@ export default function StudentPlatform() {
 
         {lessons !== null && selectedGrade && !pickingGrade && (
           <div className="md-journey">
-            <div className="md-journey-meta mb-3 flex flex-wrap items-center gap-2 text-xs" style={{ color: "#5C5A4A" }}>
-              <span className="font-bold" style={{ color: "#10665A" }}>
-                {selectedStage ? selectedStage + " · " : ""}{selectedGrade}
-              </span>
+            <div className="md-context">
               <button
                 type="button"
-                className="md-link-btn font-bold underline-offset-2 hover:underline"
-                style={{ color: "#8A8570" }}
+                className="md-ctx-grade"
                 onClick={() => setPickingGrade(true)}
+                title="تغيير الصف"
+                aria-label={`تغيير الصف: ${selectedGrade}`}
               >
-                تغيير الصف
+                <span className="md-ctx-grade-text">
+                  {selectedStage ? selectedStage + " · " : ""}{selectedGrade}
+                </span>
+                <span className="md-ctx-caret" aria-hidden="true">▾</span>
               </button>
-            </div>
-
-            <StepRow
-              number={1}
-              done={!!selectedTerm}
-              active={!selectedTerm}
-              label="الفصل الدراسي"
-            >
-              {availableTerms.length === 0 ? (
-                <p className="md-empty">لا توجد فصول دراسية منشورة لهذا الصف حالياً.</p>
-              ) : (
-                <div className="md-chips">
+              {availableTerms.length > 0 && (
+                <div className="md-ctx-terms" role="group" aria-label="الفصل الدراسي">
                   {availableTerms.map((t) => (
                     <button
                       key={t}
                       type="button"
                       className={`md-chip ${selectedTerm === t ? "selected" : ""}`}
+                      aria-pressed={selectedTerm === t}
                       onClick={() => {
                         setSelectedTerm(t);
                         setSelectedSubject("");
@@ -1175,15 +1168,15 @@ export default function StudentPlatform() {
                   ))}
                 </div>
               )}
-            </StepRow>
+            </div>
+            {availableTerms.length === 0 && (
+              <p className="md-empty">لا توجد فصول دراسية منشورة لهذا الصف حالياً.</p>
+            )}
 
             {selectedTerm && (
-              <StepRow
-                number={2}
-                done={!!selectedSubject}
-                active={!selectedSubject}
-                label="الــوحــدة"
-              >
+              <div className="md-split">
+                <aside className="md-units-rail" aria-label="الوحدات">
+                <p className="md-rail-label">الوحدات</p>
                 {availableSubjects.length === 0 ? (
                   <p className="md-empty">لا توجد مواد دراسية منشورة لهذا الصف حالياً.</p>
                 ) : (
@@ -1227,10 +1220,10 @@ export default function StudentPlatform() {
                     })}
                   </div>
                 )}
-              </StepRow>
-            )}
+                </aside>
 
-            {selectedSubject && (
+                <div className="md-split-main">
+            {selectedSubject ? (
               <section key={selectedSubject} ref={lessonsSectionRef} className="md-lessons">
                 <div className="md-lessons-header">
                   <h2 className="md-lessons-title">
@@ -1304,6 +1297,14 @@ export default function StudentPlatform() {
                   </div>
                 )}
               </section>
+            ) : (
+              <div className="md-split-empty">
+                <span className="md-split-empty-icon" aria-hidden="true">←</span>
+                <p>اختر وحدة لتظهر دروسها هنا</p>
+              </div>
+            )}
+                </div>
+              </div>
             )}
           </div>
         )}
@@ -3234,6 +3235,153 @@ export default function StudentPlatform() {
     .md-feature-icon { width: 50px; height: 50px; border-radius: 16px; }
     .md-feature h3 { font-size: 0.94rem; }
     .md-feature p { font-size: 0.74rem; }
+  }
+
+  /* =========================================================================
+     SPLIT LAYOUT — context bar + units rail + lessons column (style only)
+     ========================================================================= */
+  .md-main { max-width: 1120px; }
+
+  .md-context {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 10px 12px;
+    margin-bottom: 18px;
+    padding: 10px 12px;
+    border-radius: 20px;
+    background: #FFFFFF;
+    border: 1px solid var(--md-border);
+    box-shadow: var(--md-shadow-sm);
+  }
+  .md-ctx-grade {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    min-height: 42px;
+    max-width: 100%;
+    padding: 6px 16px;
+    border-radius: 999px;
+    border: 1.5px solid var(--md-border-strong);
+    background: var(--md-surface-2);
+    color: var(--md-teal-deep);
+    font-size: 0.9rem;
+    font-weight: 800;
+    cursor: pointer;
+    transition: border-color 0.2s ease, background 0.2s ease, transform 0.2s ease;
+  }
+  .md-ctx-grade:hover { border-color: var(--md-teal); background: var(--md-teal-soft); transform: translateY(-1px); }
+  .md-ctx-grade:focus-visible, .md-ctx-terms .md-chip:focus-visible { outline: 3px solid rgba(213, 160, 74, 0.6); outline-offset: 2px; }
+  .md-ctx-grade-text { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .md-ctx-caret { color: var(--md-gold); font-size: 0.8rem; }
+
+  .md-ctx-terms {
+    display: inline-flex;
+    flex-wrap: wrap;
+    gap: 4px;
+    padding: 4px;
+    border-radius: 999px;
+    background: var(--md-surface-3);
+    border: 1px solid var(--md-border);
+  }
+  .md-ctx-terms .md-chip {
+    min-height: 38px;
+    padding: 6px 20px;
+    border: 0;
+    background: transparent;
+    font-size: 0.88rem;
+    box-shadow: none;
+    transform: none;
+  }
+  .md-ctx-terms .md-chip:hover { background: rgba(255, 255, 255, 0.75); }
+  .md-ctx-terms .md-chip.selected { background: var(--md-teal-deep); color: #FFFFFF; box-shadow: 0 6px 16px rgba(6, 59, 52, 0.22); }
+  .md-ctx-terms .md-chip.selected::before { display: none; }
+
+  .md-split {
+    display: grid;
+    grid-template-columns: minmax(250px, 300px) minmax(0, 1fr);
+    gap: clamp(18px, 3vw, 32px);
+    align-items: start;
+  }
+  .md-units-rail { position: sticky; top: 16px; min-width: 0; }
+  .md-rail-label { margin: 0 0 10px; font-size: 0.8rem; font-weight: 800; color: var(--md-muted); }
+  .md-units-rail .md-units-grid { display: flex; flex-direction: column; gap: 10px; }
+  .md-units-rail .md-unit-row { gap: 0; }
+  .md-units-rail .md-unit-preview { display: none; }
+  .md-units-rail .md-unit-card { width: 100%; min-height: 62px; padding: 12px 14px; }
+  .md-split-main { min-width: 0; }
+
+  /* lessons now live in the column (no full-bleed band) */
+  .md-split .md-lessons {
+    margin: 0;
+    padding: 0;
+    background: none;
+    border: 0;
+    scroll-margin-top: 16px;
+  }
+  .md-split .md-lessons .md-lessons-header,
+  .md-split .md-lessons .md-lessons-grid,
+  .md-split .md-lessons > .md-empty { max-width: none; margin-inline: 0; }
+  .md-split .md-lessons .md-lessons-header { margin-bottom: 16px; }
+  .md-split .md-lessons .md-lessons-grid { grid-template-columns: none; }
+
+  .md-split-empty {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 6px;
+    min-height: 220px;
+    padding: 24px;
+    border-radius: 24px;
+    border: 1.5px dashed var(--md-border-strong);
+    background: var(--md-surface-2);
+    color: var(--md-muted);
+    text-align: center;
+  }
+  .md-split-empty p { margin: 0; font-size: 0.95rem; font-weight: 700; color: var(--md-text-soft); }
+  .md-split-empty-icon {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 44px;
+    height: 44px;
+    border-radius: 50%;
+    background: var(--md-teal-soft);
+    color: var(--md-teal-deep);
+    font-size: 1.3rem;
+    font-weight: 900;
+  }
+
+  /* ---- phones & small tablets: units become a swipeable strip above the lessons ---- */
+  @media (max-width: 860px) {
+    .md-split { grid-template-columns: minmax(0, 1fr); gap: 14px; }
+    .md-units-rail { position: static; }
+    .md-rail-label { margin-bottom: 8px; }
+    .md-units-rail .md-units-grid {
+      flex-direction: row;
+      gap: 10px;
+      overflow-x: auto;
+      padding: 2px 2px 10px;
+      margin-inline: -2px;
+      scroll-snap-type: x proximity;
+      -webkit-overflow-scrolling: touch;
+      scrollbar-width: thin;
+    }
+    .md-units-rail .md-unit-row { flex: 0 0 auto; scroll-snap-align: start; }
+    .md-units-rail .md-unit-card { width: 168px; min-height: 76px; padding: 10px 12px; row-gap: 8px; }
+    .md-units-rail .md-unit-card::before,
+    .md-units-rail .md-unit-card::after { display: none; }
+    .md-units-rail .md-unit-card-title { font-size: 0.92rem; flex: 1 1 100%; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+    .md-split-empty { min-height: 120px; padding: 18px; }
+    .md-split-empty-icon { transform: rotate(90deg); }
+  }
+
+  @media (max-width: 640px) {
+    .md-context { padding: 8px; gap: 8px; border-radius: 18px; }
+    .md-ctx-grade { width: 100%; justify-content: space-between; }
+    .md-ctx-terms { width: 100%; display: flex; }
+    .md-ctx-terms .md-chip { flex: 1 1 0; justify-content: center; padding: 6px 10px; }
   }
 
   @media (prefers-reduced-motion: reduce) {

@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useState } from "react";
 import { Link } from "react-router-dom";
+import { SOCIAL_PLATFORMS } from "../components/SocialIcons";
 import {
   listCurriculumNodes,
   saveCurriculumNode,
@@ -62,7 +63,7 @@ export default function TeacherSettings() {
   const [templates, setTemplates] = useState([]);
   const [pages, setPages] = useState([]);
   const [links, setLinks] = useState([]);
-  const [brand, setBrand] = useState({ name: "مَدَار", description: "", contactEmail: "" });
+  const [brand, setBrand] = useState({ name: "مَدَار", description: "", contactEmail: "", socialLinks: {} });
   const [msg, setMsg] = useState("");
   const [err, setErr] = useState("");
   const [loading, setLoading] = useState(true);
@@ -101,6 +102,7 @@ export default function TeacherSettings() {
         name: b?.name || "مَدَار",
         description: b?.description || "",
         contactEmail: b?.contactEmail || "",
+        socialLinks: b?.socialLinks && typeof b.socialLinks === "object" ? b.socialLinks : {},
       });
       if (errMsg) {
         setErr("خطأ من قاعدة البيانات: " + errMsg);
@@ -339,6 +341,34 @@ export default function TeacherSettings() {
                 placeholder="name@example.com"
               />
             </label>
+
+            <div className="pt-2">
+              <p className="text-sm font-bold mb-1" style={{ color: "#10665A" }}>
+                منصات التواصل الاجتماعي (تظهر كأيقونات في الفوتر)
+              </p>
+              <p className="text-[11px] mb-2" style={{ color: "#8A8570" }}>
+                اترك الخانة فارغة لإخفاء أيقونة المنصة. اضغط «حفظ» بعد التعديل.
+              </p>
+              <div className="grid gap-2 sm:grid-cols-2">
+                {SOCIAL_PLATFORMS.map((p) => (
+                  <label key={p.key} className="block">
+                    <span className="text-xs font-bold mb-1 block" style={{ color: "#8A8570" }}>
+                      {p.label}
+                    </span>
+                    <input
+                      className="w-full text-sm rounded-xl px-3 py-2 border"
+                      dir="ltr"
+                      value={brand.socialLinks?.[p.key] || ""}
+                      onChange={(e) =>
+                        setBrand({ ...brand, socialLinks: { ...(brand.socialLinks || {}), [p.key]: e.target.value } })
+                      }
+                      placeholder={p.placeholder}
+                    />
+                  </label>
+                ))}
+              </div>
+            </div>
+
             <button
               type="button"
               className="px-4 py-2 rounded-xl text-xs font-bold text-white"
