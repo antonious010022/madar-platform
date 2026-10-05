@@ -17,7 +17,7 @@ export default function Footer() {
         setLinks(Array.isArray(l) ? l : []);
         setBrand({
           name: b?.name || "مَدَار",
-          description: b?.description || "منصة تعليمية تفاعلية.",
+          description: b?.description || "منصة تعليمية تفاعلية لتعلم الدراسات الاجتماعية.",
           contactEmail: b?.contactEmail || FALLBACK_EMAIL,
           socialLinks: b?.socialLinks && typeof b.socialLinks === "object" ? b.socialLinks : {},
         });

@@ -971,9 +971,9 @@ export default function StudentPlatform() {
       className="md-hero-logo"
     />
   </div>
-  <div className="md-badge">منصة تعليمية</div>
-  <h1>مَدَار — تعلّم بوضوح</h1>
-  <p>رحلة تعليمية منظمة: فهم المحتوى، ربط الأفكار، المراجعة، ثم التحقق من فهمك — بأسلوب تفاعلي ومرئي.</p>
+  <div className="md-badge">منصة مَدَار لتعلم الدرسات الاجتماعيه</div>
+  <h1>منصة مَدَار التعليمية</h1>
+  <p>للتعلم بأسلوب تفاعلي ومرئ</p>
 </header>
 
         {/* اختيار المرحلة والصف (أول مرة أو تغيير الصف) */}
@@ -982,7 +982,7 @@ export default function StudentPlatform() {
             <div className="md-panel rounded-2xl p-5 bg-white shadow-sm" style={{ border: "1px solid #DED4BD" }}>
               <h2 className="font-black text-base mb-1" style={{ color: "#10665A" }}>اختر صفك الدراسي</h2>
               <p className="text-xs mb-4" style={{ color: "#8A8570" }}>
-                سنعرض لك الدروس الخاصة بصفك فقط. يمكنك تغيير الصف لاحقًا من قائمة الحساب.
+                سنعرض لك الدروس الخاصة بصفك . يمكنك تغيير الصف لاحقًا من قائمة الحساب.
               </p>
               {availableStages.length > 1 && (
                 <div className="mb-4">
@@ -1237,7 +1237,7 @@ export default function StudentPlatform() {
                 </div>
 
                 {filteredLessons.length === 0 ? (
-                  <p className="md-empty">لا توجد دروس منشورة حالياً في هذه المادة.</p>
+                  <p className="md-empty">لا توجد دروس منشورة حالياً.</p>
                 ) : (
                   <div className="md-lessons-grid">
                     {sequentialLessons.map(({ lesson: l, kind }, lessonIdx) => {
@@ -1311,7 +1311,7 @@ export default function StudentPlatform() {
 
         <section className="md-features" aria-label="ماذا ستجد في مَدَار">
           <div className="md-features-head">
-            <h2>كل ما تحتاجه لتفهم الدرس</h2>
+            <h2>كل ما تحتاجه لتفهم الدرسات الاجتماعية</h2>
             <p>أدوات بسيطة تساعدك على الفهم والمراجعة في مكان واحد</p>
           </div>
           <div className="md-features-grid">
