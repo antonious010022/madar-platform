@@ -2,13 +2,13 @@
 // بالشكل { facebook: "https://...", instagram: "...", ... } — بدون أي تغيير في قاعدة البيانات.
 
 export const SOCIAL_PLATFORMS = [
-  { key: "facebook", label: "فيسبوك", placeholder: "https://facebook.com/اسم-الصفحة" },
-  { key: "instagram", label: "إنستجرام", placeholder: "https://instagram.com/اسم-الحساب" },
-  { key: "youtube", label: "يوتيوب", placeholder: "https://youtube.com/@اسم-القناة" },
-  { key: "tiktok", label: "تيك توك", placeholder: "https://tiktok.com/@اسم-الحساب" },
-  { key: "telegram", label: "تليجرام", placeholder: "https://t.me/اسم-القناة" },
-  { key: "whatsapp", label: "واتساب", placeholder: "رقم الهاتف بالصيغة الدولية، مثل 201001234567" },
-  { key: "x", label: "X (تويتر)", placeholder: "https://x.com/اسم-الحساب" },
+  { key: "facebook", color: "#1877F2", label: "فيسبوك", placeholder: "https://facebook.com/اسم-الصفحة" },
+  { key: "instagram", color: "#D6249F", label: "إنستجرام", placeholder: "https://instagram.com/اسم-الحساب" },
+  { key: "youtube", color: "#E02424", label: "يوتيوب", placeholder: "https://youtube.com/@اسم-القناة" },
+  { key: "tiktok", color: "#111111", label: "تيك توك", placeholder: "https://tiktok.com/@اسم-الحساب" },
+  { key: "telegram", color: "#229ED9", label: "تليجرام", placeholder: "https://t.me/اسم-القناة" },
+  { key: "whatsapp", color: "#25A244", label: "واتساب", placeholder: "رقم الهاتف بالصيغة الدولية، مثل 201001234567" },
+  { key: "x", color: "#111111", label: "X (تويتر)", placeholder: "https://x.com/اسم-الحساب" },
 ];
 
 /** يحوّل القيمة المكتوبة إلى رابط آمن (http/https فقط) أو null إذا كانت فارغة/غير صالحة. */

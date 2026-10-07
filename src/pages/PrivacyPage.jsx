@@ -3,38 +3,38 @@ import Footer from "../components/Footer";
 
 export default function PrivacyPage() {
   return (
-    <div className="min-h-screen flex flex-col dir-rtl text-right" style={{ background: "#FAF6ED" }}>
+    <div className="min-h-screen flex flex-col dir-rtl text-right" style={{ background: "#F7F5FB" }}>
       <div className="max-w-2xl mx-auto w-full px-5 py-10 flex-1">
-        <Link to="/student" className="text-xs font-bold mb-6 inline-block" style={{ color: "#10665A" }}>
+        <Link to="/student" className="text-xs font-bold mb-6 inline-block" style={{ color: "#4B2FD1" }}>
           ← العودة للمنصة
         </Link>
 
-        <h1 className="font-black text-2xl mb-2" style={{ color: "#10665A" }}>سياسة الخصوصية</h1>
-        <p className="text-sm mb-8 leading-7" style={{ color: "#8A8570" }}>
+        <h1 className="font-black text-2xl mb-2" style={{ color: "#4B2FD1" }}>سياسة الخصوصية</h1>
+        <p className="text-sm mb-8 leading-7" style={{ color: "#6E6B85" }}>
           نوضح هنا ببساطة كيف تتعامل مَدَار مع بياناتك في المرحلة الحالية من المنصة.
         </p>
 
-        <div className="space-y-7 text-sm leading-7" style={{ color: "#5C5A4A" }}>
+        <div className="space-y-7 text-sm leading-7" style={{ color: "#433F66" }}>
           <section>
-            <h2 className="font-bold text-base mb-2" style={{ color: "#22291F" }}>ما البيانات التي نتعامل معها؟</h2>
+            <h2 className="font-bold text-base mb-2" style={{ color: "#171333" }}>ما البيانات التي نتعامل معها؟</h2>
             <p className="mb-2">حاليًا تقتصر البيانات على ما يلزم لتشغيل الحساب وعرض المحتوى:</p>
             <ul className="list-disc list-inside space-y-1.5">
               <li>
-                <strong style={{ color: "#22291F" }}>بيانات الحساب:</strong> عند تسجيل الدخول عبر Google أو البريد الإلكتروني،
+                <strong style={{ color: "#171333" }}>بيانات الحساب:</strong> عند تسجيل الدخول عبر Google أو البريد الإلكتروني،
                 نستقبل المعلومات الأساسية التي يوفّرها نظام المصادقة (مثل البريد الإلكتروني وبعض بيانات الحساب الظاهرة).
               </li>
               <li>
-                <strong style={{ color: "#22291F" }}>تقدّم التعلّم على جهازك:</strong> قد يُحفظ في متصفحك موضع آخر مشهد وصلت إليه،
+                <strong style={{ color: "#171333" }}>تقدّم التعلّم على جهازك:</strong> قد يُحفظ في متصفحك موضع آخر مشهد وصلت إليه،
                 حتى يسهل عليك استكمال الدرس لاحقًا من نفس الجهاز.
               </li>
               <li>
-                <strong style={{ color: "#22291F" }}>محتوى الدروس:</strong> الدروس المعروضة تُدار وتُنشر من مَدَار لعرضها للطلاب.
+                <strong style={{ color: "#171333" }}>محتوى الدروس:</strong> الدروس المعروضة تُدار وتُنشر من مَدَار لعرضها للطلاب.
               </li>
             </ul>
           </section>
 
           <section>
-            <h2 className="font-bold text-base mb-2" style={{ color: "#22291F" }}>أين تُحفظ البيانات؟</h2>
+            <h2 className="font-bold text-base mb-2" style={{ color: "#171333" }}>أين تُحفظ البيانات؟</h2>
             <p>
               المصادقة والبيانات السحابية تعتمد على البنية الحالية للمنصة عبر <strong>Supabase</strong>.
               أما تقدّم التعلّم المحلي فيبقى على جهازك داخل المتصفح، ولا يُرفع تلقائيًا كسجل منفصل عن ذلك.
@@ -42,7 +42,7 @@ export default function PrivacyPage() {
           </section>
 
           <section>
-            <h2 className="font-bold text-base mb-2" style={{ color: "#22291F" }}>لماذا نستخدم هذه البيانات؟</h2>
+            <h2 className="font-bold text-base mb-2" style={{ color: "#171333" }}>لماذا نستخدم هذه البيانات؟</h2>
             <ul className="list-disc list-inside space-y-1.5">
               <li>لتشغيل حسابك وإبقائك مسجّل الدخول عند الحاجة.</li>
               <li>لعرض الدروس والمحتوى التعليمي المناسب.</li>
@@ -51,7 +51,7 @@ export default function PrivacyPage() {
           </section>
 
           <section>
-            <h2 className="font-bold text-base mb-2" style={{ color: "#22291F" }}>الإعلانات وبيع البيانات</h2>
+            <h2 className="font-bold text-base mb-2" style={{ color: "#171333" }}>الإعلانات وبيع البيانات</h2>
             <p className="mb-2">
               مَدَار مصمّمة كتجربة تعليمية نظيفة. في المرحلة الحالية:
             </p>
@@ -62,7 +62,7 @@ export default function PrivacyPage() {
           </section>
 
           <section>
-            <h2 className="font-bold text-base mb-2" style={{ color: "#22291F" }}>حماية الحساب</h2>
+            <h2 className="font-bold text-base mb-2" style={{ color: "#171333" }}>حماية الحساب</h2>
             <p>
               نعتمد على نظام مصادقة موثوق (Supabase Auth) مع تسجيل الدخول عبر Google أو البريد،
               ونتخذ الإجراءات المناسبة لحماية الحسابات ضمن إمكانيات المنصة الحالية.
@@ -71,7 +71,7 @@ export default function PrivacyPage() {
           </section>
 
           <section>
-            <h2 className="font-bold text-base mb-2" style={{ color: "#22291F" }}>ما الذي يمكنك فعله؟</h2>
+            <h2 className="font-bold text-base mb-2" style={{ color: "#171333" }}>ما الذي يمكنك فعله؟</h2>
             <ul className="list-disc list-inside space-y-1.5">
               <li>تسجيل الخروج في أي وقت من المنصة.</li>
               <li>مسح بيانات التقدّم المحلي من إعدادات المتصفح (بيانات الموقع) إن رغبت.</li>
@@ -80,14 +80,14 @@ export default function PrivacyPage() {
           </section>
 
           <section>
-            <h2 className="font-bold text-base mb-2" style={{ color: "#22291F" }}>تحديث هذه الصفحة</h2>
+            <h2 className="font-bold text-base mb-2" style={{ color: "#171333" }}>تحديث هذه الصفحة</h2>
             <p>
               مع تطوّر مَدَار قد نحدّث هذه السياسة لتعكس أي تغيير حقيقي في طريقة عمل المنصة.
               سنحرص على الإبقاء على الصياغة واضحة وصادقة مع الواقع الفعلي.
             </p>
           </section>
 
-          <p className="text-xs pt-2" style={{ color: "#8A8570" }}>
+          <p className="text-xs pt-2" style={{ color: "#6E6B85" }}>
             آخر تحديث: 2026 · مَدَار — منصة تعليمية للمرحلة الإعدادية
           </p>
         </div>

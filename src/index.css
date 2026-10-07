@@ -5,12 +5,12 @@
 
 /* ---------------------------------------------------------------------------
    Design tokens & styles — exact preservation of the approved look:
-   bg paper: #FAF6ED   surface: #FFFFFF   ink: #22291F
-   teal (studio/primary): #10665A     ochre (hotwords/highlight): #B9791F
-   plum (draft/mystery): #4C3F63     line: #DED4BD
+   bg paper: #F7F5FB   surface: #FFFFFF   ink: #171333
+   teal (studio/primary): #4B2FD1     ochre (hotwords/highlight): #C9972E
+   plum (draft/mystery): #7D2E68     line: #E3E0EE
 --------------------------------------------------------------------------- */
 body {
-  background: #FAF6ED;
+  background: #F7F5FB;
 }
 .ts-root, .ts-root * { font-family: 'Tajawal', sans-serif; box-sizing: border-box; }
 .ts-display { font-family: 'Markazi Text', serif; }
@@ -18,28 +18,31 @@ body {
 /* Default content font: rich-text areas (editor surface + student Viewer)
    default to Amiri unless a run of text has an explicit font-family mark
    applied by the user — that inline style always wins over this rule. */
-.ts-richtext, .ts-richtext *, .ProseMirror, .ProseMirror * { font-family: 'Amiri', serif; }
+.ts-richtext, .ProseMirror { font-family: 'Amiri', serif; }
+/* Descendants INHERIT (not re-force Amiri): otherwise a <mark>/<a>/<strong> nested inside
+   a font-family span would override the user's chosen font. Inline style on the span still wins. */
+.ts-richtext *, .ProseMirror * { font-family: inherit; }
 .ts-fade { animation: tsFade .3s ease; }
 @keyframes tsFade { from { opacity: 0; transform: translateY(4px);} to { opacity: 1; transform: translateY(0);} }
 @media (prefers-reduced-motion: reduce) { .ts-fade { animation: none; } }
-.ts-hotword, .ts-hotword-target { color: #B9791F; text-decoration: underline; text-decoration-style: dotted; text-underline-offset: 4px; cursor: pointer; font-weight: 700; position: relative; display: inline-block; }
-.ts-hotword.active, .ts-hotword-target.active { background: #F6E9D3; border-radius: 4px; padding: 0 3px; }
-.ts-richtext h1 { font-size: 1.8em; font-weight: 800; margin: 14px 0 8px; color: #22291F; }
-.ts-richtext h2 { font-size: 1.5em; font-weight: 800; margin: 12px 0 8px; color: #22291F; }
-.ts-richtext h3 { font-size: 1.25em; font-weight: 800; margin: 10px 0 6px; color: #22291F; }
+.ts-hotword, .ts-hotword-target { color: #C9972E; text-decoration: underline; text-decoration-style: dotted; text-underline-offset: 4px; cursor: pointer; font-weight: 700; position: relative; display: inline-block; }
+.ts-hotword.active, .ts-hotword-target.active { background: #F7E6C4; border-radius: 4px; padding: 0 3px; }
+.ts-richtext h1 { font-size: 1.8em; font-weight: 800; margin: 14px 0 8px; color: #171333; }
+.ts-richtext h2 { font-size: 1.5em; font-weight: 800; margin: 12px 0 8px; color: #171333; }
+.ts-richtext h3 { font-size: 1.25em; font-weight: 800; margin: 10px 0 6px; color: #171333; }
 .ts-scrollbar::-webkit-scrollbar { width: 6px; height: 6px; }
-.ts-scrollbar::-webkit-scrollbar-thumb { background: #DED4BD; border-radius: 4px; }
-.ts-input { border: 1px solid #DED4BD; border-radius: 12px; padding: 8px 12px; width: 100%; background: #fff; color: #22291F; outline: none; }
-.ts-input:focus { border-color: #10665A; }
+.ts-scrollbar::-webkit-scrollbar-thumb { background: #E3E0EE; border-radius: 4px; }
+.ts-input { border: 1px solid #E3E0EE; border-radius: 12px; padding: 8px 12px; width: 100%; background: #fff; color: #171333; outline: none; }
+.ts-input:focus { border-color: #4B2FD1; }
 .ts-selectable { user-select: text; cursor: text; }
-.ts-selectable::selection { background: #F6E9D3; }
+.ts-selectable::selection { background: #F7E6C4; }
 .ts-richtext img { max-width: 100%; border-radius: 12px; margin: 12px 0; }
 .ts-richtext ul { list-style-type: disc; margin-right: 20px; }
 .ts-richtext ol { list-style-type: decimal; margin-right: 20px; }
-.ts-richtext blockquote { border-right: 4px solid #10665A; padding-right: 12px; margin: 10px 0; color: #5C5A4A; }
+.ts-richtext blockquote { border-right: 4px solid #4B2FD1; padding-right: 12px; margin: 10px 0; color: #433F66; }
 
 /* Links produced by the editor's Link extension — must look obviously clickable */
-.ts-richtext a, .ProseMirror a { color: #10665A; text-decoration: underline; font-weight: 600; }
+.ts-richtext a, .ProseMirror a { color: #4B2FD1; text-decoration: underline; font-weight: 600; }
 
 /* Tables — shared rules for both the editor surface and the student Viewer.
    The wrapper scrolls horizontally on narrow screens instead of overflowing
@@ -55,19 +58,19 @@ body {
    overflowing the page or squeezing unreadably small on mobile. */
 .ts-richtext table { display: block; max-width: 100%; overflow-x: auto; -webkit-overflow-scrolling: touch; }
 .ts-richtext td, .ts-richtext th, .ProseMirror td, .ProseMirror th {
-  border: 1px solid #DED4BD;
+  border: 1px solid #E3E0EE;
   padding: 8px 12px;
   min-width: 80px;
   text-align: right;
 }
-.ts-richtext th, .ProseMirror th { background: #10665A; color: #FAF6ED; font-weight: 700; }
-.ts-richtext tr:nth-child(even) td, .ProseMirror tr:nth-child(even) td { background: #F3F0E7; }
+.ts-richtext th, .ProseMirror th { background: #4B2FD1; color: #F7F5FB; font-weight: 700; }
+.ts-richtext tr:nth-child(even) td, .ProseMirror tr:nth-child(even) td { background: #F1EEF9; }
 
 /* Editor surface itself (Tiptap ProseMirror root) */
 .ProseMirror { outline: none; }
 .ProseMirror p.is-editor-empty:first-child::before {
   content: attr(data-placeholder);
-  color: #B4AE99;
+  color: #A39FBE;
   float: right;
   pointer-events: none;
   height: 0;
@@ -81,27 +84,27 @@ body {
 .md-lesson-page {
   --md-surface-2: #F7FAF9;
   --md-surface-3: #EEF5F3;
-  --md-teal: #117A6B;
-  --md-teal-deep: #0B5147;
-  --md-teal-dark: #063B34;
-  --md-teal-soft: #E5F3F0;
-  --md-gold: #B77A20;
-  --md-gold-deep: #8F5D14;
-  --md-gold-light: #D5A04A;
-  --md-gold-soft: #FBF3E4;
-  --md-text: #14231F;
-  --md-text-soft: #30453F;
-  --md-muted: #687B75;
-  --md-border: #DDE9E5;
-  --md-border-strong: #C5D8D2;
-  --md-shadow-sm: 0 2px 8px rgba(6, 59, 52, 0.06);
-  --md-shadow-md: 0 10px 28px rgba(6, 59, 52, 0.10);
-  --md-shadow-lg: 0 20px 50px rgba(6, 59, 52, 0.14);
+  --md-teal: #4B2FD1;
+  --md-teal-deep: #2E1C86;
+  --md-teal-dark: #1E1259;
+  --md-teal-soft: #EFEAFD;
+  --md-gold: #C9972E;
+  --md-gold-deep: #946518;
+  --md-gold-light: #E3B659;
+  --md-gold-soft: #FBF1DE;
+  --md-text: #171333;
+  --md-text-soft: #433F66;
+  --md-muted: #6E6B85;
+  --md-border: #E3E0EE;
+  --md-border-strong: #C9C2E6;
+  --md-shadow-sm: 0 2px 8px rgba(30, 18, 89, 0.06);
+  --md-shadow-md: 0 10px 28px rgba(30, 18, 89, 0.10);
+  --md-shadow-lg: 0 20px 50px rgba(30, 18, 89, 0.14);
   --md-font: "Segoe UI", "Cairo", "Noto Sans Arabic", system-ui, sans-serif;
   background:
-    radial-gradient(circle at 50% -8%, rgba(17, 122, 107, 0.045), transparent 40%),
-    radial-gradient(circle at 92% 18%, rgba(17, 122, 107, 0.03), transparent 42%),
-    radial-gradient(circle at 8% 78%, rgba(183, 122, 32, 0.025), transparent 38%),
+    radial-gradient(circle at 50% -8%, rgba(75, 47, 209, 0.045), transparent 40%),
+    radial-gradient(circle at 92% 18%, rgba(75, 47, 209, 0.03), transparent 42%),
+    radial-gradient(circle at 8% 78%, rgba(201, 151, 46, 0.025), transparent 38%),
     #FFFFFF !important;
   color: var(--md-text);
   font-family: var(--md-font);
@@ -155,10 +158,10 @@ body {
   justify-content: center;
   padding: 9px 22px !important;
   border-radius: 999px !important;
-  box-shadow: 0 6px 16px rgba(6, 59, 52, 0.20);
+  box-shadow: 0 6px 16px rgba(30, 18, 89, 0.20);
   transition: transform 0.2s ease, box-shadow 0.2s ease, filter 0.2s ease;
 }
-.md-lesson-page .md-lv-login:hover { transform: translateY(-1px); filter: brightness(1.1); box-shadow: 0 10px 22px rgba(6, 59, 52, 0.26); }
+.md-lesson-page .md-lv-login:hover { transform: translateY(-1px); filter: brightness(1.1); box-shadow: 0 10px 22px rgba(30, 18, 89, 0.26); }
 .md-lesson-page .md-lv-account {
   min-height: 44px;
   background: rgba(255, 255, 255, 0.9);
@@ -178,7 +181,7 @@ body {
 .md-lesson-page .md-lv-progress {
   background: var(--md-teal-soft) !important;
   color: var(--md-teal-deep) !important;
-  border-bottom: 1px solid rgba(17, 122, 107, 0.16);
+  border-bottom: 1px solid rgba(75, 47, 209, 0.16);
   font-size: 0.85rem;
   font-weight: 800;
 }
@@ -193,10 +196,10 @@ body {
   padding: clamp(30px, 5vw, 52px) 20px clamp(40px, 6vw, 64px);
   text-align: center;
   background:
-    radial-gradient(circle at 82% 8%, rgba(213, 160, 74, 0.20), transparent 38%),
+    radial-gradient(circle at 82% 8%, rgba(227, 182, 89, 0.20), transparent 38%),
     linear-gradient(160deg, var(--md-teal-dark) 0%, var(--md-teal-deep) 55%, var(--md-teal) 130%);
   border-radius: 0 0 clamp(28px, 5vw, 56px) clamp(28px, 5vw, 56px);
-  box-shadow: 0 24px 60px rgba(6, 59, 52, 0.22);
+  box-shadow: 0 24px 60px rgba(30, 18, 89, 0.22);
 }
 .md-lesson-page .md-lv-hero > * { position: relative; z-index: 1; animation: md-lv-rise 0.6s cubic-bezier(0.22, 1, 0.36, 1) both; }
 .md-lesson-page .md-lv-hero > *:nth-child(2) { animation-delay: 0.08s; }
@@ -220,7 +223,7 @@ body {
   padding: 7px 18px !important;
   background: rgba(255, 255, 255, 0.08) !important;
   color: var(--md-gold-light) !important;
-  border: 1px solid rgba(213, 160, 74, 0.45);
+  border: 1px solid rgba(227, 182, 89, 0.45);
   font-size: 0.85rem !important;
   font-weight: 700 !important;
   white-space: normal !important;
@@ -233,7 +236,7 @@ body {
   height: 6px;
   border-radius: 50%;
   background: var(--md-gold-light);
-  box-shadow: 0 0 0 3px rgba(213, 160, 74, 0.22);
+  box-shadow: 0 0 0 3px rgba(227, 182, 89, 0.22);
 }
 .md-lesson-page .md-lv-h1 {
   color: #FFFFFF !important;
@@ -255,7 +258,7 @@ body {
 .md-lesson-page .md-lv-video {
   border: 1px solid var(--md-border) !important;
   border-radius: 24px !important;
-  box-shadow: 0 24px 60px rgba(6, 59, 52, 0.16), 0 2px 8px rgba(6, 59, 52, 0.06) !important;
+  box-shadow: 0 24px 60px rgba(30, 18, 89, 0.16), 0 2px 8px rgba(30, 18, 89, 0.06) !important;
 }
 .md-lesson-page .md-lv-video-note {
   color: var(--md-text-soft) !important;
@@ -272,7 +275,7 @@ body {
   border: 1px solid var(--md-border);
   border-radius: 24px;
   padding: clamp(18px, 3vw, 26px);
-  box-shadow: 0 2px 10px rgba(6, 59, 52, 0.05);
+  box-shadow: 0 2px 10px rgba(30, 18, 89, 0.05);
 }
 .md-lesson-page .md-lv-journey::before,
 .md-lesson-page .md-lv-card--accent::before,
@@ -327,7 +330,7 @@ body {
   background: var(--md-teal-deep) !important;
   border-color: var(--md-teal-deep) !important;
   color: #FFFFFF !important;
-  box-shadow: 0 10px 24px rgba(6, 59, 52, 0.24) !important;
+  box-shadow: 0 10px 24px rgba(30, 18, 89, 0.24) !important;
 }
 .md-lesson-page .md-lv-step[data-state="done"] {
   background: var(--md-teal-soft) !important;
@@ -358,11 +361,11 @@ body {
   background: #FFFFFF !important;
   border: 1px solid var(--md-border) !important;
   border-radius: 24px !important;
-  box-shadow: 0 2px 10px rgba(6, 59, 52, 0.05) !important;
+  box-shadow: 0 2px 10px rgba(30, 18, 89, 0.05) !important;
   transition: border-color 0.28s ease, box-shadow 0.28s ease;
 }
-.md-lesson-page .md-lv-card:hover { border-color: rgba(17, 122, 107, 0.3) !important; box-shadow: 0 14px 34px rgba(6, 59, 52, 0.10) !important; }
-.md-lesson-page .md-lv-card--accent { box-shadow: 0 24px 60px rgba(6, 59, 52, 0.12), 0 2px 8px rgba(6, 59, 52, 0.05) !important; }
+.md-lesson-page .md-lv-card:hover { border-color: rgba(75, 47, 209, 0.3) !important; box-shadow: 0 14px 34px rgba(30, 18, 89, 0.10) !important; }
+.md-lesson-page .md-lv-card--accent { box-shadow: 0 24px 60px rgba(30, 18, 89, 0.12), 0 2px 8px rgba(30, 18, 89, 0.05) !important; }
 .md-lesson-page .md-lv-card-title { color: var(--md-teal-deep) !important; font-weight: 900 !important; }
 .md-lesson-page .md-lv-scene-title {
   color: var(--md-teal-dark) !important;
@@ -380,7 +383,7 @@ body {
 .md-lesson-page .md-lv-toggle:hover { background: var(--md-teal) !important; color: #FFFFFF !important; }
 .md-lesson-page .md-lv-recall {
   background: var(--md-teal-soft) !important;
-  border: 1px solid rgba(17, 122, 107, 0.28) !important;
+  border: 1px solid rgba(75, 47, 209, 0.28) !important;
   border-radius: 20px !important;
 }
 .md-lesson-page .md-lv-detail {
@@ -396,7 +399,7 @@ body {
   border-radius: 18px !important;
   transition: border-color 0.2s ease, transform 0.2s ease;
 }
-.md-lesson-page .md-lv-tl-item:hover { border-color: rgba(17, 122, 107, 0.35) !important; transform: translateY(-2px); }
+.md-lesson-page .md-lv-tl-item:hover { border-color: rgba(75, 47, 209, 0.35) !important; transform: translateY(-2px); }
 .md-lesson-page .md-lv-tl-date {
   background: var(--md-teal-deep) !important;
   color: #FFFFFF !important;
@@ -417,7 +420,7 @@ body {
   border-radius: 999px !important;
   transition: transform 0.2s ease, box-shadow 0.2s ease, opacity 0.2s ease;
 }
-.md-lesson-page .md-lv-btn-sm:hover:not(:disabled) { transform: translateY(-1px); box-shadow: 0 8px 18px rgba(6, 59, 52, 0.22); }
+.md-lesson-page .md-lv-btn-sm:hover:not(:disabled) { transform: translateY(-1px); box-shadow: 0 8px 18px rgba(30, 18, 89, 0.22); }
 
 /* ---------- Completion / lock notices ---------- */
 .md-lesson-page .md-lv-notice {
@@ -426,7 +429,7 @@ body {
   background: #FFFFFF !important;
   border: 1px solid transparent !important;
   border-radius: 28px !important;
-  box-shadow: 0 24px 60px rgba(6, 59, 52, 0.16), 0 2px 8px rgba(6, 59, 52, 0.06) !important;
+  box-shadow: 0 24px 60px rgba(30, 18, 89, 0.16), 0 2px 8px rgba(30, 18, 89, 0.06) !important;
   animation: md-lv-rise 0.5s cubic-bezier(0.22, 1, 0.36, 1) both;
 }
 .md-lesson-page .md-lv-notice p.font-black { color: var(--md-teal-deep) !important; }
@@ -452,8 +455,8 @@ body {
   font-weight: 800 !important;
   transition: transform 0.22s ease, box-shadow 0.22s ease, background 0.2s ease, border-color 0.2s ease;
 }
-.md-lesson-page .md-lv-btn-primary { box-shadow: 0 10px 24px rgba(6, 59, 52, 0.26); }
-.md-lesson-page .md-lv-btn-primary:hover:not(:disabled) { transform: translateY(-2px); box-shadow: 0 16px 32px rgba(6, 59, 52, 0.32); }
+.md-lesson-page .md-lv-btn-primary { box-shadow: 0 10px 24px rgba(30, 18, 89, 0.26); }
+.md-lesson-page .md-lv-btn-primary:hover:not(:disabled) { transform: translateY(-2px); box-shadow: 0 16px 32px rgba(30, 18, 89, 0.32); }
 .md-lesson-page .md-lv-btn-ghost {
   background: #FFFFFF !important;
   color: var(--md-teal-deep) !important;
@@ -467,7 +470,7 @@ body {
 
 .md-lesson-page button:focus-visible,
 .md-lesson-page a:focus-visible {
-  outline: 3px solid rgba(213, 160, 74, 0.6);
+  outline: 3px solid rgba(227, 182, 89, 0.6);
   outline-offset: 3px;
 }
 
@@ -486,6 +489,60 @@ body {
   .md-lesson-page .md-lv-tl-item { flex-direction: column; }
   .md-lesson-page .md-lv-tl-date { align-self: flex-start; }
 }
+
+/* ===========================================================================
+   Lesson page — livelier colors (style only). Brand stays petrol + gold;
+   each content block gets its own accent so the page is not all green.
+=========================================================================== */
+.md-lesson-page {
+  background:
+    radial-gradient(circle at 6% 6%, rgba(42, 95, 214, 0.09), transparent 34%),
+    radial-gradient(circle at 94% 14%, rgba(154, 63, 196, 0.08), transparent 36%),
+    radial-gradient(circle at 92% 70%, rgba(226, 105, 74, 0.06), transparent 34%),
+    radial-gradient(circle at 6% 80%, rgba(227, 182, 89, 0.09), transparent 36%),
+    #FFFFFF !important;
+}
+.md-lesson-page .md-lv-hero {
+  background:
+    radial-gradient(circle at 86% 6%, rgba(227, 182, 89, 0.34), transparent 36%),
+    radial-gradient(circle at 10% 100%, rgba(154, 63, 196, 0.38), transparent 44%),
+    radial-gradient(circle at 58% 118%, rgba(42, 95, 214, 0.40), transparent 46%),
+    linear-gradient(160deg, #1E1259 0%, #2E1C86 52%, #4631B0 125%);
+}
+.md-lesson-page .md-lv-journey::before,
+.md-lesson-page .md-lv-card--accent::before,
+.md-lesson-page .md-lv-notice::before {
+  background: linear-gradient(90deg, #4B2FD1 0%, #2A5FD6 25%, #9A3FC4 50%, #E2694A 75%, #E3B659 100%);
+}
+.md-lesson-page .md-lv-progress { background: #E8EEFD !important; color: #1A3E94 !important; border-bottom-color: rgba(42, 95, 214, 0.2); }
+.md-lesson-page .md-lv-back { background: #E8EEFD; color: #1A3E94 !important; }
+.md-lesson-page .md-lv-back:hover { background: #2A5FD6; color: #FFFFFF !important; }
+
+/* content blocks: one accent each */
+.md-lesson-page .md-lv-card[data-kind] { border-inline-start: 5px solid var(--lv-acc) !important; }
+.md-lesson-page .md-lv-card[data-kind] .md-lv-card-title,
+.md-lesson-page .md-lv-card[data-kind] .md-lv-scene-title { color: var(--lv-acc-deep) !important; }
+.md-lesson-page .md-lv-card[data-kind]:hover { border-color: var(--lv-acc) !important; box-shadow: 0 14px 34px var(--lv-acc-glow) !important; }
+.md-lesson-page .md-lv-card[data-kind="text"]      { --lv-acc: #4B2FD1; --lv-acc-deep: #2E1C86; --lv-acc-glow: rgba(75, 47, 209, 0.16); }
+.md-lesson-page .md-lv-card[data-kind="mindmap"]   { --lv-acc: #9A3FC4; --lv-acc-deep: #6B2B8A; --lv-acc-glow: rgba(154, 63, 196, 0.18); background: linear-gradient(135deg, #FFFFFF 70%, #F6E9FB) !important; }
+.md-lesson-page .md-lv-card[data-kind="timeline"]  { --lv-acc: #C9972E; --lv-acc-deep: #946518; --lv-acc-glow: rgba(201, 151, 46, 0.2); background: linear-gradient(135deg, #FFFFFF 70%, #FBF1DE) !important; }
+.md-lesson-page .md-lv-card[data-kind="questions"] { --lv-acc: #E2694A; --lv-acc-deep: #A3402A; --lv-acc-glow: rgba(226, 105, 74, 0.18); background: linear-gradient(135deg, #FFFFFF 70%, #FDECE6) !important; }
+.md-lesson-page .md-lv-card[data-kind="review"]    { --lv-acc: #2A5FD6; --lv-acc-deep: #1A3E94; --lv-acc-glow: rgba(42, 95, 214, 0.18); background: linear-gradient(135deg, #FFFFFF 70%, #E8EEFD) !important; }
+.md-lesson-page .md-lv-card[data-kind="mindmap"] .md-lv-toggle   { background: #F6E9FB !important; color: #6B2B8A !important; }
+.md-lesson-page .md-lv-card[data-kind="mindmap"] .md-lv-toggle:hover { background: #9A3FC4 !important; color: #FFFFFF !important; }
+.md-lesson-page .md-lv-card[data-kind="timeline"] .md-lv-toggle  { background: #FBF1DE !important; color: #946518 !important; }
+.md-lesson-page .md-lv-card[data-kind="timeline"] .md-lv-toggle:hover { background: #C9972E !important; color: #FFFFFF !important; }
+.md-lesson-page .md-lv-card[data-kind="timeline"] .md-lv-tl-date { background: #946518 !important; }
+.md-lesson-page .md-lv-card[data-kind="questions"] .md-lv-btn-sm { background: #E2694A !important; }
+.md-lesson-page .md-lv-card[data-kind="mindmap"] .md-lv-mm-node:hover { border-color: #9A3FC4 !important; }
+
+/* scene steps: finished = green, current = deep blue, available = soft blue */
+.md-lesson-page .md-lv-step[data-state="done"] { background: #E3F6EE !important; border-color: #1FA971 !important; color: #0E6B47 !important; }
+.md-lesson-page .md-lv-step[data-state="current"] { background: linear-gradient(135deg, #1A3E94, #2A5FD6) !important; border-color: #1A3E94 !important; box-shadow: 0 10px 24px rgba(42, 95, 214, 0.32) !important; }
+.md-lesson-page .md-lv-step[data-state="available"]:hover:not(:disabled) { border-color: #2A5FD6 !important; background: #E8EEFD !important; }
+.md-lesson-page .md-lv-fill { background-image: linear-gradient(90deg, #4B2FD1, #2A5FD6, #9A3FC4); }
+.md-lesson-page .md-lv-video { box-shadow: 0 24px 60px rgba(42, 95, 214, 0.22), 0 2px 8px rgba(30, 18, 89, 0.06) !important; border-color: #BBCDF5 !important; }
+.md-lesson-page .md-lv-btn-primary { background: linear-gradient(135deg, #2E1C86, #4B2FD1) !important; }
 
 @media (prefers-reduced-motion: reduce) {
   .md-lesson-page .ts-fade,

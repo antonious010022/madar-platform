@@ -94,68 +94,68 @@ export default function AuthModal({ open, onClose, onSuccess, title, subtitle })
   };
 
   return (
-    <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 overflow-y-auto" style={{ background: "rgba(14, 23, 18, 0.45)" }}
+    <div className="duo-overlay fixed inset-0 z-[100] flex items-center justify-center p-4 overflow-y-auto" style={{ background: "rgba(40, 40, 40, 0.5)" }}
       role="dialog" aria-modal="true" aria-labelledby="auth-modal-title"
       onClick={(e) => { if (e.target === e.currentTarget) onClose?.(); }}>
-      <div className="w-full max-w-sm rounded-3xl p-6 sm:p-8 bg-white shadow-lg dir-rtl text-right my-auto" style={{ border: "1px solid #DED4BD", maxHeight: "90vh", overflowY: "auto" }}
+      <div className="duo-modal w-full max-w-sm rounded-3xl p-6 sm:p-8 bg-white dir-rtl text-right my-auto" style={{ border: "2px solid var(--duo-line)", maxHeight: "90vh", overflowY: "auto" }}
         onClick={(e) => e.stopPropagation()}>
         <div className="flex justify-between items-start mb-4">
           <div>
-            <h2 id="auth-modal-title" className="font-black text-lg" style={{ color: "#10665A" }}>{title || "سجّل حسابك"}</h2>
-            <p className="text-xs mt-1" style={{ color: "#8A8570" }}>{subtitle || "سجّل حسابك واستمتع بكل مميزات مَدَار مجانًا بالكامل."}</p>
+            <h2 id="auth-modal-title" className="font-black text-lg" style={{ color: "var(--duo-green-ink)" }}>{title || "سجّل حسابك"}</h2>
+            <p className="text-xs mt-1" style={{ color: "var(--duo-muted)" }}>{subtitle || "سجّل حسابك واستمتع بكل مميزات مَدَار مجانًا بالكامل."}</p>
           </div>
-          <button type="button" onClick={onClose} className="text-lg leading-none px-2 py-1 rounded-lg" style={{ color: "#8A8570" }} aria-label="إغلاق">×</button>
+          <button type="button" onClick={onClose} className="duo-close text-lg leading-none px-2 py-1 rounded-lg" style={{ color: "var(--duo-muted)" }} aria-label="إغلاق">×</button>
         </div>
         {step === "choice" && (
           <div className="flex flex-col gap-3">
             <button ref={firstFocusRef} type="button" onClick={handleGoogle} disabled={loading}
-              className="w-full flex items-center justify-center gap-2 py-3 rounded-2xl text-sm font-bold border disabled:opacity-60"
-              style={{ background: "#FFFFFF", borderColor: "#DED4BD", color: "#22291F" }}>
+              className="duo-btn duo-btn-ghost w-full flex items-center justify-center gap-2 py-3 rounded-2xl text-sm font-bold border disabled:opacity-60"
+              style={{ color: "var(--duo-ink)" }}>
               <span className="inline-flex w-5 h-5 items-center justify-center rounded-full text-xs font-black" style={{ background: "#4285F4", color: "#fff" }}>G</span>
               متابعة باستخدام Google
             </button>
             <div className="flex items-center gap-3 my-1">
-              <div className="flex-1 h-px" style={{ background: "#DED4BD" }} />
-              <span className="text-xs" style={{ color: "#8A8570" }}>أو</span>
-              <div className="flex-1 h-px" style={{ background: "#DED4BD" }} />
+              <div className="flex-1" style={{ height: 2, borderRadius: 2, background: "var(--duo-line)" }} />
+              <span className="text-xs" style={{ color: "var(--duo-muted)" }}>أو</span>
+              <div className="flex-1" style={{ height: 2, borderRadius: 2, background: "var(--duo-line)" }} />
             </div>
             <button type="button" onClick={() => setStep("email")} disabled={loading}
-              className="w-full py-3 rounded-2xl text-sm font-bold text-white" style={{ background: "#10665A" }}>البريد الإلكتروني</button>
+              className="duo-btn duo-btn-primary w-full py-3 rounded-2xl text-sm font-bold text-white">البريد الإلكتروني</button>
           </div>
         )}
         {step === "email" && (
           <form onSubmit={handleEmailContinue} className="flex flex-col gap-3">
             <label className="block">
-              <span className="block text-xs mb-1" style={{ color: "#5C5A4A" }}>البريد الإلكتروني</span>
+              <span className="block text-xs mb-1" style={{ color: "var(--duo-ink-soft)" }}>البريد الإلكتروني</span>
               <input ref={firstFocusRef} type="email" required autoComplete="email" className="ts-input text-sm w-full"
                 value={email} onChange={(e) => setEmail(e.target.value)} placeholder="example@email.com" disabled={loading} />
             </label>
-            <button type="submit" className="w-full py-3 rounded-2xl text-sm font-bold text-white" style={{ background: "#10665A" }}>متابعة</button>
-            <button type="button" onClick={() => setStep("choice")} className="text-xs font-bold" style={{ color: "#8A8570" }}>← رجوع</button>
+            <button type="submit" className="duo-btn duo-btn-primary w-full py-3 rounded-2xl text-sm font-bold text-white">متابعة</button>
+            <button type="button" onClick={() => setStep("choice")} className="duo-linkbtn text-xs font-bold" style={{ color: "var(--duo-muted)" }}>← رجوع</button>
           </form>
         )}
         {step === "password" && (
           <form onSubmit={handlePasswordSubmit} className="flex flex-col gap-3">
-            <p className="text-xs" style={{ color: "#5C5A4A" }}>{email}</p>
+            <p className="text-xs" style={{ color: "var(--duo-ink-soft)" }}>{email}</p>
             <label className="block">
-              <span className="block text-xs mb-1" style={{ color: "#5C5A4A" }}>{mode === "signup" ? "أنشئ كلمة مرور" : "كلمة المرور"}</span>
+              <span className="block text-xs mb-1" style={{ color: "var(--duo-ink-soft)" }}>{mode === "signup" ? "أنشئ كلمة مرور" : "كلمة المرور"}</span>
               <input ref={firstFocusRef} type="password" required minLength={6}
                 autoComplete={mode === "signup" ? "new-password" : "current-password"}
                 className="ts-input text-sm w-full" value={password} onChange={(e) => setPassword(e.target.value)} disabled={loading} />
             </label>
-            {error && <p className="text-xs" style={{ color: "#C53030" }}>{error}</p>}
-            {success && <p className="text-xs" style={{ color: "#10665A" }}>{success}</p>}
-            <button type="submit" disabled={loading} className="w-full py-3 rounded-2xl text-sm font-bold text-white disabled:opacity-60" style={{ background: "#10665A" }}>
+            {error && <p className="text-xs" style={{ color: "var(--duo-red-d)", fontWeight: 700 }}>{error}</p>}
+            {success && <p className="text-xs" style={{ color: "var(--duo-green-ink)", fontWeight: 700 }}>{success}</p>}
+            <button type="submit" disabled={loading} className="duo-btn duo-btn-primary w-full py-3 rounded-2xl text-sm font-bold text-white disabled:opacity-60">
               {loading ? "جاري..." : mode === "signup" ? "إنشاء حساب" : "متابعة"}
             </button>
             <button type="button" onClick={() => { setMode(mode === "signin" ? "signup" : "signin"); setError(""); setSuccess(""); }}
-              className="text-xs font-bold" style={{ color: "#10665A" }}>
+              className="duo-linkbtn text-xs font-bold" style={{ color: "var(--duo-blue-ink)" }}>
               {mode === "signin" ? "إنشاء حساب جديد بهذا البريد" : "لدي حساب بالفعل — تسجيل الدخول"}
             </button>
-            <button type="button" onClick={() => { setStep("email"); setPassword(""); setError(""); }} className="text-xs font-bold" style={{ color: "#8A8570" }}>← تغيير البريد</button>
+            <button type="button" onClick={() => { setStep("email"); setPassword(""); setError(""); }} className="duo-linkbtn text-xs font-bold" style={{ color: "var(--duo-muted)" }}>← تغيير البريد</button>
           </form>
         )}
-        {error && step !== "password" && <p className="text-xs mt-3" style={{ color: "#C53030" }}>{error}</p>}
+        {error && step !== "password" && <p className="text-xs mt-3" style={{ color: "var(--duo-red-d)", fontWeight: 700 }}>{error}</p>}
       </div>
     </div>
   );
@@ -164,17 +164,17 @@ export default function AuthModal({ open, onClose, onSuccess, title, subtitle })
 export function RegistrationGate({ open, onClose, onRequestAuth, featureLabel }) {
   if (!open) return null;
   return (
-    <div className="fixed inset-0 z-[90] flex items-center justify-center p-4 overflow-y-auto" style={{ background: "rgba(14, 23, 18, 0.4)" }}
+    <div className="duo-overlay fixed inset-0 z-[90] flex items-center justify-center p-4 overflow-y-auto" style={{ background: "rgba(40, 40, 40, 0.45)" }}
       role="dialog" aria-modal="true" onClick={(e) => { if (e.target === e.currentTarget) onClose?.(); }}>
-      <div className="w-full max-w-sm rounded-3xl p-6 bg-white shadow-lg dir-rtl text-right my-auto" style={{ border: "1px solid #DED4BD", maxHeight: "90vh", overflowY: "auto" }} onClick={(e) => e.stopPropagation()}>
-        <h3 className="font-black text-lg mb-1" style={{ color: "#10665A" }}>افتح الميزة مجانًا</h3>
-        <p className="text-sm mb-4" style={{ color: "#5C5A4A" }}>
+      <div className="duo-modal w-full max-w-sm rounded-3xl p-6 bg-white dir-rtl text-right my-auto" style={{ border: "2px solid var(--duo-line)", maxHeight: "90vh", overflowY: "auto" }} onClick={(e) => e.stopPropagation()}>
+        <h3 className="font-black text-lg mb-1" style={{ color: "var(--duo-green-ink)" }}>افتح الميزة مجانًا</h3>
+        <p className="text-sm mb-4" style={{ color: "var(--duo-ink-soft)" }}>
           سجّل حسابك للاستمتاع بكل مميزات مَدَار مجانًا وحفظ تقدمك.
-          {featureLabel ? <span className="block mt-1 text-xs" style={{ color: "#8A8570" }}>الميزة: {featureLabel}</span> : null}
+          {featureLabel ? <span className="block mt-1 text-xs" style={{ color: "var(--duo-muted)" }}>الميزة: {featureLabel}</span> : null}
         </p>
         <div className="flex flex-col gap-2">
-          <button type="button" onClick={onRequestAuth} className="w-full py-3 rounded-2xl text-sm font-bold text-white" style={{ background: "#10665A" }}>متابعة باستخدام Google أو البريد</button>
-          <button type="button" onClick={onClose} className="w-full py-2 rounded-2xl text-xs font-bold" style={{ color: "#8A8570" }}>لاحقاً</button>
+          <button type="button" onClick={onRequestAuth} className="duo-btn duo-btn-primary w-full py-3 rounded-2xl text-sm font-bold text-white">متابعة باستخدام Google أو البريد</button>
+          <button type="button" onClick={onClose} className="duo-linkbtn w-full py-2 rounded-2xl text-xs font-bold" style={{ color: "var(--duo-muted)" }}>لاحقاً</button>
         </div>
       </div>
     </div>
@@ -197,11 +197,11 @@ export function GuestWelcomeBanner({ session }) {
     try { sessionStorage.setItem("madar_guest_banner_dismissed", "1"); } catch (_) {}
   };
   return (
-    <div className="fixed bottom-4 left-4 right-4 sm:left-auto sm:right-6 sm:max-w-sm z-[80] rounded-2xl p-4 shadow-lg dir-rtl text-right"
-      style={{ background: "#FFFFFF", border: "1px solid #DED4BD" }} role="status">
+    <div className="duo-banner fixed bottom-4 left-4 right-4 sm:left-auto sm:right-6 sm:max-w-sm z-[80] rounded-2xl p-4 dir-rtl text-right"
+      style={{ background: "#FFFFFF", border: "2px solid var(--duo-line)" }} role="status">
       <div className="flex justify-between gap-2 items-start">
-        <p className="text-sm font-medium" style={{ color: "#22291F" }}>سجّل حسابك واستمتع بكل مميزات مَدَار مجانًا بالكامل.</p>
-        <button type="button" onClick={dismiss} aria-label="إغلاق" className="text-lg leading-none" style={{ color: "#8A8570" }}>×</button>
+        <p className="text-sm font-bold" style={{ color: "var(--duo-ink)" }}>سجّل حسابك واستمتع بكل مميزات مَدَار مجانًا بالكامل.</p>
+        <button type="button" onClick={dismiss} aria-label="إغلاق" className="text-lg leading-none" style={{ color: "var(--duo-muted)" }}>×</button>
       </div>
     </div>
   );
@@ -212,7 +212,7 @@ export function LetterAvatar({ name, email, size = 32 }) {
   const letter = label.charAt(0).toUpperCase() || "?";
   return (
     <span className="inline-flex items-center justify-center rounded-full font-bold shrink-0"
-      style={{ width: size, height: size, fontSize: size * 0.42, background: "#E4F0EC", color: "#0E5348" }} aria-hidden="true">
+      style={{ width: size, height: size, fontSize: size * 0.42, background: "var(--duo-blue-s)", color: "var(--duo-blue-ink)", border: "2px solid var(--duo-blue)" }} aria-hidden="true">
       {letter}
     </span>
   );

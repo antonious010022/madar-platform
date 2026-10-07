@@ -160,33 +160,33 @@ export default function TeacherSettings() {
   ];
 
   return (
-    <div className="min-h-screen dir-rtl text-right p-4 sm:p-6" style={{ background: "#FAF6ED" }}>
+    <div className="min-h-screen dir-rtl text-right p-4 sm:p-6" style={{ background: "#F7F5FB" }}>
       <div className="max-w-3xl mx-auto">
         <div className="flex flex-wrap items-center justify-between gap-3 mb-2">
-          <h1 className="font-black text-xl" style={{ color: "#10665A" }}>
+          <h1 className="font-black text-xl" style={{ color: "#4B2FD1" }}>
             إعدادات المنصة
           </h1>
-          <Link to="/teacher" className="text-xs font-bold" style={{ color: "#10665A" }}>
+          <Link to="/teacher" className="text-xs font-bold" style={{ color: "#4B2FD1" }}>
             ← رجوع لمكتبة الدروس
           </Link>
         </div>
-        <p className="text-sm mb-5 leading-6" style={{ color: "#5C5A4A" }}>
+        <p className="text-sm mb-5 leading-6" style={{ color: "#433F66" }}>
           من هنا تغيّر <strong>محتوى صفحات الفوتر</strong> (عن مَدَار، الخصوصية، الشروط، تواصل معنا)
           وبيانات التواصل، والمنهج الدراسي. التعديل يظهر للطالب بعد الحفظ.
         </p>
 
         {msg && (
-          <div className="mb-4 px-4 py-2 rounded-xl text-sm font-bold text-white" style={{ background: "#10665A" }}>
+          <div className="mb-4 px-4 py-2 rounded-xl text-sm font-bold text-white" style={{ background: "#4B2FD1" }}>
             {msg}
           </div>
         )}
         {err && (
-          <div className="mb-4 px-4 py-3 rounded-xl text-sm" style={{ background: "#FDE8E8", color: "#9B1C1C" }}>
+          <div className="mb-4 px-4 py-3 rounded-xl text-sm" style={{ background: "#FCE9EC", color: "#A1172B" }}>
             {err}
           </div>
         )}
         {loading && (
-          <p className="text-sm mb-4" style={{ color: "#8A8570" }}>
+          <p className="text-sm mb-4" style={{ color: "#6E6B85" }}>
             جاري تحميل الإعدادات...
           </p>
         )}
@@ -200,9 +200,9 @@ export default function TeacherSettings() {
               onClick={() => setTab(t.key)}
               className="text-right rounded-2xl px-4 py-3 border transition-all"
               style={{
-                background: tab === t.key ? "#10665A" : "#FFFFFF",
-                color: tab === t.key ? "#FFFFFF" : "#22291F",
-                borderColor: tab === t.key ? "#10665A" : "#DED4BD",
+                background: tab === t.key ? "#4B2FD1" : "#FFFFFF",
+                color: tab === t.key ? "#FFFFFF" : "#171333",
+                borderColor: tab === t.key ? "#4B2FD1" : "#E3E0EE",
               }}
             >
               <span className="block text-sm font-bold">{t.label}</span>
@@ -214,33 +214,33 @@ export default function TeacherSettings() {
         {/* ========== صفحات الفوتر ========== */}
         {tab === "pages" && (
           <section className="space-y-4">
-            <div className="rounded-2xl p-4 bg-white border" style={{ borderColor: "#DED4BD" }}>
-              <p className="text-sm font-bold mb-1" style={{ color: "#10665A" }}>
+            <div className="rounded-2xl p-4 bg-white border" style={{ borderColor: "#E3E0EE" }}>
+              <p className="text-sm font-bold mb-1" style={{ color: "#4B2FD1" }}>
                 محتوى الصفحات التي يفتحها الطالب من الفوتر
               </p>
-              <p className="text-xs leading-5" style={{ color: "#8A8570" }}>
+              <p className="text-xs leading-5" style={{ color: "#6E6B85" }}>
                 عدّل العنوان والنص ثم اضغط «حفظ هذه الصفحة». الروابط في الفوتر تبقى كما هي؛ أنت تغيّر ما يظهر داخل الصفحة فقط.
               </p>
             </div>
 
             {pages.length === 0 && !loading && (
-              <p className="text-sm" style={{ color: "#C53030" }}>
+              <p className="text-sm" style={{ color: "#D6334B" }}>
                 لا توجد صفحات محفوظة. تأكد أنك شغّلت migration_data_driven.sql في Supabase.
               </p>
             )}
 
             {pages.map((pg) => (
-              <div key={pg.id} className="rounded-2xl p-5 bg-white border space-y-3" style={{ borderColor: "#DED4BD" }}>
+              <div key={pg.id} className="rounded-2xl p-5 bg-white border space-y-3" style={{ borderColor: "#E3E0EE" }}>
                 <div className="flex flex-wrap items-center justify-between gap-2">
                   <div>
-                    <p className="font-black text-base" style={{ color: "#10665A" }}>
+                    <p className="font-black text-base" style={{ color: "#4B2FD1" }}>
                       {pg.title || pg.slug}
                     </p>
-                    <p className="text-[11px] mt-1" style={{ color: "#8A8570" }}>
+                    <p className="text-[11px] mt-1" style={{ color: "#6E6B85" }}>
                       {PAGE_HELP[pg.slug] || `المعرّف: ${pg.slug}`}
                     </p>
                   </div>
-                  <label className="text-xs flex items-center gap-2 font-bold" style={{ color: "#5C5A4A" }}>
+                  <label className="text-xs flex items-center gap-2 font-bold" style={{ color: "#433F66" }}>
                     <input
                       type="checkbox"
                       checked={pg.is_visible !== false}
@@ -253,24 +253,24 @@ export default function TeacherSettings() {
                 </div>
 
                 <label className="block">
-                  <span className="text-xs font-bold mb-1 block" style={{ color: "#8A8570" }}>
+                  <span className="text-xs font-bold mb-1 block" style={{ color: "#6E6B85" }}>
                     عنوان الصفحة
                   </span>
                   <input
                     className="w-full text-sm rounded-xl px-3 py-2 border"
-                    style={{ borderColor: "#DED4BD" }}
+                    style={{ borderColor: "#E3E0EE" }}
                     value={pg.title || ""}
                     onChange={(e) => setPages(pages.map((x) => (x.id === pg.id ? { ...x, title: e.target.value } : x)))}
                   />
                 </label>
 
                 <label className="block">
-                  <span className="text-xs font-bold mb-1 block" style={{ color: "#8A8570" }}>
+                  <span className="text-xs font-bold mb-1 block" style={{ color: "#6E6B85" }}>
                     نص الصفحة (يظهر للطالب)
                   </span>
                   <textarea
                     className="w-full text-sm rounded-xl px-3 py-2 border leading-7"
-                    style={{ borderColor: "#DED4BD", minHeight: 140 }}
+                    style={{ borderColor: "#E3E0EE", minHeight: 140 }}
                     value={pg.body || ""}
                     onChange={(e) => setPages(pages.map((x) => (x.id === pg.id ? { ...x, body: e.target.value } : x)))}
                     placeholder="اكتب المحتوى هنا..."
@@ -281,7 +281,7 @@ export default function TeacherSettings() {
                   type="button"
                   disabled={saving}
                   className="px-4 py-2 rounded-xl text-xs font-bold text-white"
-                  style={{ background: "#10665A" }}
+                  style={{ background: "#4B2FD1" }}
                   onClick={async () => {
                     setSaving(true);
                     try {
@@ -304,12 +304,12 @@ export default function TeacherSettings() {
 
         {/* ========== التواصل ========== */}
         {tab === "contact" && (
-          <section className="rounded-2xl p-5 bg-white border space-y-3" style={{ borderColor: "#DED4BD" }}>
-            <p className="text-sm font-bold" style={{ color: "#10665A" }}>
+          <section className="rounded-2xl p-5 bg-white border space-y-3" style={{ borderColor: "#E3E0EE" }}>
+            <p className="text-sm font-bold" style={{ color: "#4B2FD1" }}>
               اسم المنصة والبريد الظاهر في الفوتر
             </p>
             <label className="block">
-              <span className="text-xs font-bold mb-1 block" style={{ color: "#8A8570" }}>
+              <span className="text-xs font-bold mb-1 block" style={{ color: "#6E6B85" }}>
                 اسم المنصة
               </span>
               <input
@@ -319,7 +319,7 @@ export default function TeacherSettings() {
               />
             </label>
             <label className="block">
-              <span className="text-xs font-bold mb-1 block" style={{ color: "#8A8570" }}>
+              <span className="text-xs font-bold mb-1 block" style={{ color: "#6E6B85" }}>
                 وصف قصير تحت الاسم
               </span>
               <textarea
@@ -330,7 +330,7 @@ export default function TeacherSettings() {
               />
             </label>
             <label className="block">
-              <span className="text-xs font-bold mb-1 block" style={{ color: "#8A8570" }}>
+              <span className="text-xs font-bold mb-1 block" style={{ color: "#6E6B85" }}>
                 بريد التواصل (تواصل معنا)
               </span>
               <input
@@ -343,16 +343,16 @@ export default function TeacherSettings() {
             </label>
 
             <div className="pt-2">
-              <p className="text-sm font-bold mb-1" style={{ color: "#10665A" }}>
+              <p className="text-sm font-bold mb-1" style={{ color: "#4B2FD1" }}>
                 منصات التواصل الاجتماعي (تظهر كأيقونات في الفوتر)
               </p>
-              <p className="text-[11px] mb-2" style={{ color: "#8A8570" }}>
+              <p className="text-[11px] mb-2" style={{ color: "#6E6B85" }}>
                 اترك الخانة فارغة لإخفاء أيقونة المنصة. اضغط «حفظ» بعد التعديل.
               </p>
               <div className="grid gap-2 sm:grid-cols-2">
                 {SOCIAL_PLATFORMS.map((p) => (
                   <label key={p.key} className="block">
-                    <span className="text-xs font-bold mb-1 block" style={{ color: "#8A8570" }}>
+                    <span className="text-xs font-bold mb-1 block" style={{ color: "#6E6B85" }}>
                       {p.label}
                     </span>
                     <input
@@ -372,7 +372,7 @@ export default function TeacherSettings() {
             <button
               type="button"
               className="px-4 py-2 rounded-xl text-xs font-bold text-white"
-              style={{ background: "#10665A" }}
+              style={{ background: "#4B2FD1" }}
               onClick={async () => {
                 try {
                   await saveBrandSettings(brand);
@@ -390,11 +390,11 @@ export default function TeacherSettings() {
         {/* ========== إظهار/إخفاء روابط الفوتر ========== */}
         {tab === "footer" && (
           <section className="space-y-3">
-            <p className="text-sm leading-6" style={{ color: "#5C5A4A" }}>
+            <p className="text-sm leading-6" style={{ color: "#433F66" }}>
               كل صف = رابط في أسفل صفحات الطالب. ألغِ التفعيل ليختفي الرابط من الفوتر دون حذف الصفحة.
             </p>
             {links.length === 0 && (
-              <p className="text-sm" style={{ color: "#C53030" }}>
+              <p className="text-sm" style={{ color: "#D6334B" }}>
                 لا توجد روابط. شغّل migration_data_driven.sql إن لزم.
               </p>
             )}
@@ -402,14 +402,14 @@ export default function TeacherSettings() {
               <div
                 key={lk.id}
                 className="rounded-2xl p-4 bg-white border flex flex-wrap items-center gap-3"
-                style={{ borderColor: "#DED4BD" }}
+                style={{ borderColor: "#E3E0EE" }}
               >
                 <input
                   className="text-sm rounded-xl px-3 py-2 border flex-1 min-w-[140px]"
                   value={lk.label || ""}
                   onChange={(e) => setLinks(links.map((x) => (x.id === lk.id ? { ...x, label: e.target.value } : x)))}
                 />
-                <span className="text-[11px]" style={{ color: "#8A8570" }}>
+                <span className="text-[11px]" style={{ color: "#6E6B85" }}>
                   {lk.page_slug ? `→ /student/page/${lk.page_slug}` : lk.external_url || ""}
                 </span>
                 <label className="text-xs font-bold flex items-center gap-1">
@@ -425,7 +425,7 @@ export default function TeacherSettings() {
                 <button
                   type="button"
                   className="px-3 py-1.5 rounded-xl text-xs font-bold text-white"
-                  style={{ background: "#10665A" }}
+                  style={{ background: "#4B2FD1" }}
                   onClick={async () => {
                     try {
                       await saveFooterLink(lk);
@@ -446,18 +446,18 @@ export default function TeacherSettings() {
         {/* ========== المنهج ========== */}
         {tab === "curriculum" && (
           <section className="space-y-4">
-            <div className="rounded-2xl p-4 bg-white border" style={{ borderColor: "#DED4BD" }}>
-              <p className="text-sm font-bold mb-1" style={{ color: "#10665A" }}>
+            <div className="rounded-2xl p-4 bg-white border" style={{ borderColor: "#E3E0EE" }}>
+              <p className="text-sm font-bold mb-1" style={{ color: "#4B2FD1" }}>
                 شجرة المنهج
               </p>
-              <p className="text-xs leading-5" style={{ color: "#8A8570" }}>
+              <p className="text-xs leading-5" style={{ color: "#6E6B85" }}>
                 مثال: مرحلة «الإعدادية» → صف «الثالث» → ترم «الأول» → مادة «التاريخ».
                 هذه الأسماء تظهر لاحقًا عند تصنيف الدروس في الاستوديو.
               </p>
             </div>
 
-            <div className="rounded-2xl p-4 bg-white border space-y-2" style={{ borderColor: "#DED4BD" }}>
-              <p className="text-xs font-bold" style={{ color: "#8A8570" }}>
+            <div className="rounded-2xl p-4 bg-white border space-y-2" style={{ borderColor: "#E3E0EE" }}>
+              <p className="text-xs font-bold" style={{ color: "#6E6B85" }}>
                 إضافة عنصر جديد
               </p>
               <select
@@ -493,7 +493,7 @@ export default function TeacherSettings() {
               <button
                 type="button"
                 className="px-4 py-2 rounded-xl text-xs font-bold text-white"
-                style={{ background: "#10665A" }}
+                style={{ background: "#4B2FD1" }}
                 onClick={async () => {
                   if (!form.name.trim()) return;
                   try {
@@ -516,12 +516,12 @@ export default function TeacherSettings() {
               </button>
             </div>
 
-            <div className="rounded-2xl p-4 bg-white border" style={{ borderColor: "#DED4BD" }}>
-              <p className="text-xs font-bold mb-3" style={{ color: "#8A8570" }}>
+            <div className="rounded-2xl p-4 bg-white border" style={{ borderColor: "#E3E0EE" }}>
+              <p className="text-xs font-bold mb-3" style={{ color: "#6E6B85" }}>
                 العناصر الحالية
               </p>
               {treeLines.length === 0 && (
-                <p className="text-sm" style={{ color: "#8A8570" }}>
+                <p className="text-sm" style={{ color: "#6E6B85" }}>
                   لا يوجد منهج بعد. أضف مرحلة ثم صفًا ثم ترمًا ثم مادة.
                 </p>
               )}
@@ -529,10 +529,10 @@ export default function TeacherSettings() {
                 <div
                   key={n.id}
                   className="flex items-center justify-between gap-2 py-2 border-b text-sm"
-                  style={{ borderColor: "#F0EBE0", paddingInlineStart: (n.depth || 0) * 14 }}
+                  style={{ borderColor: "#ECE8F7", paddingInlineStart: (n.depth || 0) * 14 }}
                 >
                   <span>
-                    <span className="text-[10px] font-bold ml-2 px-1.5 py-0.5 rounded" style={{ background: "#E4F0EC", color: "#0E5348" }}>
+                    <span className="text-[10px] font-bold ml-2 px-1.5 py-0.5 rounded" style={{ background: "#EFEAFD", color: "#2E1C86" }}>
                       {KIND_LABEL[n.kind] || n.kind}
                     </span>
                     {n.name}
@@ -540,7 +540,7 @@ export default function TeacherSettings() {
                   <button
                     type="button"
                     className="text-[11px] font-bold"
-                    style={{ color: "#C53030" }}
+                    style={{ color: "#D6334B" }}
                     onClick={async () => {
                       if (!confirm("حذف هذا العنصر؟")) return;
                       try {
@@ -563,18 +563,18 @@ export default function TeacherSettings() {
         {/* ========== قوالب الإكمال ========== */}
         {tab === "journey" && (
           <section className="space-y-3">
-            <p className="text-sm leading-6" style={{ color: "#5C5A4A" }}>
+            <p className="text-sm leading-6" style={{ color: "#433F66" }}>
               هذه نصوص اختيارية يمكن ربطها من داخل استوديو الدرس («إشعار بعد مشهد معيّن»).
               عدّل العنوان والنص ثم احفظ.
             </p>
             {templates.length === 0 && (
-              <p className="text-sm" style={{ color: "#8A8570" }}>
+              <p className="text-sm" style={{ color: "#6E6B85" }}>
                 لا توجد قوالب. شغّل migration_data_driven.sql لزرع القوالب الافتراضية.
               </p>
             )}
             {templates.map((tpl) => (
-              <div key={tpl.id} className="rounded-2xl p-4 bg-white border space-y-2" style={{ borderColor: "#DED4BD" }}>
-                <p className="text-xs font-bold" style={{ color: "#10665A" }}>
+              <div key={tpl.id} className="rounded-2xl p-4 bg-white border space-y-2" style={{ borderColor: "#E3E0EE" }}>
+                <p className="text-xs font-bold" style={{ color: "#4B2FD1" }}>
                   {tpl.label || tpl.key}
                 </p>
                 <input
@@ -593,7 +593,7 @@ export default function TeacherSettings() {
                 <button
                   type="button"
                   className="px-3 py-1.5 rounded-xl text-xs font-bold text-white"
-                  style={{ background: "#10665A" }}
+                  style={{ background: "#4B2FD1" }}
                   onClick={async () => {
                     try {
                       await saveCompletionTemplate(tpl);

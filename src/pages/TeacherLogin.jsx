@@ -65,24 +65,24 @@ export default function TeacherLogin() {
       className="ts-root flex items-center justify-center px-4"
       style={{
         minHeight: "calc(100vh - 41px)",
-        background: "#FAF6ED",
+        background: "#F7F5FB",
       }}
     >
       <form
         onSubmit={handleSubmit}
         className="w-full max-w-sm rounded-3xl p-8 bg-white border shadow-sm"
-        style={{ borderColor: "#DED4BD" }}
+        style={{ borderColor: "#E3E0EE" }}
       >
         <h1
           className="font-black text-xl mb-1 text-center"
-          style={{ color: "#10665A" }}
+          style={{ color: "#4B2FD1" }}
         >
           استوديو المعلم
         </h1>
 
         <p
           className="text-xs text-center mb-6"
-          style={{ color: "#8A8570" }}
+          style={{ color: "#6E6B85" }}
         >
           سجّل الدخول لإدارة دروسك
         </p>
@@ -90,7 +90,7 @@ export default function TeacherLogin() {
         <label className="block mb-3">
           <span
             className="block text-xs mb-1"
-            style={{ color: "#5C5A4A" }}
+            style={{ color: "#433F66" }}
           >
             البريد الإلكتروني
           </span>
@@ -109,7 +109,7 @@ export default function TeacherLogin() {
         <label className="block mb-4">
           <span
             className="block text-xs mb-1"
-            style={{ color: "#5C5A4A" }}
+            style={{ color: "#433F66" }}
           >
             كلمة المرور
           </span>
@@ -129,7 +129,7 @@ export default function TeacherLogin() {
         {error && (
           <p
             className="text-xs mb-3"
-            style={{ color: "#C53030" }}
+            style={{ color: "#D6334B" }}
           >
             {error}
           </p>
@@ -140,7 +140,7 @@ export default function TeacherLogin() {
           disabled={loading}
           className="w-full py-2.5 rounded-xl text-sm font-bold text-white shadow-sm"
           style={{
-            background: "#10665A",
+            background: "#4B2FD1",
             opacity: loading ? 0.7 : 1,
           }}
         >

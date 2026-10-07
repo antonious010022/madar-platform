@@ -17,6 +17,7 @@ import { ImageUploadField } from "./Viewer";
 import { uid } from "../lib/constants";
 import { listCurriculumNodes } from "../lib/db";
 import { Hotword } from "../lib/hotwordExtension";
+import { Extension } from "@tiptap/core";
 
 // ---------------------------------------------------------------------------
 // Rich Text Editor — Tiptap-based, RTL-first.
@@ -25,21 +26,35 @@ import { Hotword } from "../lib/hotwordExtension";
 // unaffected — this component just produces richer HTML than before.
 // ---------------------------------------------------------------------------
 
-// Tiptap's execCommand-era "fontSize" doesn't exist as a real command, so we
-// extend the existing `textStyle` mark with a `fontSize` attribute rendered
-// as inline CSS. This keeps the output as plain <span style="font-size:..">,
-// which any browser (including the student Viewer) renders natively.
-const FontSize = TextStyle.extend({
-  addAttributes() {
-    return {
-      ...this.parent?.(),
-      fontSize: {
-        default: null,
-        parseHTML: (el) => el.style.fontSize || null,
-        renderHTML: (attrs) => (attrs.fontSize ? { style: `font-size: ${attrs.fontSize}` } : {}),
-      },
-    };
+// Tiptap has no built-in "fontSize" command in this setup, so we add ONE
+// standalone extension that attaches a `fontSize` attribute to the existing
+// `textStyle` mark (the same mark that already carries fontFamily / color).
+// It does NOT extend or duplicate TextStyle. Output stays plain
+// <span style="font-size:..">, which the student Viewer renders natively.
+// Defined at module scope so the extension instance is stable across renders.
+const FontSize = Extension.create({
+  name: "madarFontSize",
+
+  addOptions() {
+    return { types: ["textStyle"] };
   },
+
+  addGlobalAttributes() {
+    return [
+      {
+        types: this.options.types,
+        attributes: {
+          fontSize: {
+            default: null,
+            parseHTML: (el) => el.style.fontSize || null,
+            renderHTML: (attrs) =>
+              attrs.fontSize ? { style: `font-size: ${attrs.fontSize}` } : {},
+          },
+        },
+      },
+    ];
+  },
+
   addCommands() {
     return {
       setFontSize:
@@ -49,10 +64,15 @@ const FontSize = TextStyle.extend({
       unsetFontSize:
         () =>
         ({ chain }) =>
-          chain().setMark("textStyle", { fontSize: null }).run(),
+          chain().setMark("textStyle", { fontSize: null }).removeEmptyTextStyle().run(),
     };
   },
 });
+
+// Normalises a font-family string so the stored value (quotes stripped by
+// FontFamily.parseHTML) can be matched against FONT_FAMILIES option values.
+const normFont = (v) =>
+  String(v || "").replace(/['"]/g, "").replace(/\s*,\s*/g, ", ").trim().toLowerCase();
 
 // Curated Arabic-first font list. The full 60-name wishlist would mean
 // downloading 60+ separate font families (huge payload for very little
@@ -97,23 +117,29 @@ const FONT_SIZES = [8, 9, 10, 11, 12, 14, 16, 18, 20, 22, 24, 26, 28, 32, 36];
 export function RichTextEditor({ value, onChange, uploadFn, onHotwordDetected }) {
   const [uploading, setUploading] = useState(false);
   const [importing, setImporting] = useState(false);
+
   const fileRef = useRef(null);
   const importTxtRef = useRef(null);
   const importDocxRef = useRef(null);
 
+  // One-shot insertion point for async image upload only (the upload finishes
+  // after the user may have clicked elsewhere). Captured on the image button
+  // click, consumed once, then cleared. Nothing else stores a selection.
+  const imagePosRef = useRef(null);
+
   const onHotwordDetectedRef = useRef(onHotwordDetected);
+
   useEffect(() => {
     onHotwordDetectedRef.current = onHotwordDetected;
   }, [onHotwordDetected]);
 
-  // Stable forever (empty deps) so the editor is never force-recreated —
-  // but it always calls whatever the LATEST onHotwordDetected is, via the
-  // ref above, avoiding a stale-closure bug.
   const hotwordExtension = useMemo(
     () =>
       Hotword.configure({
         onCreate: (hw) => {
-          if (onHotwordDetectedRef.current) onHotwordDetectedRef.current(hw);
+          if (onHotwordDetectedRef.current) {
+            onHotwordDetectedRef.current(hw);
+          }
         },
       }),
     []
@@ -121,58 +147,128 @@ export function RichTextEditor({ value, onChange, uploadFn, onHotwordDetected })
 
   const editor = useEditor({
     extensions: [
-      StarterKit.configure({ heading: { levels: [1, 2, 3, 4] } }),
+      StarterKit.configure({
+        heading: {
+          levels: [1, 2, 3, 4],
+        },
+      }),
+
       Underline,
+
+      // The ONE TextStyle mark: fontFamily / fontSize / color all live on it.
       TextStyle,
       FontSize,
+
       FontFamily,
       Color,
-      Highlight.configure({ multicolor: true }),
-      TextAlign.configure({ types: ["heading", "paragraph"] }),
+
+      Highlight.configure({
+        multicolor: true,
+      }),
+
+      TextAlign.configure({
+        types: ["heading", "paragraph"],
+      }),
+
       Link.configure({
         openOnClick: false,
         autolink: true,
-        HTMLAttributes: { rel: "noopener noreferrer", class: "ts-link" },
+        HTMLAttributes: {
+          rel: "noopener noreferrer",
+          class: "ts-link",
+        },
       }),
-      Table.configure({ resizable: true }),
+
+      Table.configure({
+        resizable: true,
+      }),
+
       TableRow,
       TableHeader,
       TableCell,
-      Image.configure({ inline: false }),
+
+      Image.configure({
+        inline: false,
+      }),
+
       hotwordExtension,
     ],
+
     content: value || "",
-    onUpdate: ({ editor }) => onChange(editor.getHTML()),
+
+    onUpdate: ({ editor }) => {
+      onChange(editor.getHTML());
+    },
+
     editorProps: {
       attributes: {
         dir: "rtl",
-        class: "p-4 ts-scrollbar ts-selectable ts-richtext ts-editor-surface focus:outline-none min-h-[200px]",
-        style: "color: #22291F; line-height: 1.8;",
+        class:
+          "p-4 ts-scrollbar ts-selectable ts-richtext ts-editor-surface focus:outline-none min-h-[200px]",
+        style: "color: #171333; line-height: 1.8;",
       },
     },
   });
 
+  // Sync an EXTERNAL value change into the editor. Never while the user is
+  // typing in it (that would reset content and throw the cursor away), and
+  // never for the "" vs "<p></p>" empty-document mismatch.
   useEffect(() => {
     if (!editor) return;
-    const current = editor.getHTML();
-    if (value !== current) editor.commands.setContent(value || "", false);
+    if (editor.isFocused) return;
+
+    const next = value || "";
+    if (next === editor.getHTML()) return;
+    if (next === "" && editor.isEmpty) return;
+
+    editor.commands.setContent(next, false);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [value, editor]);
 
   if (!editor) return null;
 
+  /*
+   * ---------------------------------------------------------------
+   * Selection handling
+   * ---------------------------------------------------------------
+   *
+   * ProseMirror keeps `editor.state.selection` even when the editor loses DOM
+   * focus, and every Tiptap command acts on that live state. So we do NOT
+   * keep a second saved copy of the selection and we never force-restore one.
+   *
+   * - Buttons: preventDefault on mousedown so the editor never loses focus.
+   * - <select>/<input type=color> must take focus to open their popup; their
+   *   handlers run `chain().focus()` which re-focuses the editor at the
+   *   CURRENT state selection (so clicking elsewhere afterwards works normally).
+   */
+  const keepEditorFocus = (e) => e.preventDefault();
+
   const btnStyle = (isActive) => ({
-    background: isActive ? "#10665A" : "#FFFFFF",
-    color: isActive ? "#FAF6ED" : "#22291F",
-    border: `1px solid ${isActive ? "#10665A" : "#DED4BD"}`,
+    background: isActive ? "#4B2FD1" : "#FFFFFF",
+    color: isActive ? "#F7F5FB" : "#171333",
+    border: `1px solid ${isActive ? "#4B2FD1" : "#E3E0EE"}`,
   });
+
+  /*
+   * ---------------------------------------------------------------
+   * Image
+   * ---------------------------------------------------------------
+   */
 
   const insertImage = async (file) => {
     if (!file || !uploadFn) return;
+
     setUploading(true);
+
     try {
       const url = await uploadFn(file);
-      editor.chain().focus().setImage({ src: url }).run();
+
+      const pos = imagePosRef.current;
+      imagePosRef.current = null;
+
+      const chain = editor.chain().focus();
+      if (pos !== null) chain.setTextSelection(pos);
+      chain.setImage({ src: url }).run();
     } catch {
       // eslint-disable-next-line no-alert
       alert("تعذر رفع الصورة، حاول مرة أخرى.");
@@ -181,209 +277,1008 @@ export function RichTextEditor({ value, onChange, uploadFn, onHotwordDetected })
     }
   };
 
+  /*
+   * ---------------------------------------------------------------
+   * Table
+   * ---------------------------------------------------------------
+   */
+
   const insertTable = () => {
-    // eslint-disable-next-line no-alert
-    const rows = parseInt(prompt("عدد الصفوف:", "3") || "0", 10);
-    // eslint-disable-next-line no-alert
-    const cols = parseInt(prompt("عدد الأعمدة:", "3") || "0", 10);
+    const rows = parseInt(
+      // eslint-disable-next-line no-alert
+      prompt("عدد الصفوف:", "3") || "0",
+      10
+    );
+
+    const cols = parseInt(
+      // eslint-disable-next-line no-alert
+      prompt("عدد الأعمدة:", "3") || "0",
+      10
+    );
+
     if (rows > 0 && cols > 0) {
-      editor.chain().focus().insertTable({ rows, cols, withHeaderRow: true }).run();
+      editor
+        .chain()
+        .focus()
+        .insertTable({
+          rows,
+          cols,
+          withHeaderRow: true,
+        })
+        .run();
     }
   };
+
+  /*
+   * ---------------------------------------------------------------
+   * Link
+   * ---------------------------------------------------------------
+   */
 
   const setLink = () => {
     const previous = editor.getAttributes("link").href || "";
+
     // eslint-disable-next-line no-alert
-    const url = prompt("رابط الصفحة (اتركه فارغًا لإزالة الرابط):", previous);
-    if (url === null) return; // cancelled
+    const url = prompt(
+      "رابط الصفحة (اتركه فارغًا لإزالة الرابط):",
+      previous
+    );
+
+    if (url === null) return;
+
     if (url === "") {
-      editor.chain().focus().extendMarkRange("link").unsetLink().run();
+      editor
+        .chain()
+        .focus()
+        .extendMarkRange("link")
+        .unsetLink()
+        .run();
+
       return;
     }
-    editor.chain().focus().extendMarkRange("link").setLink({ href: url, target: "_blank" }).run();
+
+    editor
+      .chain()
+      .focus()
+      .extendMarkRange("link")
+      .setLink({
+        href: url,
+        target: "_blank",
+      })
+      .run();
   };
+
+  /*
+   * ---------------------------------------------------------------
+   * TXT Import
+   * ---------------------------------------------------------------
+   */
+
+  const escapeHtml = (text) =>
+    String(text)
+      .replace(/&/g, "&amp;")
+      .replace(/</g, "&lt;")
+      .replace(/>/g, "&gt;")
+      .replace(/"/g, "&quot;")
+      .replace(/'/g, "&#39;");
 
   const importTxt = (file) => {
     if (!file) return;
+
     setImporting(true);
+
     const reader = new FileReader();
+
     reader.onload = () => {
-      const text = String(reader.result || "");
-      const html = text
-        .split(/\r?\n/)
-        .map((line) => `<p>${line.replace(/&/g, "&amp;").replace(/</g, "&lt;") || "<br>"}</p>`)
-        .join("");
-      editor.commands.setContent(html, true);
-      onChange(editor.getHTML());
-      setImporting(false);
+      try {
+        const text = String(reader.result ?? "");
+
+        /*
+         * لا نعمل trim().
+         * لا نحذف المسافات.
+         * لا نعدل علامات الترقيم.
+         *
+         * كل سطر يتحول إلى paragraph.
+         */
+        const html = text
+          .split(/\r\n|\n|\r/)
+          .map((line) => {
+            if (line === "") {
+              return "<p><br></p>";
+            }
+
+            return `<p>${escapeHtml(line)}</p>`;
+          })
+          .join("");
+
+        editor.commands.setContent(
+          html || "<p></p>",
+          true
+        );
+
+        /*
+         * onUpdate قد لا يكون كافيًا في كل إصدارات Tiptap
+         * بعد setContent، لذلك نرسل الناتج صراحة.
+         */
+        onChange(editor.getHTML());
+      } catch (error) {
+        console.error(error);
+
+        // eslint-disable-next-line no-alert
+        alert("تعذر استيراد ملف TXT.");
+      } finally {
+        setImporting(false);
+      }
     };
+
     reader.onerror = () => {
       // eslint-disable-next-line no-alert
       alert("تعذر قراءة الملف.");
+
       setImporting(false);
     };
+
     reader.readAsText(file, "utf-8");
   };
 
+  /*
+   * ---------------------------------------------------------------
+   * DOCX Import
+   * ---------------------------------------------------------------
+   */
+
   const importDocx = async (file) => {
     if (!file) return;
+
     setImporting(true);
+
     try {
       const mammoth = await import("mammoth");
+
       const arrayBuffer = await file.arrayBuffer();
-      const result = await mammoth.convertToHtml({ arrayBuffer });
-      editor.commands.setContent(result.value || "<p></p>", true);
+
+      const result = await mammoth.convertToHtml(
+        {
+          arrayBuffer,
+        },
+        {
+          /*
+           * نخلي Mammoth يحتفظ بالـ paragraph structure
+           * بدل تحويل كل شيء إلى plain text.
+           */
+          includeDefaultStyleMap: true,
+        }
+      );
+
+      const html = result?.value || "<p></p>";
+
+      editor.commands.setContent(
+        html,
+        true
+      );
+
       onChange(editor.getHTML());
-    } catch (e) {
+    } catch (error) {
       // eslint-disable-next-line no-console
-      console.error(e);
+      console.error("DOCX import error:", error);
+
       // eslint-disable-next-line no-alert
-      alert("تعذر استيراد ملف Word. تأكد أن الملف بصيغة .docx سليمة.");
+      alert(
+        "تعذر استيراد ملف Word. تأكد أن الملف بصيغة .docx سليمة."
+      );
     } finally {
       setImporting(false);
     }
   };
 
+  /*
+   * ---------------------------------------------------------------
+   * Toolbar
+   * ---------------------------------------------------------------
+   */
+
   return (
-    <div className="border rounded-2xl overflow-hidden bg-white" style={{ borderColor: "#DED4BD" }}>
-      <div className="flex flex-col gap-1.5 p-2 bg-[#FAF6ED] border-b" style={{ borderColor: "#DED4BD" }}>
-        {/* Row 1: font family, size, color, highlight */}
+    <div
+      className="border rounded-2xl overflow-hidden bg-white"
+      style={{
+        borderColor: "#E3E0EE",
+      }}
+    >
+      <div
+        className="flex flex-col gap-1.5 p-2 bg-[#F7F5FB] border-b"
+        style={{
+          borderColor: "#E3E0EE",
+        }}
+      >
+        {/* =========================================================
+            ROW 1
+        ========================================================== */}
+
         <div className="flex flex-wrap items-center gap-1">
+
+          {/* FONT FAMILY */}
+
           <select
             className="text-xs rounded px-2 py-1 border bg-white"
-            style={{ borderColor: "#DED4BD", maxWidth: 150 }}
-            onChange={(e) => editor.chain().focus().setFontFamily(e.target.value).run()}
-            defaultValue=""
+            style={{
+              borderColor: "#E3E0EE",
+              maxWidth: 150,
+            }}
+            value={
+              FONT_FAMILIES.find(
+                (f) =>
+                  normFont(f.value) ===
+                  normFont(editor.getAttributes("textStyle").fontFamily)
+              )?.value ?? ""
+            }
+            onChange={(e) => {
+              const font = e.target.value;
+
+              if (!font) return;
+
+              editor
+                .chain()
+                .focus()
+                .setFontFamily(font)
+                .run();
+            }}
           >
-            <option value="" disabled>الخط</option>
+            <option value="" disabled>
+              الخط
+            </option>
+
             {FONT_FAMILIES.map((f) => (
-              <option key={f.value} value={f.value} style={{ fontFamily: f.value }}>{f.label}</option>
+              <option
+                key={f.value}
+                value={f.value}
+                style={{
+                  fontFamily: f.value,
+                }}
+              >
+                {f.label}
+              </option>
             ))}
           </select>
+
+          {/* FONT SIZE */}
 
           <select
             className="text-xs rounded px-2 py-1 border bg-white"
-            style={{ borderColor: "#DED4BD", maxWidth: 70 }}
-            onChange={(e) => editor.chain().focus().setFontSize(e.target.value + "px").run()}
-            defaultValue=""
+            style={{
+              borderColor: "#E3E0EE",
+              maxWidth: 70,
+            }}
+            value={(() => {
+              const px = parseInt(editor.getAttributes("textStyle").fontSize, 10);
+              return FONT_SIZES.includes(px) ? String(px) : "";
+            })()}
+            onChange={(e) => {
+              const size = e.target.value;
+
+              if (!size) return;
+
+              editor
+                .chain()
+                .focus()
+                .setFontSize(`${size}px`)
+                .run();
+            }}
           >
-            <option value="" disabled>الحجم</option>
+            <option value="" disabled>
+              الحجم
+            </option>
+
             {FONT_SIZES.map((s) => (
-              <option key={s} value={s}>{s}</option>
+              <option key={s} value={String(s)}>
+                {s}
+              </option>
             ))}
           </select>
 
-          <span className="text-xs" style={{ color: "#5C5A4A" }}>لون الخط</span>
+          {/* COLOR */}
+
+          <span
+            className="text-xs"
+            style={{
+              color: "#433F66",
+            }}
+          >
+            لون الخط
+          </span>
+
           <input
             type="color"
-            defaultValue="#22291F"
-            onChange={(e) => editor.chain().focus().setColor(e.target.value).run()}
+            defaultValue="#171333"
+            // No .focus() here: the picker fires onChange continuously while
+            // dragging and re-focusing the editor would fight the native popup.
+            // The command still targets the live editor.state.selection.
+            onChange={(e) => {
+              editor
+                .chain()
+                .setColor(e.target.value)
+                .run();
+            }}
             className="w-7 h-7 rounded cursor-pointer border-0"
             title="لون النص"
           />
 
-          <span className="text-xs" style={{ color: "#5C5A4A" }}>تمييز</span>
+          {/* HIGHLIGHT */}
+
+          <span
+            className="text-xs"
+            style={{
+              color: "#433F66",
+            }}
+          >
+            تمييز
+          </span>
+
           <input
             type="color"
-            defaultValue="#F6E9D3"
-            onChange={(e) => editor.chain().focus().toggleHighlight({ color: e.target.value }).run()}
+            defaultValue="#F7E6C4"
+            onChange={(e) => {
+              editor
+                .chain()
+                .toggleHighlight({
+                  color: e.target.value,
+                })
+                .run();
+            }}
             className="w-7 h-7 rounded cursor-pointer border-0"
             title="لون خلفية التمييز"
           />
 
+          {/* CLEAR FORMAT */}
+
           <button
             type="button"
-            onClick={() => editor.chain().focus().unsetAllMarks().clearNodes().run()}
-            className="px-2.5 py-1 rounded text-xs bg-white border border-[#DED4BD]"
+            onMouseDown={keepEditorFocus}
+            onClick={() => {
+              editor
+                .chain()
+                .focus()
+                .unsetAllMarks()
+                .clearNodes()
+                .run();
+            }}
+            className="px-2.5 py-1 rounded text-xs bg-white border border-[#E3E0EE]"
             title="مسح كل التنسيق عن النص المحدد"
           >
             🧹 مسح التنسيق
           </button>
         </div>
 
-        {/* Row 2: bold/italic/underline/strike + headings */}
-        <div className="flex flex-wrap items-center gap-1">
-          <button type="button" onClick={() => editor.chain().focus().toggleBold().run()} className="px-2.5 py-1 rounded font-bold text-xs" style={btnStyle(editor.isActive("bold"))} title="عريض (Ctrl+B)">B</button>
-          <button type="button" onClick={() => editor.chain().focus().toggleItalic().run()} className="px-2.5 py-1 rounded italic text-xs" style={btnStyle(editor.isActive("italic"))} title="مائل (Ctrl+I)">I</button>
-          <button type="button" onClick={() => editor.chain().focus().toggleUnderline().run()} className="px-2.5 py-1 rounded underline text-xs" style={btnStyle(editor.isActive("underline"))} title="تسطير (Ctrl+U)">U</button>
-          <button type="button" onClick={() => editor.chain().focus().toggleStrike().run()} className="px-2.5 py-1 rounded line-through text-xs" style={btnStyle(editor.isActive("strike"))} title="يتوسطه خط">S</button>
+        {/* =========================================================
+            ROW 2
+        ========================================================== */}
 
-          <span className="w-px h-5 mx-0.5" style={{ background: "#DED4BD" }} />
+        <div className="flex flex-wrap items-center gap-1">
+
+          {/* BOLD */}
+
+          <button
+            type="button"
+            onMouseDown={keepEditorFocus}
+            onClick={() => {
+              editor
+                .chain()
+                .focus()
+                .toggleBold()
+                .run();
+            }}
+            className="px-2.5 py-1 rounded font-bold text-xs"
+            style={btnStyle(editor.isActive("bold"))}
+            title="عريض (Ctrl+B)"
+          >
+            B
+          </button>
+
+          {/* ITALIC */}
+
+          <button
+            type="button"
+            onMouseDown={keepEditorFocus}
+            onClick={() => {
+              editor
+                .chain()
+                .focus()
+                .toggleItalic()
+                .run();
+            }}
+            className="px-2.5 py-1 rounded italic text-xs"
+            style={btnStyle(editor.isActive("italic"))}
+            title="مائل (Ctrl+I)"
+          >
+            I
+          </button>
+
+          {/* UNDERLINE */}
+
+          <button
+            type="button"
+            onMouseDown={keepEditorFocus}
+            onClick={() => {
+              editor
+                .chain()
+                .focus()
+                .toggleUnderline()
+                .run();
+            }}
+            className="px-2.5 py-1 rounded underline text-xs"
+            style={btnStyle(editor.isActive("underline"))}
+            title="تسطير (Ctrl+U)"
+          >
+            U
+          </button>
+
+          {/* STRIKE */}
+
+          <button
+            type="button"
+            onMouseDown={keepEditorFocus}
+            onClick={() => {
+              editor
+                .chain()
+                .focus()
+                .toggleStrike()
+                .run();
+            }}
+            className="px-2.5 py-1 rounded line-through text-xs"
+            style={btnStyle(editor.isActive("strike"))}
+            title="يتوسطه خط"
+          >
+            S
+          </button>
+
+          <span
+            className="w-px h-5 mx-0.5"
+            style={{
+              background: "#E3E0EE",
+            }}
+          />
+
+          {/* HEADING */}
 
           <select
             className="text-xs rounded px-2 py-1 border bg-white"
-            style={{ borderColor: "#DED4BD" }}
-            onChange={(e) => {
-              const v = e.target.value;
-              if (v === "p") editor.chain().focus().setParagraph().run();
-              else editor.chain().focus().toggleHeading({ level: Number(v) }).run();
+            style={{
+              borderColor: "#E3E0EE",
             }}
             value={
-              editor.isActive("heading", { level: 1 }) ? "1" :
-              editor.isActive("heading", { level: 2 }) ? "2" :
-              editor.isActive("heading", { level: 3 }) ? "3" :
-              editor.isActive("heading", { level: 4 }) ? "4" : "p"
+              editor.isActive("heading", {
+                level: 1,
+              })
+                ? "1"
+                : editor.isActive("heading", {
+                    level: 2,
+                  })
+                ? "2"
+                : editor.isActive("heading", {
+                    level: 3,
+                  })
+                ? "3"
+                : editor.isActive("heading", {
+                    level: 4,
+                  })
+                ? "4"
+                : "p"
             }
+            onChange={(e) => {
+              const v = e.target.value;
+
+              if (v === "p") {
+                editor
+                  .chain()
+                  .focus()
+                  .setParagraph()
+                  .run();
+              } else {
+                editor
+                  .chain()
+                  .focus()
+                  .setHeading({
+                    level: Number(v),
+                  })
+                  .run();
+              }
+            }}
           >
-            <option value="p">نص عادي</option>
-            <option value="1">عنوان 1</option>
-            <option value="2">عنوان 2</option>
-            <option value="3">عنوان 3</option>
-            <option value="4">عنوان 4</option>
+            <option value="p">
+              نص عادي
+            </option>
+
+            <option value="1">
+              عنوان 1
+            </option>
+
+            <option value="2">
+              عنوان 2
+            </option>
+
+            <option value="3">
+              عنوان 3
+            </option>
+
+            <option value="4">
+              عنوان 4
+            </option>
           </select>
         </div>
 
-        {/* Row 3: alignment, lists, indent */}
+        {/* =========================================================
+            ROW 3
+        ========================================================== */}
+
         <div className="flex flex-wrap items-center gap-1">
-          <button type="button" onClick={() => editor.chain().focus().setTextAlign("right").run()} className="px-2.5 py-1 rounded text-xs" style={btnStyle(editor.isActive({ textAlign: "right" }))} title="محاذاة يمين">يمين</button>
-          <button type="button" onClick={() => editor.chain().focus().setTextAlign("center").run()} className="px-2.5 py-1 rounded text-xs" style={btnStyle(editor.isActive({ textAlign: "center" }))} title="محاذاة وسط">وسط</button>
-          <button type="button" onClick={() => editor.chain().focus().setTextAlign("left").run()} className="px-2.5 py-1 rounded text-xs" style={btnStyle(editor.isActive({ textAlign: "left" }))} title="محاذاة يسار">يسار</button>
-          <button type="button" onClick={() => editor.chain().focus().setTextAlign("justify").run()} className="px-2.5 py-1 rounded text-xs" style={btnStyle(editor.isActive({ textAlign: "justify" }))} title="ضبط">ضبط</button>
 
-          <span className="w-px h-5 mx-0.5" style={{ background: "#DED4BD" }} />
+          {/* ALIGN RIGHT */}
 
-          <button type="button" onClick={() => editor.chain().focus().toggleBulletList().run()} className="px-2.5 py-1 rounded text-xs" style={btnStyle(editor.isActive("bulletList"))}>• قائمة</button>
-          <button type="button" onClick={() => editor.chain().focus().toggleOrderedList().run()} className="px-2.5 py-1 rounded text-xs" style={btnStyle(editor.isActive("orderedList"))}>1. قائمة</button>
-          <button type="button" onClick={() => editor.chain().focus().sinkListItem("listItem").run()} className="px-2.5 py-1 rounded text-xs bg-white border border-[#DED4BD]" title="زيادة المسافة البادئة">⇤ زحاف</button>
-          <button type="button" onClick={() => editor.chain().focus().liftListItem("listItem").run()} className="px-2.5 py-1 rounded text-xs bg-white border border-[#DED4BD]" title="إنقاص المسافة البادئة">⇥ إلغاء زحاف</button>
+          <button
+            type="button"
+            onMouseDown={keepEditorFocus}
+            onClick={() => {
+              editor
+                .chain()
+                .focus()
+                .setTextAlign("right")
+                .run();
+            }}
+            className="px-2.5 py-1 rounded text-xs"
+            style={btnStyle(
+              editor.isActive({
+                textAlign: "right",
+              })
+            )}
+            title="محاذاة يمين"
+          >
+            يمين
+          </button>
+
+          {/* ALIGN CENTER */}
+
+          <button
+            type="button"
+            onMouseDown={keepEditorFocus}
+            onClick={() => {
+              editor
+                .chain()
+                .focus()
+                .setTextAlign("center")
+                .run();
+            }}
+            className="px-2.5 py-1 rounded text-xs"
+            style={btnStyle(
+              editor.isActive({
+                textAlign: "center",
+              })
+            )}
+            title="محاذاة وسط"
+          >
+            وسط
+          </button>
+
+          {/* ALIGN LEFT */}
+
+          <button
+            type="button"
+            onMouseDown={keepEditorFocus}
+            onClick={() => {
+              editor
+                .chain()
+                .focus()
+                .setTextAlign("left")
+                .run();
+            }}
+            className="px-2.5 py-1 rounded text-xs"
+            style={btnStyle(
+              editor.isActive({
+                textAlign: "left",
+              })
+            )}
+            title="محاذاة يسار"
+          >
+            يسار
+          </button>
+
+          {/* JUSTIFY */}
+
+          <button
+            type="button"
+            onMouseDown={keepEditorFocus}
+            onClick={() => {
+              editor
+                .chain()
+                .focus()
+                .setTextAlign("justify")
+                .run();
+            }}
+            className="px-2.5 py-1 rounded text-xs"
+            style={btnStyle(
+              editor.isActive({
+                textAlign: "justify",
+              })
+            )}
+            title="ضبط"
+          >
+            ضبط
+          </button>
+
+          <span
+            className="w-px h-5 mx-0.5"
+            style={{
+              background: "#E3E0EE",
+            }}
+          />
+
+          {/* BULLET */}
+
+          <button
+            type="button"
+            onMouseDown={keepEditorFocus}
+            onClick={() => {
+              editor
+                .chain()
+                .focus()
+                .toggleBulletList()
+                .run();
+            }}
+            className="px-2.5 py-1 rounded text-xs"
+            style={btnStyle(
+              editor.isActive("bulletList")
+            )}
+          >
+            • قائمة
+          </button>
+
+          {/* ORDERED */}
+
+          <button
+            type="button"
+            onMouseDown={keepEditorFocus}
+            onClick={() => {
+              editor
+                .chain()
+                .focus()
+                .toggleOrderedList()
+                .run();
+            }}
+            className="px-2.5 py-1 rounded text-xs"
+            style={btnStyle(
+              editor.isActive("orderedList")
+            )}
+          >
+            1. قائمة
+          </button>
+
+          {/* SINK */}
+
+          <button
+            type="button"
+            onMouseDown={keepEditorFocus}
+            onClick={() => {
+              editor
+                .chain()
+                .focus()
+                .sinkListItem("listItem")
+                .run();
+            }}
+            className="px-2.5 py-1 rounded text-xs bg-white border border-[#E3E0EE]"
+            title="زيادة المسافة البادئة"
+          >
+            ⇤ زحاف
+          </button>
+
+          {/* LIFT */}
+
+          <button
+            type="button"
+            onMouseDown={keepEditorFocus}
+            onClick={() => {
+              editor
+                .chain()
+                .focus()
+                .liftListItem("listItem")
+                .run();
+            }}
+            className="px-2.5 py-1 rounded text-xs bg-white border border-[#E3E0EE]"
+            title="إنقاص المسافة البادئة"
+          >
+            ⇥ إلغاء زحاف
+          </button>
         </div>
 
-        {/* Row 4: link, table, image, import, undo/redo */}
+        {/* =========================================================
+            ROW 4
+        ========================================================== */}
+
         <div className="flex flex-wrap items-center gap-1">
-          <button type="button" onClick={setLink} className="px-2.5 py-1 rounded text-xs" style={btnStyle(editor.isActive("link"))} title="إدراج/تعديل رابط">🔗 رابط</button>
-          <button type="button" onClick={() => editor.chain().focus().extendMarkRange("link").unsetLink().run()} className="px-2 py-1 rounded text-xs bg-white border border-[#DED4BD]" title="حذف الرابط">إزالة الرابط</button>
 
-          <span className="w-px h-5 mx-0.5" style={{ background: "#DED4BD" }} />
+          {/* LINK */}
 
-          <button type="button" onClick={insertTable} className="px-2.5 py-1 rounded text-xs bg-white border border-[#DED4BD]">📊 جدول</button>
-          <button type="button" onClick={() => editor.chain().focus().addColumnAfter().run()} className="px-2 py-1 rounded text-xs bg-white border border-[#DED4BD]">+عمود</button>
-          <button type="button" onClick={() => editor.chain().focus().deleteColumn().run()} className="px-2 py-1 rounded text-xs bg-white border border-[#DED4BD]" style={{ color: "#C53030" }}>-عمود</button>
-          <button type="button" onClick={() => editor.chain().focus().addRowAfter().run()} className="px-2 py-1 rounded text-xs bg-white border border-[#DED4BD]">+صف</button>
-          <button type="button" onClick={() => editor.chain().focus().deleteRow().run()} className="px-2 py-1 rounded text-xs bg-white border border-[#DED4BD]" style={{ color: "#C53030" }}>-صف</button>
-          <button type="button" onClick={() => editor.chain().focus().toggleHeaderRow().run()} className="px-2 py-1 rounded text-xs bg-white border border-[#DED4BD]">صف عناوين</button>
-          <button type="button" onClick={() => editor.chain().focus().deleteTable().run()} className="px-2 py-1 rounded text-xs bg-white border border-[#DED4BD]" style={{ color: "#C53030" }}>حذف الجدول</button>
-
-          <span className="w-px h-5 mx-0.5" style={{ background: "#DED4BD" }} />
-
-          <button type="button" onClick={() => fileRef.current?.click()} className="px-2.5 py-1 rounded text-xs bg-white border border-[#DED4BD]">
-            {uploading ? "⏳ جاري الرفع..." : "🖼️ صورة"}
+          <button
+            type="button"
+            onMouseDown={keepEditorFocus}
+            onClick={setLink}
+            className="px-2.5 py-1 rounded text-xs"
+            style={btnStyle(
+              editor.isActive("link")
+            )}
+            title="إدراج/تعديل رابط"
+          >
+            🔗 رابط
           </button>
-          <input ref={fileRef} type="file" accept="image/*" className="hidden" onChange={(e) => { insertImage(e.target.files?.[0]); e.target.value = ""; }} />
 
-          <button type="button" onClick={() => importTxtRef.current?.click()} className="px-2.5 py-1 rounded text-xs bg-white border border-[#DED4BD]">
-            {importing ? "⏳ جاري الاستيراد..." : "📄 استيراد TXT"}
+          <button
+            type="button"
+            onMouseDown={keepEditorFocus}
+            onClick={() => {
+              editor
+                .chain()
+                .focus()
+                .extendMarkRange("link")
+                .unsetLink()
+                .run();
+            }}
+            className="px-2 py-1 rounded text-xs bg-white border border-[#E3E0EE]"
+            title="حذف الرابط"
+          >
+            إزالة الرابط
           </button>
-          <input ref={importTxtRef} type="file" accept=".txt,text/plain" className="hidden" onChange={(e) => { importTxt(e.target.files?.[0]); e.target.value = ""; }} />
 
-          <button type="button" onClick={() => importDocxRef.current?.click()} className="px-2.5 py-1 rounded text-xs bg-white border border-[#DED4BD]">
-            {importing ? "⏳ جاري الاستيراد..." : "📝 استيراد Word"}
+          <span
+            className="w-px h-5 mx-0.5"
+            style={{
+              background: "#E3E0EE",
+            }}
+          />
+
+          {/* TABLE */}
+
+          <button
+            type="button"
+            onMouseDown={keepEditorFocus}
+            onClick={insertTable}
+            className="px-2.5 py-1 rounded text-xs bg-white border border-[#E3E0EE]"
+          >
+            📊 جدول
           </button>
-          <input ref={importDocxRef} type="file" accept=".docx" className="hidden" onChange={(e) => { importDocx(e.target.files?.[0]); e.target.value = ""; }} />
 
-          <span className="w-px h-5 mx-0.5" style={{ background: "#DED4BD" }} />
+          <button
+            type="button"
+            onMouseDown={keepEditorFocus}
+            onClick={() =>
+              editor
+                  .chain()
+                  .focus()
+                  .addColumnAfter()
+                  .run()
+            }
+            className="px-2 py-1 rounded text-xs bg-white border border-[#E3E0EE]"
+          >
+            +عمود
+          </button>
 
-          <button type="button" onClick={() => editor.chain().focus().undo().run()} className="px-2.5 py-1 rounded text-xs bg-white border border-[#DED4BD]" title="تراجع (Ctrl+Z)">↩ تراجع</button>
-          <button type="button" onClick={() => editor.chain().focus().redo().run()} className="px-2.5 py-1 rounded text-xs bg-white border border-[#DED4BD]" title="إعادة (Ctrl+Y)">↪ إعادة</button>
+          <button
+            type="button"
+            onMouseDown={keepEditorFocus}
+            onClick={() =>
+              editor
+                  .chain()
+                  .focus()
+                  .deleteColumn()
+                  .run()
+            }
+            className="px-2 py-1 rounded text-xs bg-white border border-[#E3E0EE]"
+            style={{
+              color: "#D6334B",
+            }}
+          >
+            -عمود
+          </button>
+
+          <button
+            type="button"
+            onMouseDown={keepEditorFocus}
+            onClick={() =>
+              editor
+                  .chain()
+                  .focus()
+                  .addRowAfter()
+                  .run()
+            }
+            className="px-2 py-1 rounded text-xs bg-white border border-[#E3E0EE]"
+          >
+            +صف
+          </button>
+
+          <button
+            type="button"
+            onMouseDown={keepEditorFocus}
+            onClick={() =>
+              editor
+                  .chain()
+                  .focus()
+                  .deleteRow()
+                  .run()
+            }
+            className="px-2 py-1 rounded text-xs bg-white border border-[#E3E0EE]"
+            style={{
+              color: "#D6334B",
+            }}
+          >
+            -صف
+          </button>
+
+          <button
+            type="button"
+            onMouseDown={keepEditorFocus}
+            onClick={() =>
+              editor
+                  .chain()
+                  .focus()
+                  .toggleHeaderRow()
+                  .run()
+            }
+            className="px-2 py-1 rounded text-xs bg-white border border-[#E3E0EE]"
+          >
+            صف عناوين
+          </button>
+
+          <button
+            type="button"
+            onMouseDown={keepEditorFocus}
+            onClick={() =>
+              editor
+                  .chain()
+                  .focus()
+                  .deleteTable()
+                  .run()
+            }
+            className="px-2 py-1 rounded text-xs bg-white border border-[#E3E0EE]"
+            style={{
+              color: "#D6334B",
+            }}
+          >
+            حذف الجدول
+          </button>
+
+          <span
+            className="w-px h-5 mx-0.5"
+            style={{
+              background: "#E3E0EE",
+            }}
+          />
+
+          {/* IMAGE */}
+
+          <button
+            type="button"
+            onMouseDown={keepEditorFocus}
+            onClick={() => {
+              imagePosRef.current = editor.state.selection.to;
+              fileRef.current?.click();
+            }}
+            className="px-2.5 py-1 rounded text-xs bg-white border border-[#E3E0EE]"
+          >
+            {uploading
+              ? "⏳ جاري الرفع..."
+              : "🖼️ صورة"}
+          </button>
+
+          <input
+            ref={fileRef}
+            type="file"
+            accept="image/*"
+            className="hidden"
+            onChange={(e) => {
+              insertImage(
+                e.target.files?.[0]
+              );
+
+              e.target.value = "";
+            }}
+          />
+
+          {/* TXT */}
+
+          <button
+            type="button"
+            onMouseDown={keepEditorFocus}
+            onClick={() => {
+              importTxtRef.current?.click();
+            }}
+            className="px-2.5 py-1 rounded text-xs bg-white border border-[#E3E0EE]"
+          >
+            {importing
+              ? "⏳ جاري الاستيراد..."
+              : "📄 استيراد TXT"}
+          </button>
+
+          <input
+            ref={importTxtRef}
+            type="file"
+            accept=".txt,text/plain"
+            className="hidden"
+            onChange={(e) => {
+              importTxt(
+                e.target.files?.[0]
+              );
+
+              e.target.value = "";
+            }}
+          />
+
+          {/* DOCX */}
+
+          <button
+            type="button"
+            onMouseDown={keepEditorFocus}
+            onClick={() => {
+              importDocxRef.current?.click();
+            }}
+            className="px-2.5 py-1 rounded text-xs bg-white border border-[#E3E0EE]"
+          >
+            {importing
+              ? "⏳ جاري الاستيراد..."
+              : "📝 استيراد Word"}
+          </button>
+
+          <input
+            ref={importDocxRef}
+            type="file"
+            accept=".docx"
+            className="hidden"
+            onChange={(e) => {
+              importDocx(
+                e.target.files?.[0]
+              );
+
+              e.target.value = "";
+            }}
+          />
+
+          <span
+            className="w-px h-5 mx-0.5"
+            style={{
+              background: "#E3E0EE",
+            }}
+          />
+
+          {/* UNDO */}
+
+          <button
+            type="button"
+            onMouseDown={keepEditorFocus}
+            onClick={() => {
+              editor
+                .chain()
+                .focus()
+                .undo()
+                .run();
+            }}
+            className="px-2.5 py-1 rounded text-xs bg-white border border-[#E3E0EE]"
+            title="تراجع (Ctrl+Z)"
+          >
+            ↩ تراجع
+          </button>
+
+          {/* REDO */}
+
+          <button
+            type="button"
+            onMouseDown={keepEditorFocus}
+            onClick={() => {
+              editor
+                .chain()
+                .focus()
+                .redo()
+                .run();
+            }}
+            className="px-2.5 py-1 rounded text-xs bg-white border border-[#E3E0EE]"
+            title="إعادة (Ctrl+Y)"
+          >
+            ↪ إعادة
+          </button>
         </div>
       </div>
 
@@ -426,21 +1321,21 @@ export function StudioHotwords({ hotwords, onAdd, onRemove, onUpdate, uploadFn }
   };
 
   return (
-    <div className="mb-6 p-4 rounded-2xl bg-white border" style={{ borderColor: "#DED4BD" }}>
-      <h3 className="font-bold text-base mb-2" style={{ color: "#10665A" }}>✨ الكلمات التفاعلية (Hotwords)</h3>
-      <p className="text-xs mb-3" style={{ color: "#5C5A4A" }}>
+    <div className="mb-6 p-4 rounded-2xl bg-white border" style={{ borderColor: "#E3E0EE" }}>
+      <h3 className="font-bold text-base mb-2" style={{ color: "#4B2FD1" }}>✨ الكلمات التفاعلية (Hotwords)</h3>
+      <p className="text-xs mb-3" style={{ color: "#433F66" }}>
         اكتب <b>*الكلمة*</b> داخل محتوى الشرح فتتحول تلقائيًا لكلمة تفاعلية، أو حدد أي نص من المعاينة بالأسفل واضغط الزر هنا لإضافته يدويًا:
       </p>
 
       <div className="flex gap-2 mb-3">
-        <button type="button" onMouseDown={(e) => e.preventDefault()} onClick={handleCaptureSelection} className="px-3 py-1.5 rounded-xl text-xs font-bold text-white" style={{ background: "#10665A" }}>
+        <button type="button" onMouseDown={(e) => e.preventDefault()} onClick={handleCaptureSelection} className="px-3 py-1.5 rounded-xl text-xs font-bold text-white" style={{ background: "#4B2FD1" }}>
           استخدام النص المحدد حالياً من المتصفح
         </button>
       </div>
 
       {selectedText && (
-        <div className="ts-fade p-3 rounded-xl mb-3" style={{ background: "#F6E9D3", border: "1px solid #B9791F" }}>
-          <p className="font-bold text-sm mb-2" style={{ color: "#8A5A15" }}>النص المحدد: «{selectedText}»</p>
+        <div className="ts-fade p-3 rounded-xl mb-3" style={{ background: "#F7E6C4", border: "1px solid #C9972E" }}>
+          <p className="font-bold text-sm mb-2" style={{ color: "#946518" }}>النص المحدد: «{selectedText}»</p>
           <input className="ts-input text-sm mb-2" placeholder="الشرح أو التعريف الإضافي..." value={note} onChange={(e) => setNote(e.target.value)} />
           <ImageUploadField value={image} onChange={setImage} label="صورة توضيحية (اختياري)" uploadFn={uploadFn} />
           <div className="flex gap-2">
@@ -454,18 +1349,18 @@ export function StudioHotwords({ hotwords, onAdd, onRemove, onUpdate, uploadFn }
                 setImage("");
               }}
               className="px-4 py-1.5 rounded-lg text-xs font-bold text-white"
-              style={{ background: "#10665A" }}
+              style={{ background: "#4B2FD1" }}
             >
               حفظ وتفعيل الكلمة
             </button>
-            <button type="button" onClick={() => setSelectedText("")} className="px-3 py-1.5 rounded-lg text-xs" style={{ color: "#8A8570" }}>إلغاء</button>
+            <button type="button" onClick={() => setSelectedText("")} className="px-3 py-1.5 rounded-lg text-xs" style={{ color: "#6E6B85" }}>إلغاء</button>
           </div>
         </div>
       )}
 
       {editingId && (
-        <div className="ts-fade p-3 rounded-xl mb-3" style={{ background: "#E4F0EC", border: "1px solid #10665A" }}>
-          <p className="font-bold text-sm mb-2" style={{ color: "#0E5348" }}>
+        <div className="ts-fade p-3 rounded-xl mb-3" style={{ background: "#EFEAFD", border: "1px solid #4B2FD1" }}>
+          <p className="font-bold text-sm mb-2" style={{ color: "#2E1C86" }}>
             تعديل شرح: «{hotwords.find((h) => h.id === editingId)?.text}»
           </p>
           <input className="ts-input text-sm mb-2" placeholder="الشرح أو التعريف الإضافي..." value={note} onChange={(e) => setNote(e.target.value)} />
@@ -480,21 +1375,21 @@ export function StudioHotwords({ hotwords, onAdd, onRemove, onUpdate, uploadFn }
                 setImage("");
               }}
               className="px-4 py-1.5 rounded-lg text-xs font-bold text-white"
-              style={{ background: "#10665A" }}
+              style={{ background: "#4B2FD1" }}
             >
               حفظ التعديل
             </button>
-            <button type="button" onClick={() => setEditingId(null)} className="px-3 py-1.5 rounded-lg text-xs" style={{ color: "#8A8570" }}>إلغاء</button>
+            <button type="button" onClick={() => setEditingId(null)} className="px-3 py-1.5 rounded-lg text-xs" style={{ color: "#6E6B85" }}>إلغاء</button>
           </div>
         </div>
       )}
 
       <div className="flex flex-wrap gap-2">
         {hotwords.map((hw) => (
-          <span key={hw.id} className="text-xs px-3 py-1.5 rounded-xl flex items-center gap-2 border" style={{ background: "#FAF6ED", borderColor: "#DED4BD", color: "#8A5A15" }}>
+          <span key={hw.id} className="text-xs px-3 py-1.5 rounded-xl flex items-center gap-2 border" style={{ background: "#F7F5FB", borderColor: "#E3E0EE", color: "#946518" }}>
             <button type="button" onClick={() => startEditing(hw)} className="font-bold" title="تعديل الشرح/الصورة">{hw.text}</button>
-            {!hw.note && !hw.image && <span title="أضف شرح أو صورة لهذه الكلمة" style={{ color: "#B9791F" }}>⚠️</span>}
-            <button type="button" onClick={() => onRemove(hw.id)} style={{ color: "#C53030", fontWeight: "bold" }}>×</button>
+            {!hw.note && !hw.image && <span title="أضف شرح أو صورة لهذه الكلمة" style={{ color: "#C9972E" }}>⚠️</span>}
+            <button type="button" onClick={() => onRemove(hw.id)} style={{ color: "#D6334B", fontWeight: "bold" }}>×</button>
           </span>
         ))}
       </div>
@@ -531,8 +1426,8 @@ export function MindMapStudioBuilder({ mindmap, scenes, onChange }) {
   };
 
   return (
-    <div className="mb-6 p-4 rounded-2xl bg-white border" style={{ borderColor: "#DED4BD" }}>
-      <h3 className="font-bold text-base mb-3" style={{ color: "#10665A" }}>🧠 مصمم الخريطة الذهنية (Mind Map Builder)</h3>
+    <div className="mb-6 p-4 rounded-2xl bg-white border" style={{ borderColor: "#E3E0EE" }}>
+      <h3 className="font-bold text-base mb-3" style={{ color: "#4B2FD1" }}>🧠 مصمم الخريطة الذهنية (Mind Map Builder)</h3>
       <MindMapNodeEditor node={mindmap} scenes={scenes} onAddChild={handleAddChild} onUpdate={handleUpdate} onDelete={handleDelete} />
     </div>
   );
@@ -546,14 +1441,14 @@ function MindMapNodeEditor({ node, scenes, onAddChild, onUpdate, onDelete }) {
   const [sceneId, setSceneId] = useState(node.sceneId || "");
 
   return (
-    <div className="my-2 p-3 rounded-xl border bg-[#FAF6ED]" style={{ borderColor: "#DED4BD" }}>
+    <div className="my-2 p-3 rounded-xl border bg-[#F7F5FB]" style={{ borderColor: "#E3E0EE" }}>
       <div className="flex items-center justify-between flex-wrap gap-2">
         <div className="flex items-center gap-2">
-          <button type="button" onClick={() => setIsExpanded(!isExpanded)} className="text-xs font-bold px-2 py-0.5 rounded" style={{ background: "#EAE6F1", color: "#4C3F63" }}>
+          <button type="button" onClick={() => setIsExpanded(!isExpanded)} className="text-xs font-bold px-2 py-0.5 rounded" style={{ background: "#F6E8F1", color: "#7D2E68" }}>
             {isExpanded ? "▼" : "◀"}
           </button>
           {!isEditing ? (
-            <span className="font-bold text-sm" style={{ color: "#22291F" }}>{node.label}</span>
+            <span className="font-bold text-sm" style={{ color: "#171333" }}>{node.label}</span>
           ) : (
             <div className="flex flex-col gap-2 w-full sm:w-80">
               <input className="ts-input text-xs" value={label} onChange={(e) => setLabel(e.target.value)} placeholder="عنوان العقدة" />
@@ -569,7 +1464,7 @@ function MindMapNodeEditor({ node, scenes, onAddChild, onUpdate, onDelete }) {
                   setIsEditing(false);
                 }}
                 className="px-3 py-1 rounded text-xs text-white font-bold"
-                style={{ background: "#10665A" }}
+                style={{ background: "#4B2FD1" }}
               >
                 حفظ التعديل
               </button>
@@ -579,15 +1474,15 @@ function MindMapNodeEditor({ node, scenes, onAddChild, onUpdate, onDelete }) {
 
         <div className="flex items-center gap-1">
           {!isEditing && (
-            <button type="button" onClick={() => setIsEditing(true)} className="text-xs px-2.5 py-1 rounded bg-white border" style={{ color: "#10665A", borderColor: "#DED4BD" }}>تعديل</button>
+            <button type="button" onClick={() => setIsEditing(true)} className="text-xs px-2.5 py-1 rounded bg-white border" style={{ color: "#4B2FD1", borderColor: "#E3E0EE" }}>تعديل</button>
           )}
-          <button type="button" onClick={() => onAddChild(node.id)} className="text-xs px-2.5 py-1 rounded text-white font-bold" style={{ background: "#10665A" }}>+ فرع</button>
-          <button type="button" onClick={() => onDelete(node.id)} className="text-xs px-2 py-1 rounded" style={{ color: "#C53030" }}>حذف</button>
+          <button type="button" onClick={() => onAddChild(node.id)} className="text-xs px-2.5 py-1 rounded text-white font-bold" style={{ background: "#4B2FD1" }}>+ فرع</button>
+          <button type="button" onClick={() => onDelete(node.id)} className="text-xs px-2 py-1 rounded" style={{ color: "#D6334B" }}>حذف</button>
         </div>
       </div>
 
       {isExpanded && node.children && node.children.length > 0 && (
-        <div className="mr-4 mt-2 pr-3 border-r-2" style={{ borderColor: "#DED4BD" }}>
+        <div className="mr-4 mt-2 pr-3 border-r-2" style={{ borderColor: "#E3E0EE" }}>
           {node.children.map((child) => (
             <MindMapNodeEditor key={child.id} node={child} scenes={scenes} onAddChild={onAddChild} onUpdate={onUpdate} onDelete={onDelete} />
           ))}
@@ -617,8 +1512,8 @@ export function TimelineStudioEditor({ items, onAdd, onEdit, onDelete, uploadFn 
   };
 
   return (
-    <div className="mb-6 p-4 rounded-2xl bg-white border" style={{ borderColor: "#DED4BD" }}>
-      <h3 className="font-bold text-base mb-3" style={{ color: "#10665A" }}>🕒 إدارة الخط الزمني والأحداث</h3>
+    <div className="mb-6 p-4 rounded-2xl bg-white border" style={{ borderColor: "#E3E0EE" }}>
+      <h3 className="font-bold text-base mb-3" style={{ color: "#4B2FD1" }}>🕒 إدارة الخط الزمني والأحداث</h3>
 
       <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 mb-2">
         <input className="ts-input text-sm" placeholder="التاريخ (مثال: يوليو 1798)" value={date} onChange={(e) => setDate(e.target.value)} />
@@ -627,16 +1522,16 @@ export function TimelineStudioEditor({ items, onAdd, onEdit, onDelete, uploadFn 
       <textarea className="ts-input text-sm mb-2" placeholder="وصف الحدث..." value={description} onChange={(e) => setDescription(e.target.value)} rows={2} />
       <input className="ts-input text-sm mb-2" placeholder="الموقع الجغرافي (مثال: الإسكندرية)" value={location} onChange={(e) => setLocation(e.target.value)} />
       <ImageUploadField value={image} onChange={setImage} label="صورة الحدث (اختياري)" uploadFn={uploadFn} />
-      <button type="button" onClick={handleSave} className="px-4 py-2 rounded-xl text-xs font-bold text-white mb-4 mt-2" style={{ background: "#10665A" }}>
+      <button type="button" onClick={handleSave} className="px-4 py-2 rounded-xl text-xs font-bold text-white mb-4 mt-2" style={{ background: "#4B2FD1" }}>
         {editingId ? "تحديث الحدث" : "+ إضافة حدث للخط الزمني"}
       </button>
 
       <div className="flex flex-col gap-2">
         {items.map((item) => (
-          <div key={item.id} className="flex justify-between items-center p-3 rounded-xl border bg-[#FAF6ED]" style={{ borderColor: "#DED4BD" }}>
+          <div key={item.id} className="flex justify-between items-center p-3 rounded-xl border bg-[#F7F5FB]" style={{ borderColor: "#E3E0EE" }}>
             <div>
-              <span className="font-bold text-xs px-2 py-1 rounded ml-2" style={{ background: "#10665A", color: "#FAF6ED" }}>{item.date}</span>
-              <span className="font-bold text-sm" style={{ color: "#22291F" }}>{item.title}</span>
+              <span className="font-bold text-xs px-2 py-1 rounded ml-2" style={{ background: "#4B2FD1", color: "#F7F5FB" }}>{item.date}</span>
+              <span className="font-bold text-sm" style={{ color: "#171333" }}>{item.title}</span>
             </div>
             <div className="flex gap-2">
               <button
@@ -650,11 +1545,11 @@ export function TimelineStudioEditor({ items, onAdd, onEdit, onDelete, uploadFn 
                   setImage(item.image);
                 }}
                 className="text-xs px-2.5 py-1 rounded bg-white border"
-                style={{ color: "#10665A", borderColor: "#DED4BD" }}
+                style={{ color: "#4B2FD1", borderColor: "#E3E0EE" }}
               >
                 تعديل
               </button>
-              <button type="button" onClick={() => onDelete(item.id)} className="text-xs px-2.5 py-1 rounded" style={{ color: "#C53030" }}>حذف</button>
+              <button type="button" onClick={() => onDelete(item.id)} className="text-xs px-2.5 py-1 rounded" style={{ color: "#D6334B" }}>حذف</button>
             </div>
           </div>
         ))}
@@ -719,8 +1614,8 @@ export function QuestionStudioEditor({ questions, onAdd, onUpdate, onDelete }) {
   };
 
   return (
-    <div className="mb-6 p-4 rounded-2xl bg-white border" style={{ borderColor: "#DED4BD" }}>
-      <h3 className="font-bold text-base mb-3" style={{ color: "#10665A" }}>❓ بنك الأسئلة والتقييمات</h3>
+    <div className="mb-6 p-4 rounded-2xl bg-white border" style={{ borderColor: "#E3E0EE" }}>
+      <h3 className="font-bold text-base mb-3" style={{ color: "#4B2FD1" }}>❓ بنك الأسئلة والتقييمات</h3>
 
       <div className="grid grid-cols-2 gap-2 mb-3">
         <select className="ts-input text-sm" value={type} onChange={(e) => setType(e.target.value)}>
@@ -757,11 +1652,11 @@ export function QuestionStudioEditor({ questions, onAdd, onUpdate, onDelete }) {
       )}
 
       <div className="flex flex-wrap gap-2 mb-4">
-        <button type="button" onClick={handleSave} className="px-4 py-2 rounded-xl text-xs font-bold text-white" style={{ background: "#10665A" }}>
+        <button type="button" onClick={handleSave} className="px-4 py-2 rounded-xl text-xs font-bold text-white" style={{ background: "#4B2FD1" }}>
           {editingId ? "💾 حفظ التعديلات" : "+ إضافة السؤال للمشهد"}
         </button>
         {editingId && (
-          <button type="button" onClick={resetForm} className="px-3 py-2 rounded-xl text-xs font-bold" style={{ color: "#8A8570" }}>
+          <button type="button" onClick={resetForm} className="px-3 py-2 rounded-xl text-xs font-bold" style={{ color: "#6E6B85" }}>
             إلغاء التعديل
           </button>
         )}
@@ -769,11 +1664,11 @@ export function QuestionStudioEditor({ questions, onAdd, onUpdate, onDelete }) {
 
       <div className="flex flex-col gap-2">
         {questions.map((q) => (
-          <div key={q.id} className="flex justify-between items-center gap-2 p-3 rounded-xl border bg-[#FAF6ED]" style={{ borderColor: editingId === q.id ? "#10665A" : "#DED4BD" }}>
-            <span className="font-bold text-sm flex-1" style={{ color: "#22291F" }}>{q.prompt}</span>
+          <div key={q.id} className="flex justify-between items-center gap-2 p-3 rounded-xl border bg-[#F7F5FB]" style={{ borderColor: editingId === q.id ? "#4B2FD1" : "#E3E0EE" }}>
+            <span className="font-bold text-sm flex-1" style={{ color: "#171333" }}>{q.prompt}</span>
             <div className="flex gap-1 shrink-0">
-              <button type="button" onClick={() => startEdit(q)} className="text-xs px-2 py-1 rounded font-bold" style={{ color: "#10665A" }}>✏️ تعديل</button>
-              <button type="button" onClick={() => onDelete(q.id)} className="text-xs px-2 py-1 rounded" style={{ color: "#C53030" }}>🗑 حذف</button>
+              <button type="button" onClick={() => startEdit(q)} className="text-xs px-2 py-1 rounded font-bold" style={{ color: "#4B2FD1" }}>✏️ تعديل</button>
+              <button type="button" onClick={() => onDelete(q.id)} className="text-xs px-2 py-1 rounded" style={{ color: "#D6334B" }}>🗑 حذف</button>
             </div>
           </div>
         ))}
@@ -854,23 +1749,23 @@ export function CreateLessonModal({ onCreate, onClose }) {
   const canSubmit = title.trim() && stageId && gradeId && termId && subjectId;
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 overflow-y-auto" style={{ background: "rgba(34,41,31,0.5)" }}>
-      <div className="ts-fade w-full rounded-3xl p-6 shadow-2xl bg-white border max-w-md my-auto" style={{ borderColor: "#DED4BD", maxHeight: "90vh", overflowY: "auto" }}>
-        <h2 className="font-black text-xl mb-4" style={{ color: "#10665A" }}>إنشاء درس جديد</h2>
+    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 overflow-y-auto" style={{ background: "rgba(23, 19, 51,0.5)" }}>
+      <div className="ts-fade w-full rounded-3xl p-6 shadow-2xl bg-white border max-w-md my-auto" style={{ borderColor: "#E3E0EE", maxHeight: "90vh", overflowY: "auto" }}>
+        <h2 className="font-black text-xl mb-4" style={{ color: "#4B2FD1" }}>إنشاء درس جديد</h2>
 
         {loadError && (
-          <p className="text-xs mb-3" style={{ color: "#C53030" }}>{loadError}</p>
+          <p className="text-xs mb-3" style={{ color: "#D6334B" }}>{loadError}</p>
         )}
 
         {curriculumEmpty ? (
-          <p className="text-sm mb-5 leading-6" style={{ color: "#5C5A4A" }}>
+          <p className="text-sm mb-5 leading-6" style={{ color: "#433F66" }}>
             لا يوجد منهج مُعرَّف بعد (مراحل · صفوف · ترمات · مواد). أضِف عناصر المنهج أولًا من
             «إعدادات المنصة ← المنهج» ثم عُد هنا لإنشاء الدرس.
           </p>
         ) : (
           <>
             <label className="block mb-3">
-              <span className="block text-xs mb-1" style={{ color: "#5C5A4A" }}>عنوان الدرس</span>
+              <span className="block text-xs mb-1" style={{ color: "#433F66" }}>عنوان الدرس</span>
               <input className="ts-input" value={title} onChange={(e) => setTitle(e.target.value)} />
             </label>
 
@@ -923,7 +1818,7 @@ export function CreateLessonModal({ onCreate, onClose }) {
             </div>
 
             <label className="block mb-5">
-              <span className="block text-xs mb-1" style={{ color: "#5C5A4A" }}>وصف مختصر</span>
+              <span className="block text-xs mb-1" style={{ color: "#433F66" }}>وصف مختصر</span>
               <textarea rows={2} className="ts-input" value={description} onChange={(e) => setDescription(e.target.value)} />
             </label>
           </>
@@ -943,11 +1838,11 @@ export function CreateLessonModal({ onCreate, onClose }) {
               })
             }
             className="px-4 py-2.5 rounded-xl text-xs font-bold text-white shadow-sm flex-1"
-            style={{ background: canSubmit ? "#10665A" : "#DED4BD" }}
+            style={{ background: canSubmit ? "#4B2FD1" : "#E3E0EE" }}
           >
             إنشاء والبدء في الاستوديو
           </button>
-          <button onClick={onClose} className="px-4 py-2.5 rounded-xl text-xs" style={{ color: "#8A8570" }}>إلغاء</button>
+          <button onClick={onClose} className="px-4 py-2.5 rounded-xl text-xs" style={{ color: "#6E6B85" }}>إلغاء</button>
         </div>
       </div>
     </div>

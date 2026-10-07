@@ -408,20 +408,20 @@ export default function StudentLessonPage() {
     // نفس ارتفاع/بنية الهيدر الموجود في العرض النهائي (سطر lesson.title لاحقًا) حتى لا تقفز
     // الصفحة (Layout Shift) لحظة انتهاء التحميل — Visual/Layout فقط، لا تأثير على تحميل الدرس.
     return (
-      <div className="min-h-screen flex flex-col md-lesson-page" style={{ background: "#FAF6ED" }}>
+      <div className="min-h-screen flex flex-col md-lesson-page" style={{ background: "#FFFFFF" }}>
         <div
           className="md-lv-topbar bg-white px-4 sm:px-6 py-3 border-b flex justify-between items-center gap-2 flex-wrap"
-          style={{ borderColor: "#DED4BD" }}
+          style={{ borderColor: "var(--duo-line)" }}
         >
-          <span className="text-sm font-bold" style={{ color: "#10665A" }}>مَدَار</span>
-          <span className="md-lv-topbar-title text-xs font-medium truncate max-w-[40%]" style={{ color: "#8A8570" }}>
+          <span className="text-sm font-bold" style={{ color: "var(--duo-green-ink)" }}>مَدَار</span>
+          <span className="md-lv-topbar-title text-xs font-medium truncate max-w-[40%]" style={{ color: "var(--duo-muted)" }}>
             جاري التحميل...
           </span>
-          <span className="text-xs" style={{ color: "#8A8570", opacity: 0 }} aria-hidden="true">
+          <span className="text-xs" style={{ color: "var(--duo-muted)", opacity: 0 }} aria-hidden="true">
             تسجيل الدخول
           </span>
         </div>
-        <div className="flex-1 flex items-center justify-center p-10 dir-rtl" style={{ color: "#8A8570" }}>
+        <div className="flex-1 flex items-center justify-center p-10 dir-rtl" style={{ color: "var(--duo-muted)" }}>
           <p>جاري تحميل الدرس...</p>
         </div>
       </div>
@@ -430,14 +430,14 @@ export default function StudentLessonPage() {
   if (lesson === false) {
     return (
       <div className="md-lesson-page min-h-screen p-10 text-center dir-rtl">
-        <p className="font-bold mb-2" style={{ color: "#C53030" }}>تعذّر عرض هذا الدرس</p>
-        <p className="text-sm mb-4" style={{ color: "#8A8570" }}>
+        <p className="font-bold mb-2" style={{ color: "var(--duo-red-d)" }}>تعذّر عرض هذا الدرس</p>
+        <p className="text-sm mb-4" style={{ color: "var(--duo-muted)" }}>
           قد يكون غير منشور أو غير موجود. يمكنك العودة واختيار درس آخر.
         </p>
         <button
           onClick={() => navigate("/student")}
           className="md-lv-btn md-lv-btn-primary mt-2 px-4 py-2 rounded-xl text-sm font-bold text-white"
-          style={{ background: "#10665A" }}
+          style={{ background: "var(--duo-green)" }}
         >
           ← العودة لمنصة الطالب
         </button>
@@ -465,31 +465,31 @@ export default function StudentLessonPage() {
 
   if (lessonComingSoon) {
     return (
-      <div className="min-h-screen flex flex-col md-lesson-page" style={{ background: "#FAF6ED" }}>
+      <div className="min-h-screen flex flex-col md-lesson-page" style={{ background: "#FFFFFF" }}>
         <div
           className="md-lv-topbar bg-white px-4 sm:px-6 py-3 border-b flex justify-between items-center gap-2 flex-wrap"
-          style={{ borderColor: "#DED4BD" }}
+          style={{ borderColor: "var(--duo-line)" }}
         >
-          <button onClick={() => navigate("/student")} className="md-lv-back text-sm font-bold" style={{ color: "#10665A" }}>
+          <button onClick={() => navigate("/student")} className="md-lv-back text-sm font-bold" style={{ color: "var(--duo-green-ink)" }}>
             ← العودة لقائمة الدروس
           </button>
-          <span className="md-lv-topbar-title text-xs font-medium truncate max-w-[40%]" style={{ color: "#8A8570" }}>
+          <span className="md-lv-topbar-title text-xs font-medium truncate max-w-[40%]" style={{ color: "var(--duo-muted)" }}>
             {lesson?.title || "منصة الطالب التعليمية"}
           </span>
           <span />
         </div>
         <div className="flex-1 flex items-center justify-center p-6">
-          <div className="md-lv-lock max-w-md w-full rounded-3xl p-8 text-center bg-white shadow-sm dir-rtl" style={{ border: "1px solid #DED4BD" }}>
+          <div className="md-lv-lock max-w-md w-full rounded-3xl p-8 text-center bg-white dir-rtl" style={{ border: "2px solid var(--duo-line)" }}>
             <p className="text-4xl mb-3">⏳</p>
-            <p className="font-black text-lg mb-2" style={{ color: "#10665A" }}>قريبًا</p>
-            <p className="text-sm mb-6" style={{ color: "#5C5A4A" }}>
+            <p className="font-black text-lg mb-2" style={{ color: "var(--duo-green-ink)" }}>قريبًا</p>
+            <p className="text-sm mb-6" style={{ color: "var(--duo-ink-soft)" }}>
               هذا الدرس سيتوفر قريبًا. تابعنا لاحقًا.
             </p>
             <button
               type="button"
               onClick={() => navigate("/student")}
               className="md-lv-btn md-lv-btn-primary w-full px-5 py-3 rounded-2xl text-sm font-bold text-white"
-              style={{ background: "#10665A" }}
+              style={{ background: "var(--duo-green)" }}
             >
               ← العودة لقائمة الدروس
             </button>
@@ -501,38 +501,38 @@ export default function StudentLessonPage() {
 
   if (lessonAccessLocked) {
     return (
-      <div className="min-h-screen flex flex-col md-lesson-page" style={{ background: "#FAF6ED" }}>
+      <div className="min-h-screen flex flex-col md-lesson-page" style={{ background: "#FFFFFF" }}>
         <div
           className="md-lv-topbar bg-white px-4 sm:px-6 py-3 border-b flex justify-between items-center gap-2 flex-wrap"
-          style={{ borderColor: "#DED4BD" }}
+          style={{ borderColor: "var(--duo-line)" }}
         >
-          <button onClick={() => navigate("/student")} className="md-lv-back text-sm font-bold" style={{ color: "#10665A" }}>
+          <button onClick={() => navigate("/student")} className="md-lv-back text-sm font-bold" style={{ color: "var(--duo-green-ink)" }}>
             ← العودة لقائمة الدروس
           </button>
-          <span className="md-lv-topbar-title text-xs font-medium truncate max-w-[40%]" style={{ color: "#8A8570" }}>
+          <span className="md-lv-topbar-title text-xs font-medium truncate max-w-[40%]" style={{ color: "var(--duo-muted)" }}>
             {lesson?.title || "منصة الطالب التعليمية"}
           </span>
           <button
             type="button"
             onClick={() => setAuthOpen(true)}
             className="md-lv-login text-xs font-bold px-3 py-1.5 rounded-xl text-white"
-            style={{ background: "#10665A" }}
+            style={{ background: "var(--duo-green)" }}
           >
             تسجيل الدخول
           </button>
         </div>
         <div className="flex-1 flex items-center justify-center p-6">
-          <div className="md-lv-lock max-w-md w-full rounded-3xl p-8 text-center bg-white shadow-sm dir-rtl" style={{ border: "1px solid #DED4BD" }}>
+          <div className="md-lv-lock max-w-md w-full rounded-3xl p-8 text-center bg-white dir-rtl" style={{ border: "2px solid var(--duo-line)" }}>
             <p className="text-4xl mb-3">🔐</p>
-            <p className="font-black text-lg mb-2" style={{ color: "#10665A" }}>تسجيل الدخول مطلوب</p>
-            <p className="text-sm mb-6" style={{ color: "#5C5A4A" }}>
+            <p className="font-black text-lg mb-2" style={{ color: "var(--duo-green-ink)" }}>تسجيل الدخول مطلوب</p>
+            <p className="text-sm mb-6" style={{ color: "var(--duo-ink-soft)" }}>
               هذا الدرس حصري للمستخدمين المسجّلين. سجّل دخولك للوصول إليه.
             </p>
             <button
               type="button"
               onClick={() => setAuthOpen(true)}
               className="md-lv-btn md-lv-btn-primary w-full px-5 py-3 rounded-2xl text-sm font-bold text-white"
-              style={{ background: "#10665A" }}
+              style={{ background: "var(--duo-green)" }}
             >
               تسجيل الدخول / إنشاء حساب
             </button>
@@ -540,7 +540,7 @@ export default function StudentLessonPage() {
               type="button"
               onClick={() => navigate("/student")}
               className="md-lv-btn md-lv-btn-text w-full mt-2 px-5 py-2 rounded-2xl text-xs font-bold"
-              style={{ color: "#8A8570" }}
+              style={{ color: "var(--duo-muted)" }}
             >
               ← العودة لقائمة الدروس
             </button>
@@ -552,20 +552,20 @@ export default function StudentLessonPage() {
   }
 
   return (
-    <div className="min-h-screen flex flex-col md-lesson-page" style={{ background: "#FAF6ED" }}>
+    <div className="min-h-screen flex flex-col md-lesson-page" style={{ background: "#FFFFFF" }}>
       <div
         className="md-lv-topbar bg-white px-4 sm:px-6 py-3 border-b flex justify-between items-center gap-2 flex-wrap"
-        style={{ borderColor: "#DED4BD" }}
+        style={{ borderColor: "var(--duo-line)" }}
       >
-        <button onClick={() => navigate("/student")} className="md-lv-back text-sm font-bold" style={{ color: "#10665A" }}>
+        <button onClick={() => navigate("/student")} className="md-lv-back text-sm font-bold" style={{ color: "var(--duo-green-ink)" }}>
           ← العودة لقائمة الدروس
         </button>
-        <span className="md-lv-topbar-title text-xs font-medium truncate max-w-[40%]" style={{ color: "#8A8570" }}>
+        <span className="md-lv-topbar-title text-xs font-medium truncate max-w-[40%]" style={{ color: "var(--duo-muted)" }}>
           {lesson?.title || "منصة الطالب التعليمية"}
         </span>
         <div className="relative">
           {session === undefined ? (
-            <span className="text-xs" style={{ color: "#8A8570" }}>...</span>
+            <span className="text-xs" style={{ color: "var(--duo-muted)" }}>...</span>
           ) : session ? (
             <>
               <button
@@ -575,22 +575,22 @@ export default function StudentLessonPage() {
                 aria-expanded={menuOpen}
               >
                 <LetterAvatar name={name} email={session.user?.email} size={28} />
-                <span className="text-xs font-bold hidden sm:inline" style={{ color: "#22291F" }}>
+                <span className="text-xs font-bold hidden sm:inline" style={{ color: "var(--duo-ink)" }}>
                   {name}
                 </span>
               </button>
               {menuOpen && (
                 <div
-                  className="md-lv-menu absolute left-0 mt-2 w-48 rounded-2xl bg-white shadow-lg py-2 z-50 dir-rtl text-right"
-                  style={{ border: "1px solid #DED4BD" }}
+                  className="md-lv-menu absolute left-0 mt-2 w-48 rounded-2xl bg-white py-2 z-50 dir-rtl text-right"
+                  style={{ border: "2px solid var(--duo-line)" }}
                 >
-                  <p className="px-4 py-1 text-xs font-bold" style={{ color: "#10665A" }}>
+                  <p className="px-4 py-1 text-xs font-bold" style={{ color: "var(--duo-green-ink)" }}>
                     {name}
                   </p>
                   <button
                     type="button"
                     className="w-full text-right px-4 py-2 text-xs"
-                    style={{ color: "#5C5A4A" }}
+                    style={{ color: "var(--duo-ink-soft)" }}
                     onClick={() => {
                       setMenuOpen(false);
                       navigate("/student");
@@ -601,7 +601,7 @@ export default function StudentLessonPage() {
                   <button
                     type="button"
                     className="w-full text-right px-4 py-2 text-xs"
-                    style={{ color: "#C53030" }}
+                    style={{ color: "var(--duo-red-d)" }}
                     onClick={async () => {
                       setMenuOpen(false);
                       try {
@@ -619,7 +619,7 @@ export default function StudentLessonPage() {
               type="button"
               onClick={() => setAuthOpen(true)}
               className="md-lv-login text-xs font-bold px-3 py-1.5 rounded-xl text-white"
-              style={{ background: "#10665A" }}
+              style={{ background: "var(--duo-green)" }}
             >
               تسجيل الدخول
             </button>
@@ -628,7 +628,7 @@ export default function StudentLessonPage() {
       </div>
 
       {sceneCount > 0 && (
-        <div className="md-lv-progress px-4 py-2 text-center text-xs font-bold" style={{ background: "#E4F0EC", color: "#0E5348" }}>
+        <div className="md-lv-progress px-4 py-2 text-center text-xs font-bold" style={{ background: "var(--duo-green-s)", color: "var(--duo-green-ink)" }}>
           التقدّم : {progressLabel}
           {sceneCount > 0 && !progress.lessonCompleted ? ` · عناوين مكتملة ${doneCount}/${sceneCount}` : ""}
         </div>

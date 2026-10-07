@@ -70,26 +70,26 @@ function SeoSettingsSection({ lesson, patchLesson, open, setOpen, slugConflict, 
   const finalUrl = `${origin}/lessons/${lesson.id}/${previewSlug}`;
 
   return (
-    <div className="mb-4 rounded-xl overflow-hidden" style={{ border: "1px solid #DED4BD" }}>
+    <div className="mb-4 rounded-xl overflow-hidden" style={{ border: "1px solid #E3E0EE" }}>
       <button
         type="button"
         onClick={() => setOpen((v) => !v)}
         className="w-full flex items-center justify-between px-3 py-2.5 text-xs font-bold"
-        style={{ background: "#FAF6ED", color: "#10665A" }}
+        style={{ background: "#F7F5FB", color: "#4B2FD1" }}
       >
         <span>🔎 إعدادات محركات البحث</span>
-        <span style={{ color: "#8A8570" }}>{open ? "▲" : "▼"}</span>
+        <span style={{ color: "#6E6B85" }}>{open ? "▲" : "▼"}</span>
       </button>
 
       {open && (
         <div className="p-3 bg-white">
-          <p className="text-[11px] mb-3" style={{ color: "#8A8570" }}>
+          <p className="text-[11px] mb-3" style={{ color: "#6E6B85" }}>
             هذه البيانات تتحكم في طريقة ظهور الدرس لمحركات البحث والمشاركة على المنصات الاجتماعية. لا تغيّر محتوى الدرس نفسه.
           </p>
 
           {/* لغة SEO */}
           <label className="block mb-3">
-            <span className="block text-xs mb-1 font-bold" style={{ color: "#8A8570" }}>لغة SEO</span>
+            <span className="block text-xs mb-1 font-bold" style={{ color: "#6E6B85" }}>لغة SEO</span>
             <select
               className="ts-input text-xs w-full"
               value={lesson.seoLanguage || "ar"}
@@ -102,9 +102,9 @@ function SeoSettingsSection({ lesson, patchLesson, open, setOpen, slugConflict, 
 
           {/* عنوان SEO */}
           <label className="block mb-3">
-            <span className="flex items-center justify-between text-xs mb-1 font-bold" style={{ color: "#8A8570" }}>
+            <span className="flex items-center justify-between text-xs mb-1 font-bold" style={{ color: "#6E6B85" }}>
               <span>عنوان SEO</span>
-              <span style={{ color: seoTitleLen > SEO_TITLE_LIMIT ? "#C53030" : "#8A8570" }}>
+              <span style={{ color: seoTitleLen > SEO_TITLE_LIMIT ? "#D6334B" : "#6E6B85" }}>
                 {seoTitleLen} / {SEO_TITLE_LIMIT}
               </span>
             </span>
@@ -116,18 +116,18 @@ function SeoSettingsSection({ lesson, patchLesson, open, setOpen, slugConflict, 
               onBlur={(e) => patchLesson({ seoTitle: e.target.value.trim() }, { immediate: true })}
             />
             {seoTitleLen > SEO_TITLE_LIMIT && (
-              <p className="text-[11px] mt-1" style={{ color: "#C53030" }}>العنوان طويل — قد يظهر مقطوعًا في نتائج البحث.</p>
+              <p className="text-[11px] mt-1" style={{ color: "#D6334B" }}>العنوان طويل — قد يظهر مقطوعًا في نتائج البحث.</p>
             )}
             {!lesson.seoTitle && (
-              <p className="text-[11px] mt-1" style={{ color: "#8A8570" }}>بدون تعبئة، سيُستخدم عنوان الدرس تلقائيًا: «{lesson.title}»</p>
+              <p className="text-[11px] mt-1" style={{ color: "#6E6B85" }}>بدون تعبئة، سيُستخدم عنوان الدرس تلقائيًا: «{lesson.title}»</p>
             )}
           </label>
 
           {/* وصف SEO */}
           <label className="block mb-3">
-            <span className="flex items-center justify-between text-xs mb-1 font-bold" style={{ color: "#8A8570" }}>
+            <span className="flex items-center justify-between text-xs mb-1 font-bold" style={{ color: "#6E6B85" }}>
               <span>وصف SEO</span>
-              <span style={{ color: seoDescLen > SEO_DESCRIPTION_LIMIT ? "#C53030" : "#8A8570" }}>
+              <span style={{ color: seoDescLen > SEO_DESCRIPTION_LIMIT ? "#D6334B" : "#6E6B85" }}>
                 {seoDescLen} / {SEO_DESCRIPTION_LIMIT}
               </span>
             </span>
@@ -140,16 +140,16 @@ function SeoSettingsSection({ lesson, patchLesson, open, setOpen, slugConflict, 
               onBlur={(e) => patchLesson({ seoDescription: e.target.value.trim() }, { immediate: true })}
             />
             {seoDescLen > SEO_DESCRIPTION_LIMIT && (
-              <p className="text-[11px] mt-1" style={{ color: "#C53030" }}>الوصف طويل — قد يُختصر في نتائج البحث.</p>
+              <p className="text-[11px] mt-1" style={{ color: "#D6334B" }}>الوصف طويل — قد يُختصر في نتائج البحث.</p>
             )}
             {!lesson.seoDescription && (
-              <p className="text-[11px] mt-1" style={{ color: "#8A8570" }}>بدون تعبئة، سيُستخدم وصف بديل تلقائيًا.</p>
+              <p className="text-[11px] mt-1" style={{ color: "#6E6B85" }}>بدون تعبئة، سيُستخدم وصف بديل تلقائيًا.</p>
             )}
           </label>
 
           {/* الرابط / Slug */}
           <label className="block mb-3">
-            <span className="block text-xs mb-1 font-bold" style={{ color: "#8A8570" }}>الرابط / Slug</span>
+            <span className="block text-xs mb-1 font-bold" style={{ color: "#6E6B85" }}>الرابط / Slug</span>
             <input
               className="ts-input text-xs w-full"
               dir="ltr"
@@ -162,26 +162,26 @@ function SeoSettingsSection({ lesson, patchLesson, open, setOpen, slugConflict, 
               onBlur={(e) => patchLesson({ seoSlug: slugify(e.target.value || "") }, { immediate: true })}
             />
             {slugConflict && (
-              <p className="text-[11px] mt-1" style={{ color: "#C53030" }}>{slugConflict}</p>
+              <p className="text-[11px] mt-1" style={{ color: "#D6334B" }}>{slugConflict}</p>
             )}
             {!lesson.seoSlug && !slugConflict && (
-              <p className="text-[11px] mt-1" style={{ color: "#8A8570" }}>بدون تعبئة، سيُشتق تلقائيًا من عنوان الدرس: «{previewSlug}»</p>
+              <p className="text-[11px] mt-1" style={{ color: "#6E6B85" }}>بدون تعبئة، سيُشتق تلقائيًا من عنوان الدرس: «{previewSlug}»</p>
             )}
           </label>
 
           {/* معاينة الرابط النهائي */}
           <div
             className="mb-4 p-2.5 rounded-lg text-[11px]"
-            style={{ background: "#FAF6ED", border: "1px solid #DED4BD", direction: "ltr", textAlign: "left", wordBreak: "break-all" }}
+            style={{ background: "#F7F5FB", border: "1px solid #E3E0EE", direction: "ltr", textAlign: "left", wordBreak: "break-all" }}
           >
-            <p className="font-bold mb-1" style={{ color: "#8A8570" }}>الرابط النهائي:</p>
-            <p style={{ color: "#10665A" }}>{finalUrl}</p>
+            <p className="font-bold mb-1" style={{ color: "#6E6B85" }}>الرابط النهائي:</p>
+            <p style={{ color: "#4B2FD1" }}>{finalUrl}</p>
           </div>
 
           {/* معاينة نتيجة البحث (Google-style, تقريبية) */}
           <div>
-            <p className="text-xs font-bold mb-1" style={{ color: "#8A8570" }}>معاينة نتيجة البحث</p>
-            <div className="p-3 rounded-lg" style={{ background: "#fff", border: "1px solid #DED4BD" }}>
+            <p className="text-xs font-bold mb-1" style={{ color: "#6E6B85" }}>معاينة نتيجة البحث</p>
+            <div className="p-3 rounded-lg" style={{ background: "#fff", border: "1px solid #E3E0EE" }}>
               <p style={{ color: "#1a0dab", fontSize: "16px", lineHeight: "1.3", marginBottom: "2px", fontFamily: "arial, sans-serif" }}>
                 {previewTitle || "عنوان الدرس"}
               </p>
@@ -192,7 +192,7 @@ function SeoSettingsSection({ lesson, patchLesson, open, setOpen, slugConflict, 
                 {previewDescription || "لا يوجد وصف بعد."}
               </p>
             </div>
-            <p className="text-[10px] mt-1" style={{ color: "#8A8570" }}>
+            <p className="text-[10px] mt-1" style={{ color: "#6E6B85" }}>
               معاينة تقريبية — قد تعرض Google نصًا مختلفًا حسب عبارة البحث.
             </p>
           </div>
@@ -475,10 +475,10 @@ export default function TeacherStudioPage() {
   }, [showPreview, mobilePanel]);
 
   if (lesson === null) {
-    return <div className="p-10 text-center" style={{ color: "#8A8570" }}>جاري تحميل الدرس...</div>;
+    return <div className="p-10 text-center" style={{ color: "#6E6B85" }}>جاري تحميل الدرس...</div>;
   }
   if (lesson === false) {
-    return <div className="p-10 text-center" style={{ color: "#C53030" }}>لم يتم العثور على هذا الدرس.</div>;
+    return <div className="p-10 text-center" style={{ color: "#D6334B" }}>لم يتم العثور على هذا الدرس.</div>;
   }
 
   const scene = lesson.scenes.find((s) => s.id === selectedSceneId) || lesson.scenes[0];
@@ -490,7 +490,7 @@ export default function TeacherStudioPage() {
 
   const saveLabel =
     saveStatus === "saving" ? "جاري الحفظ..." : saveStatus === "error" ? "تعذر الحفظ — إعادة المحاولة" : "تم الحفظ ✓";
-  const saveColor = saveStatus === "error" ? "#C53030" : saveStatus === "saving" ? "#8A5A15" : "#0E5348";
+  const saveColor = saveStatus === "error" ? "#D6334B" : saveStatus === "saving" ? "#946518" : "#2E1C86";
 
   // المسار (Cascading) — كل مستوى يُفلتَر بـ parentId الحقيقي التابع للمستوى الأب المختار فعليًا.
   // إذا كانت القيمة المحفوظة لا تطابق أي node بنفس parentId الصحيح، تُعامل كغير صالحة (لا تُخمَّن).
@@ -510,7 +510,7 @@ export default function TeacherStudioPage() {
 
   if (recording) {
     return (
-      <div className="ts-root flex items-center justify-center" style={{ height: "calc(100vh - 41px)", background: "#0E1712", overflow: "hidden" }}>
+      <div className="ts-root flex items-center justify-center" style={{ height: "calc(100vh - 41px)", background: "#120D24", overflow: "hidden" }}>
         <PresentationTools onExit={() => setRecording(false)}>
           <StudentView lesson={lesson} embedded controlled={{ index: recIndex, setIndex: setRecIndex }} isTeacherView recordingMode />
         </PresentationTools>
@@ -519,12 +519,12 @@ export default function TeacherStudioPage() {
   }
 
   return (
-    <div className="ts-root" style={{ minHeight: "calc(100vh - 41px)", background: "#FAF6ED" }}>
+    <div className="ts-root" style={{ minHeight: "calc(100vh - 41px)", background: "#F7F5FB" }}>
       {/* Header Bar */}
-      <div className="flex items-center justify-between px-6 py-3 bg-white shadow-sm border-b flex-wrap gap-2" style={{ borderColor: "#DED4BD" }}>
+      <div className="flex items-center justify-between px-6 py-3 bg-white shadow-sm border-b flex-wrap gap-2" style={{ borderColor: "#E3E0EE" }}>
         <div className="flex items-center gap-3 flex-wrap">
-          <button onClick={() => navigate("/teacher")} className="text-xs font-bold" style={{ color: "#8A8570" }}>← مكتبة الدروس</button>
-          <h1 className="font-black text-base" style={{ color: "#10665A" }}>{lesson.title}</h1>
+          <button onClick={() => navigate("/teacher")} className="text-xs font-bold" style={{ color: "#6E6B85" }}>← مكتبة الدروس</button>
+          <h1 className="font-black text-base" style={{ color: "#4B2FD1" }}>{lesson.title}</h1>
           <Pill tone={statusMeta(lesson.status).tone}>{statusMeta(lesson.status).label}</Pill>
           <span className="text-xs font-semibold" style={{ color: saveColor }}>{saveLabel}</span>
         </div>
@@ -533,12 +533,12 @@ export default function TeacherStudioPage() {
             value={lesson.status}
             onChange={(e) => patchLesson({ status: e.target.value }, { immediate: true })}
             className="rounded-xl px-3 py-1.5 text-xs border"
-            style={{ borderColor: "#DED4BD" }}
+            style={{ borderColor: "#E3E0EE" }}
           >
             {STATUSES.map((s) => <option key={s.key} value={s.key}>{s.label}</option>)}
           </select>
-          <button onClick={() => setShowPreview(!showPreview)} className="px-3.5 py-1.5 rounded-xl text-xs font-bold" style={{ background: "#EAE6F1", color: "#4C3F63" }}>{showPreview ? "إخفاء المعاينة" : "إظهار المعاينة"}</button>
-          <button onClick={() => setRecording(true)} className="px-4 py-1.5 rounded-xl text-xs font-bold text-white shadow-sm" style={{ background: "#10665A" }}>🎥 وضع التصوير</button>
+          <button onClick={() => setShowPreview(!showPreview)} className="px-3.5 py-1.5 rounded-xl text-xs font-bold" style={{ background: "#F6E8F1", color: "#7D2E68" }}>{showPreview ? "إخفاء المعاينة" : "إظهار المعاينة"}</button>
+          <button onClick={() => setRecording(true)} className="px-4 py-1.5 rounded-xl text-xs font-bold text-white shadow-sm" style={{ background: "#4B2FD1" }}>🎥 وضع التصوير</button>
         </div>
       </div>
 
@@ -557,12 +557,12 @@ export default function TeacherStudioPage() {
         style={{ gridTemplateColumns: showPreview ? "280px 1fr 380px" : "280px 1fr", minHeight: "calc(100vh - 98px)" }}
       >
         {/* Scenes Sidebar */}
-        <div data-studio-panel="scenes" className="p-4 ts-scrollbar bg-white border-l" style={{ borderColor: "#DED4BD", overflowY: "auto" }}>
+        <div data-studio-panel="scenes" className="p-4 ts-scrollbar bg-white border-l" style={{ borderColor: "#E3E0EE", overflowY: "auto" }}>
           <label className="block mb-3">
-            <span className="block text-xs mb-1" style={{ color: "#8A8570" }}>عنوان الدرس</span>
+            <span className="block text-xs mb-1" style={{ color: "#6E6B85" }}>عنوان الدرس</span>
             <input className="ts-input text-xs w-full" value={lesson.title} onChange={(e) => patchLesson({ title: e.target.value })} />
           </label>
-          <p className="text-[11px] mb-2 font-bold" style={{ color: "#8A8570" }}>
+          <p className="text-[11px] mb-2 font-bold" style={{ color: "#6E6B85" }}>
             المسار: {[lesson.stage, lesson.grade, lesson.term, lesson.subject].filter(Boolean).join(" / ") || "—"}
           </p>
           <div className="grid grid-cols-2 gap-2 mb-4">
@@ -647,8 +647,8 @@ export default function TeacherStudioPage() {
           </div>
 
           {/* رقم الدرس داخل الوحدة — يحدّده المعلم يدويًا (عمود sort_order الموجود) */}
-          <label className="block mb-4 p-3 rounded-xl" style={{ background: "#FAF6ED", border: "1px solid #DED4BD" }}>
-            <span className="block text-xs mb-1 font-bold" style={{ color: "#10665A" }}>رقم الدرس داخل الوحدة</span>
+          <label className="block mb-4 p-3 rounded-xl" style={{ background: "#F7F5FB", border: "1px solid #E3E0EE" }}>
+            <span className="block text-xs mb-1 font-bold" style={{ color: "#4B2FD1" }}>رقم الدرس داخل الوحدة</span>
             <input
               className="ts-input text-xs w-full"
               type="number"
@@ -666,14 +666,14 @@ export default function TeacherStudioPage() {
                 patchLesson({ sortOrder: Number.isFinite(n) && n > 0 ? n : 0 }, { immediate: true });
               }}
             />
-            <p className="text-[11px] mt-1" style={{ color: "#8A8570" }}>
+            <p className="text-[11px] mt-1" style={{ color: "#6E6B85" }}>
               الرقم الذي تكتبه هو الذي يظهر للطالب على بطاقة الدرس ويحدد ترتيبه داخل الوحدة. اتركه فارغًا للترتيب التلقائي (الدروس غير المرقّمة تأتي بعد المرقّمة بحسب وقت الإضافة).
             </p>
           </label>
 
           {/* وصول الدرس — Access Lock على مستوى الدرس (journey_config.isMembersOnly) */}
-          <div className="mb-4 p-3 rounded-xl" style={{ background: "#FAF6ED", border: "1px solid #DED4BD" }}>
-            <p className="text-xs font-bold mb-2" style={{ color: "#10665A" }}>الوصول إلى الدرس</p>
+          <div className="mb-4 p-3 rounded-xl" style={{ background: "#F7F5FB", border: "1px solid #E3E0EE" }}>
+            <p className="text-xs font-bold mb-2" style={{ color: "#4B2FD1" }}>الوصول إلى الدرس</p>
             <label className="text-xs flex items-center gap-2 cursor-pointer mb-1">
               <input
                 type="radio"
@@ -725,41 +725,41 @@ export default function TeacherStudioPage() {
               />
               ⏳ قريبًا
             </label>
-            <p className="text-[11px] mt-2" style={{ color: "#8A8570" }}>
+            <p className="text-[11px] mt-2" style={{ color: "#6E6B85" }}>
               عند التفعيل، الزائر (Guest) يرى قفل تسجيل الدخول وليس «أكمل الدرس السابق».
             </p>
-            <p className="text-[11px] mt-1" style={{ color: "#8A8570" }}>
+            <p className="text-[11px] mt-1" style={{ color: "#6E6B85" }}>
               «قريبًا»: تظهر بطاقة الدرس للطلاب بشارة «قريبًا» ولا يمكن فتح الدرس حتى تغيّر هذا الخيار.
             </p>
           </div>
 
           <label className="block mb-4">
-            <span className="block text-xs mb-1 font-bold" style={{ color: "#8A8570" }}>فيديو الدرس (YouTube — اختياري)</span>
+            <span className="block text-xs mb-1 font-bold" style={{ color: "#6E6B85" }}>فيديو الدرس (YouTube — اختياري)</span>
             <input className="ts-input text-xs w-full" type="url" placeholder="https://www.youtube.com/watch?v=..."
               value={lesson.youtubeUrl || ""}
               onChange={(e) => patchLesson({ youtubeUrl: e.target.value })}
               onBlur={(e) => patchLesson({ youtubeUrl: (e.target.value || "").trim() }, { immediate: true })}
             />
             {lesson.youtubeUrl && !extractYouTubeId(lesson.youtubeUrl) && (
-              <p className="text-[11px] mt-1" style={{ color: "#C53030" }}>أدخل رابط YouTube صحيحًا.</p>
+              <p className="text-[11px] mt-1" style={{ color: "#D6334B" }}>أدخل رابط YouTube صحيحًا.</p>
             )}
             {lesson.youtubeUrl && extractYouTubeId(lesson.youtubeUrl) && (
-              <p className="text-[11px] mt-1" style={{ color: "#0E5348" }}>✓ سيتم عرض الفيديو للطالب</p>
+              <p className="text-[11px] mt-1" style={{ color: "#2E1C86" }}>✓ سيتم عرض الفيديو للطالب</p>
             )}
           </label>
 
           <SeoSettingsSection lesson={lesson} patchLesson={patchLesson} open={seoSectionOpen} setOpen={setSeoSectionOpen} slugConflict={seoSlugConflict} />
 
-          <p className="text-xs font-bold mb-2" style={{ color: "#8A8570" }}>مشاهد الدرس (Scenes)</p>
+          <p className="text-xs font-bold mb-2" style={{ color: "#6E6B85" }}>مشاهد الدرس (Scenes)</p>
           {lesson.scenes.map((s) => (
             <div
               key={s.id}
               onClick={() => setSelectedSceneId(s.id)}
               className="rounded-xl px-3 py-2.5 mb-2 cursor-pointer text-xs font-bold shadow-sm flex items-center justify-between"
               style={{
-                background: s.id === scene?.id ? "#E4F0EC" : "#FAF6ED",
-                border: "1px solid " + (s.id === scene?.id ? "#10665A" : "#DED4BD"),
-                color: "#22291F",
+                background: s.id === scene?.id ? "#EFEAFD" : "#F7F5FB",
+                border: "1px solid " + (s.id === scene?.id ? "#4B2FD1" : "#E3E0EE"),
+                color: "#171333",
               }}
             >
               <span className="truncate">
@@ -767,18 +767,18 @@ export default function TeacherStudioPage() {
                 {(SCENE_TYPES.find((x) => x.key === (s.sceneType || s.scene_type)) || {}).icon || ""} {s.title}
               </span>
               {lesson.scenes.length > 1 && (
-                <button type="button" onClick={(e) => { e.stopPropagation(); removeScene(s.id); }} style={{ color: "#C53030" }}>×</button>
+                <button type="button" onClick={(e) => { e.stopPropagation(); removeScene(s.id); }} style={{ color: "#D6334B" }}>×</button>
               )}
             </div>
           ))}
           {addSceneError && (
-            <p className="text-[11px] mb-2" style={{ color: "#C53030" }}>{addSceneError}</p>
+            <p className="text-[11px] mb-2" style={{ color: "#D6334B" }}>{addSceneError}</p>
           )}
           {!showTypePicker ? (
-            <button type="button" onClick={() => setShowTypePicker(true)} className="w-full mt-2 py-2 rounded-xl text-xs font-bold" style={{ background: "#EAE6F1", color: "#4C3F63" }}>+ إضافة مشهد جديد</button>
+            <button type="button" onClick={() => setShowTypePicker(true)} className="w-full mt-2 py-2 rounded-xl text-xs font-bold" style={{ background: "#F6E8F1", color: "#7D2E68" }}>+ إضافة مشهد جديد</button>
           ) : (
-            <div className="mt-2 p-2 rounded-xl border" style={{ borderColor: "#DED4BD", background: "#FAF6ED" }}>
-              <p className="text-[11px] font-bold mb-2" style={{ color: "#5C5A4A" }}>نوع المشهد:</p>
+            <div className="mt-2 p-2 rounded-xl border" style={{ borderColor: "#E3E0EE", background: "#F7F5FB" }}>
+              <p className="text-[11px] font-bold mb-2" style={{ color: "#433F66" }}>نوع المشهد:</p>
               <div className="flex flex-col gap-1.5">
                 {SCENE_TYPES.map((st) => (
                   <button
@@ -786,12 +786,12 @@ export default function TeacherStudioPage() {
                     type="button"
                     onClick={() => addScene(st.key)}
                     className="w-full text-right px-2.5 py-2 rounded-lg text-xs font-bold"
-                    style={{ background: "#FFFFFF", border: "1px solid #DED4BD", color: "#22291F" }}
+                    style={{ background: "#FFFFFF", border: "1px solid #E3E0EE", color: "#171333" }}
                   >
                     {st.icon} {st.label}
                   </button>
                 ))}
-                <button type="button" onClick={() => setShowTypePicker(false)} className="text-[11px] mt-1" style={{ color: "#8A8570" }}>إلغاء</button>
+                <button type="button" onClick={() => setShowTypePicker(false)} className="text-[11px] mt-1" style={{ color: "#6E6B85" }}>إلغاء</button>
               </div>
             </div>
           )}
@@ -804,7 +804,7 @@ export default function TeacherStudioPage() {
               
               {/* عنوان المشهد */}
               <div className="mb-4">
-                <label className="block text-xs font-bold mb-1" style={{ color: "#5C5A4A" }}>عنوان المشهد</label>
+                <label className="block text-xs font-bold mb-1" style={{ color: "#433F66" }}>عنوان المشهد</label>
                 <div className="flex gap-2 items-center">
                   <input
                     type="text"
@@ -829,9 +829,9 @@ export default function TeacherStudioPage() {
               </div>
 
               {/* رحلة الدرس — إعداد إشعار الإكمال الخاص بهذا المشهد فقط */}
-              <div className="mb-4 p-3 rounded-xl" style={{ background: "#FAF6ED", border: "1px solid #DED4BD" }}>
-                <p className="text-xs font-bold mb-2" style={{ color: "#10665A" }}>رحلة الدرس (لهذا المشهد)</p>
-                <label className="block text-[11px] mb-1" style={{ color: "#8A8570" }}>إشعار الإكمال بعد هذا المشهد</label>
+              <div className="mb-4 p-3 rounded-xl" style={{ background: "#F7F5FB", border: "1px solid #E3E0EE" }}>
+                <p className="text-xs font-bold mb-2" style={{ color: "#4B2FD1" }}>رحلة الدرس (لهذا المشهد)</p>
+                <label className="block text-[11px] mb-1" style={{ color: "#6E6B85" }}>إشعار الإكمال بعد هذا المشهد</label>
                 <select
                   className="ts-input text-xs w-full mb-2"
                   value={sceneJourney.enabled ? "yes" : "no"}
@@ -867,7 +867,7 @@ export default function TeacherStudioPage() {
                   <option value="no">بدون إشعار</option>
                   <option value="yes">إظهار إشعار إكمال بعد هذا المشهد</option>
                 </select>
-                <label className="block text-[11px] mb-1" style={{ color: "#8A8570" }}>نوع الرسالة</label>
+                <label className="block text-[11px] mb-1" style={{ color: "#6E6B85" }}>نوع الرسالة</label>
                 <select
                   className="ts-input text-xs w-full"
                   value={sceneJourney.completionTemplateKey || "none"}
@@ -913,7 +913,7 @@ export default function TeacherStudioPage() {
               {/* النوع الأساسي + صلاحية الوصول */}
               <div className="mb-4 flex flex-col gap-3">
                 <div className="flex flex-wrap items-center gap-2">
-                  <span className="text-xs font-bold" style={{ color: "#8A8570" }}>النوع الأساسي:</span>
+                  <span className="text-xs font-bold" style={{ color: "#6E6B85" }}>النوع الأساسي:</span>
                   <select
                     className="ts-input text-xs"
                     style={{ width: "auto" }}
@@ -926,7 +926,7 @@ export default function TeacherStudioPage() {
                   </select>
                 </div>
                 <div className="flex flex-wrap items-center gap-3">
-                  <span className="text-xs font-bold" style={{ color: "#8A8570" }}>المحتوى:</span>
+                  <span className="text-xs font-bold" style={{ color: "#6E6B85" }}>المحتوى:</span>
                   <label className="text-xs flex items-center gap-1 cursor-pointer">
                     <input
                       type="radio"
@@ -960,14 +960,14 @@ export default function TeacherStudioPage() {
                 return (
                   <>
               {isFinalReviewType && (
-                <div className="mb-4 p-3 rounded-xl text-xs" style={{ background: "#E4F0EC", border: "1px solid #10665A", color: "#0E5348" }}>
+                <div className="mb-4 p-3 rounded-xl text-xs" style={{ background: "#EFEAFD", border: "1px solid #4B2FD1", color: "#2E1C86" }}>
                   📚 هذا المشهد يعرض تلقائيًا المراجعة المجمّعة للدرس (الخريطة الذهنية الكاملة، الخط الزمني الكامل، وأسئلة المراجعة) بالاعتماد على محتوى بقية المشاهد — لا حاجة لإضافة محتوى هنا يدويًا.
                 </div>
               )}
               {showExpl && (
               <>
               <label className="block mb-4">
-                <span className="block text-xs font-bold mb-1" style={{ color: "#5C5A4A" }}>📝 محتوى الشرح (Rich Text)</span>
+                <span className="block text-xs font-bold mb-1" style={{ color: "#433F66" }}>📝 محتوى الشرح (Rich Text)</span>
                 <RichTextEditor
                   value={scene.text}
                   onChange={(html) => patchScene(scene.id, { text: html })}
@@ -1006,7 +1006,7 @@ export default function TeacherStudioPage() {
                 }
               />
               <label className="block mb-4">
-                <span className="block text-xs font-bold mb-1" style={{ color: "#5C5A4A" }}>
+                <span className="block text-xs font-bold mb-1" style={{ color: "#433F66" }}>
                   ملاحظات المُقدّم (خاصة بك أثناء التصوير)
                 </span>
                 <textarea
@@ -1014,16 +1014,16 @@ export default function TeacherStudioPage() {
                   onChange={(e) => patchScene(scene.id, { presenterNotes: e.target.value })}
                   rows={2}
                   className="ts-input text-xs w-full"
-                  style={{ background: "#FDF9EE" }}
+                  style={{ background: "#F7F5FB" }}
                 />
               </label>
               </>
               )}
 
               {showQR && (
-              <div className="mb-4 p-4 rounded-2xl bg-white border" style={{ borderColor: "#DED4BD" }}>
+              <div className="mb-4 p-4 rounded-2xl bg-white border" style={{ borderColor: "#E3E0EE" }}>
                 <div className="flex justify-between items-center mb-2">
-                  <span className="font-bold text-sm" style={{ color: "#10665A" }}>🧠 تذكّر سريع</span>
+                  <span className="font-bold text-sm" style={{ color: "#4B2FD1" }}>🧠 تذكّر سريع</span>
                   <label className="text-xs flex items-center gap-1">
                     <input
                       type="checkbox"
@@ -1033,7 +1033,7 @@ export default function TeacherStudioPage() {
                     إظهار للطالب
                   </label>
                 </div>
-                <p className="text-xs mb-2" style={{ color: "#8A8570" }}>
+                <p className="text-xs mb-2" style={{ color: "#6E6B85" }}>
                   اكتب كل نقطة في سطر مستقل. اتركه فارغًا إن لم تحتاجه.
                 </p>
                 <textarea
@@ -1098,8 +1098,8 @@ export default function TeacherStudioPage() {
         )}
 
         {showPreview && (
-          <div data-studio-panel="preview" className="ts-scrollbar border-r bg-white ts-studio-preview" style={{ borderColor: "#DED4BD", overflowY: "auto" }}>
-            <div className="px-4 py-2.5 bg-[#22291F] text-white text-xs font-bold flex items-center justify-between gap-2">
+          <div data-studio-panel="preview" className="ts-scrollbar border-r bg-white ts-studio-preview" style={{ borderColor: "#E3E0EE", overflowY: "auto" }}>
+            <div className="px-4 py-2.5 bg-[#171333] text-white text-xs font-bold flex items-center justify-between gap-2">
               <span className="flex-1 text-center">معاينة حية (Live Preview)</span>
               <button
                 type="button"
@@ -1134,7 +1134,7 @@ export default function TeacherStudioPage() {
             left: 0;
             width: min(380px, 92vw);
             z-index: 45;
-            box-shadow: 8px 0 28px rgba(34,41,31,0.22);
+            box-shadow: 8px 0 28px rgba(23, 19, 51,0.22);
           }
           .ts-studio-preview-close { display: inline-flex; }
         }
@@ -1146,7 +1146,7 @@ export default function TeacherStudioPage() {
             gap: 6px;
             padding: 8px 12px;
             background: #fff;
-            border-bottom: 1px solid #DED4BD;
+            border-bottom: 1px solid #E3E0EE;
             overflow-x: auto;
             -webkit-overflow-scrolling: touch;
           }
@@ -1158,14 +1158,14 @@ export default function TeacherStudioPage() {
             padding: 8px 10px;
             min-height: 40px;
             border-radius: 10px;
-            background: #FAF6ED;
-            color: #8A8570;
-            border: 1px solid #DED4BD;
+            background: #F7F5FB;
+            color: #6E6B85;
+            border: 1px solid #E3E0EE;
           }
           .ts-studio-mobiletabs button.active {
-            background: #E4F0EC;
-            color: #10665A;
-            border-color: #10665A;
+            background: #EFEAFD;
+            color: #4B2FD1;
+            border-color: #4B2FD1;
           }
 
           .ts-studio-grid { grid-template-columns: 1fr !important; }

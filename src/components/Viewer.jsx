@@ -7,9 +7,9 @@ import AuthModal, { RegistrationGate } from "./AuthModal";
 // ---------------------------------------------------------------------------
 export function Pill({ children, tone = "teal" }) {
   const tones = {
-    teal: { bg: "#E4F0EC", color: "#0E5348" },
-    plum: { bg: "#EAE6F1", color: "#4C3F63" },
-    ochre: { bg: "#F6E9D3", color: "#8A5A15" },
+    teal: { bg: "#EFEAFD", color: "#2E1C86" },
+    plum: { bg: "#F6E8F1", color: "#7D2E68" },
+    ochre: { bg: "#F7E6C4", color: "#946518" },
   };
   const t = tones[tone] || tones.teal;
 
@@ -74,7 +74,7 @@ export function ImageUploadField({ value, onChange, label, uploadFn }) {
   return (
     <div className="mb-2 text-right dir-rtl">
       {label && (
-        <span className="block text-xs mb-1" style={{ color: "#5C5A4A" }}>
+        <span className="block text-xs mb-1" style={{ color: "#433F66" }}>
           {label}
         </span>
       )}
@@ -85,7 +85,7 @@ export function ImageUploadField({ value, onChange, label, uploadFn }) {
           onClick={() => inputRef.current?.click()}
           disabled={uploading}
           className="px-3 py-1.5 rounded-xl text-xs font-bold transition-opacity disabled:opacity-50 cursor-pointer"
-          style={{ background: "#EAE6F1", color: "#4C3F63" }}
+          style={{ background: "#F6E8F1", color: "#7D2E68" }}
         >
           {uploading ? "جاري الرفع..." : "📁 اختيار صورة من الجهاز"}
         </button>
@@ -95,7 +95,7 @@ export function ImageUploadField({ value, onChange, label, uploadFn }) {
             onMouseDown={(e) => e.preventDefault()}
             onClick={handleRemoveImage}
             className="text-xs px-2 py-1 rounded font-bold cursor-pointer"
-            style={{ color: "#C53030" }}
+            style={{ color: "#D6334B" }}
           >
             إزالة الصورة
           </button>
@@ -113,7 +113,7 @@ export function ImageUploadField({ value, onChange, label, uploadFn }) {
         />
       </div>
       {error && (
-        <p className="text-xs mt-1" style={{ color: "#C53030" }}>
+        <p className="text-xs mt-1" style={{ color: "#D6334B" }}>
           {error}
         </p>
       )}
@@ -189,34 +189,34 @@ export function HotwordRenderer({ text, hotwords = [], onJumpToScene }) {
       <style>{`
         .ts-richtext-content {
           line-height: 1.8;
-          color: #22291F;
+          color: #171333;
         }
         /* تصميم متوهج فخم بدلاً من المستطيل الملوّن */
         .ts-richtext-content .ts-hotword-highlight {
           font-size: inherit !important;
           font-family: inherit !important;
           font-weight: 700 !important;
-          color: #B9791F !important;
+          color: #C9972E !important;
           background: none !important;
           padding: 0 1px !important;
           margin: 0 1px !important;
           border-radius: 0 !important;
-          border-bottom: 1.5px dotted rgba(185,121,31,0.55) !important;
+          border-bottom: 1.5px dotted rgba(201, 151, 46,0.55) !important;
           text-decoration: none !important;
           cursor: pointer !important;
           transition: color 0.25s ease, text-shadow 0.25s ease, border-color 0.25s ease !important;
-          text-shadow: 0 0 6px rgba(185,121,31,0.45), 0 0 14px rgba(185,121,31,0.2) !important;
+          text-shadow: 0 0 6px rgba(201, 151, 46,0.45), 0 0 14px rgba(201, 151, 46,0.2) !important;
           animation: ts-hotword-glow 2.6s ease-in-out infinite;
         }
         .ts-richtext-content .ts-hotword-highlight:hover {
-          color: #E0A83E !important;
-          border-bottom-color: rgba(224,168,62,0.9) !important;
-          text-shadow: 0 0 10px rgba(224,168,62,0.85), 0 0 22px rgba(224,168,62,0.45) !important;
+          color: #E3B659 !important;
+          border-bottom-color: rgba(227, 182, 89,0.9) !important;
+          text-shadow: 0 0 10px rgba(227, 182, 89,0.85), 0 0 22px rgba(227, 182, 89,0.45) !important;
           animation-play-state: paused;
         }
         @keyframes ts-hotword-glow {
-          0%, 100% { text-shadow: 0 0 6px rgba(185,121,31,0.4), 0 0 14px rgba(185,121,31,0.18); }
-          50% { text-shadow: 0 0 10px rgba(185,121,31,0.75), 0 0 20px rgba(185,121,31,0.4); }
+          0%, 100% { text-shadow: 0 0 6px rgba(201, 151, 46,0.4), 0 0 14px rgba(201, 151, 46,0.18); }
+          50% { text-shadow: 0 0 10px rgba(201, 151, 46,0.75), 0 0 20px rgba(201, 151, 46,0.4); }
         }
         .ts-richtext-content img {
           display: block !important;
@@ -251,8 +251,8 @@ export function HotwordRenderer({ text, hotwords = [], onJumpToScene }) {
         <div
           className="ts-fade absolute z-50 rounded-2xl p-4 shadow-2xl max-w-sm w-full text-right"
           style={{
-            background: "#FAF6ED",
-            border: "2px solid #10665A",
+            background: "#F7F5FB",
+            border: "2px solid #4B2FD1",
             top: `${popPos.top}px`,
             right: `${popPos.right}px`,
             boxShadow: "0 10px 25px -5px rgba(0, 0, 0, 0.2)",
@@ -262,16 +262,16 @@ export function HotwordRenderer({ text, hotwords = [], onJumpToScene }) {
         >
           <div
             className="flex justify-between items-center mb-2 border-b pb-1"
-            style={{ borderColor: "#DED4BD" }}
+            style={{ borderColor: "#E3E0EE" }}
           >
-            <span className="font-bold text-base" style={{ color: "#10665A" }}>
+            <span className="font-bold text-base" style={{ color: "#4B2FD1" }}>
               {activeHot.text}
             </span>
             <button
               type="button"
               onClick={() => setActiveHot(null)}
               className="font-bold px-2 py-0.5 rounded cursor-pointer"
-              style={{ color: "#8A8570" }}
+              style={{ color: "#6E6B85" }}
             >
               ✕
             </button>
@@ -282,12 +282,12 @@ export function HotwordRenderer({ text, hotwords = [], onJumpToScene }) {
               src={activeHot.image}
               alt={activeHot.text}
               className="rounded-xl mb-2 w-full object-contain block border"
-              style={{ maxHeight: "280px", borderColor: "#DED4BD" }}
+              style={{ maxHeight: "280px", borderColor: "#E3E0EE" }}
             />
           )}
 
           {activeHot.note && (
-            <p className="text-sm mb-2" style={{ color: "#22291F" }}>
+            <p className="text-sm mb-2" style={{ color: "#171333" }}>
               {activeHot.note}
             </p>
           )}
@@ -300,7 +300,7 @@ export function HotwordRenderer({ text, hotwords = [], onJumpToScene }) {
                 setActiveHot(null);
               }}
               className="text-xs px-3 py-1.5 rounded-xl text-white font-bold w-full cursor-pointer mt-1"
-              style={{ background: "#10665A" }}
+              style={{ background: "#4B2FD1" }}
             >
               الانتقال إلى المشهد المرتبط ↗
             </button>
@@ -335,8 +335,8 @@ export function MindMapViewerNode({
         }}
         className="md-lv-mm-node flex items-center gap-2 py-1.5 px-3 rounded-xl cursor-pointer transition-all border"
         style={{
-          background: isSelected ? "#F6E9D3" : "#FFFFFF",
-          borderColor: isSelected ? "#B9791F" : "#DED4BD",
+          background: isSelected ? "#F7E6C4" : "#FFFFFF",
+          borderColor: isSelected ? "#C9972E" : "#E3E0EE",
         }}
       >
         <span
@@ -344,7 +344,7 @@ export function MindMapViewerNode({
             width: depth === 0 ? 12 : 8,
             height: depth === 0 ? 12 : 8,
             borderRadius: 999,
-            background: depth === 0 ? "#10665A" : "#B9791F",
+            background: depth === 0 ? "#4B2FD1" : "#C9972E",
             display: "inline-block",
             flexShrink: 0,
           }}
@@ -352,7 +352,7 @@ export function MindMapViewerNode({
         <span
           style={{
             fontWeight: depth === 0 ? 800 : 600,
-            color: "#22291F",
+            color: "#171333",
             fontSize: depth === 0 ? 16 : 14,
           }}
         >
@@ -368,8 +368,8 @@ export function MindMapViewerNode({
             aria-label={open ? "طي" : "توسيع"}
             className="mr-auto w-6 h-6 flex items-center justify-center rounded-full flex-shrink-0 cursor-pointer"
             style={{
-              background: "#EAE6F1",
-              color: "#4C3F63",
+              background: "#F6E8F1",
+              color: "#7D2E68",
               transform: open ? "rotate(90deg)" : "rotate(0deg)",
               transition: "transform .15s ease",
               fontSize: 12,
@@ -383,7 +383,7 @@ export function MindMapViewerNode({
       {hasChildren && open && (
         <div
           style={{
-            borderInlineStart: "2px dashed #DED4BD",
+            borderInlineStart: "2px dashed #E3E0EE",
             paddingInlineStart: 12,
             marginTop: 4,
           }}
@@ -425,9 +425,9 @@ export function QuestionItem({ q }) {
     return (
       <div
         className="md-lv-q p-4 rounded-2xl border text-right dir-rtl"
-        style={{ background: "#FAF6ED", borderColor: "#DED4BD" }}
+        style={{ background: "#F7F5FB", borderColor: "#E3E0EE" }}
       >
-        <p className="font-bold mb-3" style={{ color: "#22291F" }}>
+        <p className="font-bold mb-3" style={{ color: "#171333" }}>
           {q.prompt}
         </p>
         <div className="flex flex-col gap-2">
@@ -443,20 +443,20 @@ export function QuestionItem({ q }) {
                 className="md-lv-opt text-right px-4 py-2.5 rounded-xl border text-sm font-medium transition-all cursor-pointer"
                 style={{
                   background: isCorrect
-                    ? "#E4F0EC"
+                    ? "#EFEAFD"
                     : isWrong
-                    ? "#FBEAEB"
+                    ? "#FCE9EC"
                     : selectedOption === i
-                    ? "#F6E9D3"
+                    ? "#F7E6C4"
                     : "#FFFFFF",
                   borderColor: isCorrect
-                    ? "#10665A"
+                    ? "#4B2FD1"
                     : isWrong
-                    ? "#C53030"
+                    ? "#D6334B"
                     : selectedOption === i
-                    ? "#B9791F"
-                    : "#DED4BD",
-                  color: "#22291F",
+                    ? "#C9972E"
+                    : "#E3E0EE",
+                  color: "#171333",
                 }}
               >
                 {opt}
@@ -471,7 +471,7 @@ export function QuestionItem({ q }) {
             onClick={() => setShowAnswer(true)}
             className="md-lv-btn-sm mt-3 px-4 py-2 rounded-xl text-xs font-bold text-white transition-opacity disabled:opacity-50 cursor-pointer"
             style={{
-              background: selectedOption === null ? "#DED4BD" : "#10665A",
+              background: selectedOption === null ? "#E3E0EE" : "#4B2FD1",
             }}
           >
             تحقق من الإجابة
@@ -482,7 +482,7 @@ export function QuestionItem({ q }) {
               className="font-bold mb-1"
               style={{
                 color:
-                  selectedOption === q.correctIndex ? "#10665A" : "#C53030",
+                  selectedOption === q.correctIndex ? "#4B2FD1" : "#D6334B",
               }}
             >
               {selectedOption === q.correctIndex
@@ -492,7 +492,7 @@ export function QuestionItem({ q }) {
                   }`}
             </p>
             {q.explanation && (
-              <p className="text-xs" style={{ color: "#5C5A4A" }}>
+              <p className="text-xs" style={{ color: "#433F66" }}>
                 💡 {q.explanation}
               </p>
             )}
@@ -505,9 +505,9 @@ export function QuestionItem({ q }) {
   return (
     <div
       className="md-lv-q p-4 rounded-2xl border text-right dir-rtl"
-      style={{ background: "#FAF6ED", borderColor: "#DED4BD" }}
+      style={{ background: "#F7F5FB", borderColor: "#E3E0EE" }}
     >
-      <p className="font-bold mb-3" style={{ color: "#22291F" }}>
+      <p className="font-bold mb-3" style={{ color: "#171333" }}>
         {q.prompt}
       </p>
       <textarea
@@ -516,26 +516,26 @@ export function QuestionItem({ q }) {
         rows={3}
         placeholder="اكتب إجابتك هنا..."
         className="ts-input text-sm mb-2 w-full p-3 rounded-xl border focus:outline-none focus:ring-2 focus:ring-teal-600"
-        style={{ borderColor: "#DED4BD" }}
+        style={{ borderColor: "#E3E0EE" }}
       />
       {!showAnswer ? (
         <button
           type="button"
           onClick={() => setShowAnswer(true)}
           className="md-lv-btn-sm px-4 py-2 rounded-xl text-xs font-bold text-white cursor-pointer"
-          style={{ background: "#10665A" }}
+          style={{ background: "#4B2FD1" }}
         >
           عرض الإجابة النموذجية
         </button>
       ) : (
         <div
           className="ts-fade mt-3 p-3 rounded-xl text-sm"
-          style={{ background: "#E4F0EC", border: "1px solid #10665A" }}
+          style={{ background: "#EFEAFD", border: "1px solid #4B2FD1" }}
         >
-          <p className="font-bold mb-1" style={{ color: "#0E5348" }}>
+          <p className="font-bold mb-1" style={{ color: "#2E1C86" }}>
             الإجابة النموذجية:
           </p>
-          <p style={{ color: "#22291F" }}>{q.modelAnswer}</p>
+          <p style={{ color: "#171333" }}>{q.modelAnswer}</p>
         </div>
       )}
     </div>
@@ -559,11 +559,11 @@ function InfoTip({ text, label }) {
   return (
     <span className="relative inline-flex" ref={ref}>
       <button type="button" className="inline-flex items-center justify-center w-5 h-5 rounded-full text-xs font-bold"
-        style={{ background: "#EAE6F1", color: "#4C3F63" }} aria-label={label || "معلومة"} aria-expanded={open}
+        style={{ background: "#F6E8F1", color: "#7D2E68" }} aria-label={label || "معلومة"} aria-expanded={open}
         onClick={(e) => { e.stopPropagation(); setOpen((v) => !v); }}>ⓘ</button>
       {open && (
         <span role="tooltip" className="absolute z-20 top-full mt-1 right-0 w-56 sm:w-64 p-3 rounded-xl text-xs shadow-md"
-          style={{ background: "#22291F", color: "#FAF6ED" }}>{text}</span>
+          style={{ background: "#171333", color: "#F7F5FB" }}>{text}</span>
       )}
     </span>
   );
@@ -573,14 +573,14 @@ function YouTubePlayer({ videoId }) {
   const [show, setShow] = useState(false);
   if (!videoId) return null;
   return (
-    <div className="md-lv-video mb-6 rounded-3xl overflow-hidden bg-black shadow-sm" style={{ border: "1px solid #DED4BD" }}>
+    <div className="md-lv-video mb-6 rounded-3xl overflow-hidden bg-black shadow-sm" style={{ border: "1px solid #E3E0EE" }}>
       {!show ? (
         <button type="button" onClick={() => setShow(true)}
           className="relative w-full flex items-center justify-center cursor-pointer"
-          style={{ aspectRatio: "16 / 9", background: "#0E1712" }} aria-label="تشغيل فيديو الدرس">
+          style={{ aspectRatio: "16 / 9", background: "#120D24" }} aria-label="تشغيل فيديو الدرس">
           <img src={`https://i.ytimg.com/vi/${videoId}/hqdefault.jpg`} alt="" className="absolute inset-0 w-full h-full object-cover opacity-70" loading="lazy" />
           <span className="relative z-10 w-14 h-14 rounded-full flex items-center justify-center text-white text-2xl shadow-lg"
-            style={{ background: "rgba(16, 102, 90, 0.92)" }}>▶</span>
+            style={{ background: "rgba(75, 47, 209, 0.92)" }}>▶</span>
         </button>
       ) : (
         <div className="w-full" style={{ aspectRatio: "16 / 9" }}>
@@ -839,7 +839,7 @@ export function StudentView({
 
   if (!lesson || !Array.isArray(lesson.scenes) || lesson.scenes.length === 0) {
     return (
-      <div className="p-8 text-center text-right dir-rtl" style={{ color: "#8A8570" }}>
+      <div className="p-8 text-center text-right dir-rtl" style={{ color: "#6E6B85" }}>
         لا توجد مشاهد متاحة في هذا الدرس.
       </div>
     );
@@ -854,7 +854,7 @@ export function StudentView({
 
   if (!isFinalReview && !isCompletionStep && !scene) {
     return (
-      <div className="p-8 text-center text-right dir-rtl" style={{ color: "#8A8570" }}>
+      <div className="p-8 text-center text-right dir-rtl" style={{ color: "#6E6B85" }}>
         المشهد غير موجود.
       </div>
     );
@@ -886,7 +886,7 @@ export function StudentView({
       className="ts-root ts-scrollbar dir-rtl text-right md-lv"
       style={{
         minHeight: embedded ? "100%" : undefined,
-        background: "#FAF6ED",
+        background: "#F7F5FB",
         overflowY: "auto",
       }}
     >
@@ -910,12 +910,12 @@ export function StudentView({
         <div className="text-center mb-6">
           <h1
             className="ts-display font-black md-lv-h1"
-            style={{ color: "#22291F", fontSize: embedded ? 24 : 32 }}
+            style={{ color: "#171333", fontSize: embedded ? 24 : 32 }}
           >
             {lesson.title}
           </h1>
           {lesson.description && (
-            <p className="md-lv-desc text-sm mt-1" style={{ color: "#5C5A4A" }}>
+            <p className="md-lv-desc text-sm mt-1" style={{ color: "#433F66" }}>
               {lesson.description}
             </p>
           )}
@@ -926,7 +926,7 @@ export function StudentView({
         {/* فيديو الدرس — ثابت أعلى الرحلة (مستوى الدرس) */}
         {youtubeId && !recordingMode && !sceneContentLocked && (
           <div className="mb-6">
-            <p className="md-lv-video-note text-xs font-bold mb-2 text-center" style={{ color: "#8A8570" }}>🎥 شاهد فيديو الدرس
+            <p className="md-lv-video-note text-xs font-bold mb-2 text-center" style={{ color: "#6E6B85" }}>🎥 شاهد فيديو الدرس
 
 تابع الشرح خطوة بخطوة وركّز في ترتيب الأفكار والأمثلة. خُد وقتك في الفهم قبل الانتقال للجزء التالي، لأن الفيديو هو بداية رحلتك لفهم الدرس بشكل كامل.
 </p>
@@ -938,7 +938,7 @@ export function StudentView({
         <div className="mb-6 md-lv-journey">
           {sceneCount > 0 && !recordingMode && (
             <div className="text-center mb-3">
-              <p className="text-xs font-bold" style={{ color: "#8A8570" }}>
+              <p className="text-xs font-bold" style={{ color: "#6E6B85" }}>
                 {isLessonDone
                   ? "🎉 تم إكمال الدرس"
                   : isFinalReview
@@ -946,7 +946,7 @@ export function StudentView({
                     : `التقدّم  ·  ${sceneIndex + 1} من ${sceneCount}`}
               </p>
               {hasJourney && sceneCount > 0 && (
-                <p className="text-[11px] mt-1" style={{ color: "#8A8570" }}>
+                <p className="text-[11px] mt-1" style={{ color: "#6E6B85" }}>
                   عناوين مكتملة {(journey.completedScenes || []).length}/{sceneCount}
                 </p>
               )}
@@ -996,14 +996,14 @@ export function StudentView({
               data-state={done ? "done" : current ? "current" : kind === "ACCESS_LOCK" ? "access" : kind === "SEQUENCE_LOCK" ? "sequence" : "available"}
               className="md-lv-step px-4 py-2 rounded-2xl text-sm font-bold transition-all shadow-sm"
               style={{
-                background: current ? "#10665A" : done ? "#E4F0EC" : "#FFFFFF",
-                color: current ? "#FAF6ED" : "#22291F",
+                background: current ? "#4B2FD1" : done ? "#EFEAFD" : "#FFFFFF",
+                color: current ? "#F7F5FB" : "#171333",
                 border: "1px solid " + (
-                  current ? "#10665A" :
-                  done ? "#10665A" :
-                  kind === "ACCESS_LOCK" ? "#8A5A15" :
-                  kind === "SEQUENCE_LOCK" ? "#DED4BD" :
-                  "#DED4BD"
+                  current ? "#4B2FD1" :
+                  done ? "#4B2FD1" :
+                  kind === "ACCESS_LOCK" ? "#946518" :
+                  kind === "SEQUENCE_LOCK" ? "#E3E0EE" :
+                  "#E3E0EE"
                 ),
                 opacity: disabled ? 0.55 : 1,
                 cursor: disabled ? "not-allowed" : "pointer",
@@ -1021,9 +1021,9 @@ export function StudentView({
               data-state={isFinalReview ? "current" : (journey.finalReviewUnlocked || (journey.completedScenes || []).length >= sceneCount || isTeacherView) ? "available" : "sequence"}
               className="md-lv-step px-4 py-2 rounded-2xl text-sm font-bold transition-all shadow-sm"
               style={{
-                background: isFinalReview ? "#10665A" : "#FFFFFF",
-                color: isFinalReview ? "#FAF6ED" : "#22291F",
-                border: "1px solid " + (isFinalReview ? "#10665A" : "#DED4BD"),
+                background: isFinalReview ? "#4B2FD1" : "#FFFFFF",
+                color: isFinalReview ? "#F7F5FB" : "#171333",
+                border: "1px solid " + (isFinalReview ? "#4B2FD1" : "#E3E0EE"),
                 opacity: (journey.finalReviewUnlocked || (journey.completedScenes || []).length >= sceneCount || isTeacherView) ? 1 : 0.55,
                 cursor: (journey.finalReviewUnlocked || (journey.completedScenes || []).length >= sceneCount || isTeacherView) ? "pointer" : "not-allowed",
               }}
@@ -1033,26 +1033,26 @@ export function StudentView({
           )}
           </div>
           {!recordingMode && (
-            <p className="md-lv-legend text-center text-[11px] mt-2" style={{ color: "#8A8570" }}>
+            <p className="md-lv-legend text-center text-[11px] mt-2" style={{ color: "#6E6B85" }}>
               ✓ مكتمل · ● الحالي · ○ متاح · 🔒 أكمل العنوان السابق · 🔐 تسجيل الدخول مطلوب
             </p>
           )}
         </div>
 
         {isCompletionStep && hasJourney && (
-          <div className="md-lv-notice rounded-3xl p-8 mb-6 text-center bg-white shadow-sm" style={{ border: "1px solid #10665A" }}>
+          <div className="md-lv-notice rounded-3xl p-8 mb-6 text-center bg-white shadow-sm" style={{ border: "1px solid #4B2FD1" }}>
             <p className="text-3xl mb-3">🎉</p>
-            <p className="font-black text-lg mb-2" style={{ color: "#10665A" }}>
+            <p className="font-black text-lg mb-2" style={{ color: "#4B2FD1" }}>
               {(journey.completionTitle) || "تم إكمال هذا الجزء"}
             </p>
-            <p className="text-sm mb-6" style={{ color: "#5C5A4A" }}>
+            <p className="text-sm mb-6" style={{ color: "#433F66" }}>
               {(journey.completionBody) || "أحسنت — يمكنك المتابعة للخطوة التالية."}
             </p>
             <button
               type="button"
               onClick={() => journey.dismissCompletion?.()}
               className="md-lv-btn md-lv-btn-primary px-6 py-3 rounded-2xl text-sm font-bold text-white"
-              style={{ background: "#10665A" }}
+              style={{ background: "#4B2FD1" }}
             >
               التالي →
             </button>
@@ -1061,14 +1061,14 @@ export function StudentView({
 
 
         {sceneContentLocked && (
-          <div className="md-lv-lock rounded-3xl p-8 mb-6 text-center shadow-sm bg-white" style={{ border: "1px solid #DED4BD" }}>
+          <div className="md-lv-lock rounded-3xl p-8 mb-6 text-center shadow-sm bg-white" style={{ border: "1px solid #E3E0EE" }}>
             <p className="text-3xl mb-2">🔐</p>
-            <p className="font-black text-lg mb-2" style={{ color: "#10665A" }}>تسجيل الدخول مطلوب</p>
-            <p className="text-sm mb-4" style={{ color: "#5C5A4A" }}>
+            <p className="font-black text-lg mb-2" style={{ color: "#4B2FD1" }}>تسجيل الدخول مطلوب</p>
+            <p className="text-sm mb-4" style={{ color: "#433F66" }}>
               هذا العنوان حصري للمستخدمين المسجّلين. سجّل دخولك للوصول إليه — وليس بسبب ترتيب المشاهد.
             </p>
             <button type="button" onClick={() => setAuthOpen(true)}
-              className="md-lv-btn md-lv-btn-primary px-5 py-2.5 rounded-2xl text-sm font-bold text-white" style={{ background: "#10665A" }}>
+              className="md-lv-btn md-lv-btn-primary px-5 py-2.5 rounded-2xl text-sm font-bold text-white" style={{ background: "#4B2FD1" }}>
               تسجيل الدخول / إنشاء حساب
             </button>
           </div>
@@ -1078,12 +1078,12 @@ export function StudentView({
         {!sceneContentLocked && scene && isTeacherView && scene.presenterNotes && (
           <div
             className="rounded-2xl p-4 mb-4"
-            style={{ background: "#FDF9EE", border: "1px solid #B9791F" }}
+            style={{ background: "#F7F5FB", border: "1px solid #C9972E" }}
           >
-            <p className="font-bold text-xs mb-1" style={{ color: "#8A5A15" }}>
+            <p className="font-bold text-xs mb-1" style={{ color: "#946518" }}>
               📌 ملاحظات المُقدّم (خاص بك):
             </p>
-            <p className="text-sm" style={{ color: "#5F4416" }}>
+            <p className="text-sm" style={{ color: "#6B4710" }}>
               {scene.presenterNotes}
             </p>
           </div>
@@ -1093,14 +1093,14 @@ export function StudentView({
         {!sceneContentLocked && scene && isQuickRecallVisible && quickRecallItems.length > 0 && (
           <div
             className="md-lv-recall rounded-2xl p-4 mb-5 quick-recall-hidden"
-            style={{ background: "#E4F0EC", border: "1px solid #10665A" }}
+            style={{ background: "#EFEAFD", border: "1px solid #4B2FD1" }}
           >
-            <p className="font-bold text-sm mb-2" style={{ color: "#0E5348" }}>
+            <p className="font-bold text-sm mb-2" style={{ color: "#2E1C86" }}>
               🧠 تذكّر سريع:
             </p>
             <ol
               className="list-decimal list-inside text-sm space-y-1"
-              style={{ color: "#22291F" }}
+              style={{ color: "#171333" }}
             >
               {quickRecallItems.map((item, idx) => (
                 <li key={`quick-recall-${idx}`}>{item}</li>
@@ -1113,14 +1113,15 @@ export function StudentView({
         {!sceneContentLocked && scene && scene.text && String(scene.text).replace(/<[^>]+>/g, "").trim() && (
         <div
           key={scene.id || activeIndex}
+          data-kind="text"
           className="md-lv-card md-lv-card--accent ts-fade rounded-3xl p-6 sm:p-8 mb-6 shadow-sm bg-white"
-          style={{ border: "1px solid #DED4BD" }}
+          style={{ border: "1px solid #E3E0EE" }}
         >
           <h2
             className="md-lv-scene-title text-xl font-bold mb-4 pb-2 border-b"
             style={{
-              color: "#10665A",
-              borderColor: "#DED4BD",
+              color: "#4B2FD1",
+              borderColor: "#E3E0EE",
               fontFamily: scene.titleFont || "Amiri, serif",
             }}
           >
@@ -1142,14 +1143,15 @@ export function StudentView({
         {/* 📚 المراجعة النهائية — محتوى مجمّع من كل مشاهد الدرس (خريطة ذهنية + خط زمني + أسئلة) */}
         {!sceneContentLocked && scene && isFinalReviewScene && (
           <div
+            data-kind="review"
             className="md-lv-card md-lv-card--accent rounded-3xl p-5 mb-6 shadow-sm bg-white"
-            style={{ border: "1px solid #DED4BD" }}
+            style={{ border: "1px solid #E3E0EE" }}
           >
-            <h3 className="md-lv-card-title font-bold text-lg mb-1" style={{ color: "#10665A" }}>📚 المراجعة النهائية</h3>
-            <p className="text-xs mb-4" style={{ color: "#8A8570" }}>ملخص من كل مشاهد الدرس: خريطة ذهنية وخط زمني وأسئلة.</p>
+            <h3 className="md-lv-card-title font-bold text-lg mb-1" style={{ color: "#4B2FD1" }}>📚 المراجعة النهائية</h3>
+            <p className="text-xs mb-4" style={{ color: "#6E6B85" }}>ملخص من كل مشاهد الدرس: خريطة ذهنية وخط زمني وأسئلة.</p>
             {fullMindMap && fullMindMap.label && (
               <div className="mb-6">
-                <p className="font-bold text-sm mb-2" style={{ color: "#0E5348" }}>🗺️ الخريطة الذهنية الكاملة</p>
+                <p className="font-bold text-sm mb-2" style={{ color: "#2E1C86" }}>🗺️ الخريطة الذهنية الكاملة</p>
                 <MindMapViewerNode
                   node={fullMindMap}
                   onSelectNode={(node) => setSelectedMindNode(node)}
@@ -1159,13 +1161,13 @@ export function StudentView({
             )}
             {Array.isArray(fullTimeline) && fullTimeline.length > 0 && (
               <div className="mb-6">
-                <p className="font-bold text-sm mb-2" style={{ color: "#0E5348" }}>🕒 الخط الزمني الكامل</p>
+                <p className="font-bold text-sm mb-2" style={{ color: "#2E1C86" }}>🕒 الخط الزمني الكامل</p>
                 <div className="flex flex-col gap-3">
                   {fullTimeline.map((item, idx) => (
-                    <div key={item.id || `fr-ft-${idx}`} className="md-lv-tl-item p-3 rounded-xl" style={{ background: "#FAF6ED", border: "1px solid #DED4BD" }}>
-                      <p className="font-bold text-xs" style={{ color: "#10665A" }}>{item.date}</p>
-                      <p className="text-sm font-bold" style={{ color: "#22291F" }}>{item.title}</p>
-                      {item.description && <p className="text-xs mt-1" style={{ color: "#5C5A4A" }}>{item.description}</p>}
+                    <div key={item.id || `fr-ft-${idx}`} className="md-lv-tl-item p-3 rounded-xl" style={{ background: "#F7F5FB", border: "1px solid #E3E0EE" }}>
+                      <p className="font-bold text-xs" style={{ color: "#4B2FD1" }}>{item.date}</p>
+                      <p className="text-sm font-bold" style={{ color: "#171333" }}>{item.title}</p>
+                      {item.description && <p className="text-xs mt-1" style={{ color: "#433F66" }}>{item.description}</p>}
                     </div>
                   ))}
                 </div>
@@ -1173,7 +1175,7 @@ export function StudentView({
             )}
             {Array.isArray(fullQuestions) && fullQuestions.length > 0 && (
               <div className="mb-4">
-                <p className="font-bold text-sm mb-2" style={{ color: "#0E5348" }}>❓ أسئلة المراجعة</p>
+                <p className="font-bold text-sm mb-2" style={{ color: "#2E1C86" }}>❓ أسئلة المراجعة</p>
                 <div className="flex flex-col gap-3">
                   {fullQuestions.map((q, idx) => (
                     <QuestionItem key={q.id || `fr-fq-${idx}`} q={q} />
@@ -1182,7 +1184,7 @@ export function StudentView({
               </div>
             )}
             {!fullMindMap?.label && !(fullTimeline || []).length && !(fullQuestions || []).length && (
-              <p className="text-sm" style={{ color: "#8A8570" }}>لا توجد عناصر مراجعة مجمّعة بعد — أضف محتوى في المشاهد من الاستوديو.</p>
+              <p className="text-sm" style={{ color: "#6E6B85" }}>لا توجد عناصر مراجعة مجمّعة بعد — أضف محتوى في المشاهد من الاستوديو.</p>
             )}
           </div>
         )}
@@ -1190,18 +1192,19 @@ export function StudentView({
         {/* الخريطة الذهنية */}
         {!sceneContentLocked && scene && !isFinalReviewScene && scene.mindmap && scene.mindmap.label && (
           <div
+            data-kind="mindmap"
             className="md-lv-card rounded-3xl p-6 mb-6 shadow-sm bg-white"
-            style={{ border: "1px solid #DED4BD" }}
+            style={{ border: "1px solid #E3E0EE" }}
           >
             <div className="flex justify-between items-center mb-4">
-              <h3 className="md-lv-card-title font-bold text-lg" style={{ color: "#10665A" }}>
+              <h3 className="md-lv-card-title font-bold text-lg" style={{ color: "#4B2FD1" }}>
                 🧠 الخريطة الذهنية للدرس
               </h3>
               <button
                 type="button"
                 onClick={() => setShowMap((prev) => !prev)}
                 className="md-lv-toggle text-xs px-3 py-1.5 rounded-xl font-bold cursor-pointer"
-                style={{ background: "#EAE6F1", color: "#4C3F63" }}
+                style={{ background: "#F6E8F1", color: "#7D2E68" }}
               >
                 {showMap ? "إخفاء" : "إظهار"}
               </button>
@@ -1217,17 +1220,17 @@ export function StudentView({
                   <div
                     className="md-lv-detail ts-fade mt-4 p-4 rounded-2xl"
                     style={{
-                      background: "#F6E9D3",
-                      border: "1px solid #B9791F",
+                      background: "#F7E6C4",
+                      border: "1px solid #C9972E",
                     }}
                   >
                     <p
                       className="font-bold text-sm mb-1"
-                      style={{ color: "#8A5A15" }}
+                      style={{ color: "#946518" }}
                     >
                       تفاصيل العنصر: {selectedMindNode.label}
                     </p>
-                    <p className="text-sm" style={{ color: "#5F4416" }}>
+                    <p className="text-sm" style={{ color: "#6B4710" }}>
                       {selectedMindNode.description ||
                         "لا توجد تفاصيل إضافية."}
                     </p>
@@ -1241,7 +1244,7 @@ export function StudentView({
                           if (idx !== -1) setActiveIndex(idx);
                         }}
                         className="mt-2 text-xs px-3 py-1 rounded-lg text-white font-bold cursor-pointer"
-                        style={{ background: "#10665A" }}
+                        style={{ background: "#4B2FD1" }}
                       >
                         الانتقال للمشهد المرتبط ↗
                       </button>
@@ -1256,18 +1259,19 @@ export function StudentView({
         {/* الشريط الزمني */}
         {!sceneContentLocked && scene && !isFinalReviewScene && Array.isArray(scene.timeline) && scene.timeline.length > 0 && (
           <div
+            data-kind="timeline"
             className="md-lv-card rounded-3xl p-6 mb-6 shadow-sm bg-white"
-            style={{ border: "1px solid #DED4BD" }}
+            style={{ border: "1px solid #E3E0EE" }}
           >
             <div className="flex justify-between items-center mb-4">
-              <h3 className="md-lv-card-title font-bold text-lg" style={{ color: "#10665A" }}>
+              <h3 className="md-lv-card-title font-bold text-lg" style={{ color: "#4B2FD1" }}>
                 🕒 الخط الزمني والأحداث
               </h3>
               <button
                 type="button"
                 onClick={() => setShowTimeline((prev) => !prev)}
                 className="md-lv-toggle text-xs px-3 py-1.5 rounded-xl font-bold cursor-pointer"
-                style={{ background: "#EAE6F1", color: "#4C3F63" }}
+                style={{ background: "#F6E8F1", color: "#7D2E68" }}
               >
                 {showTimeline ? "إخفاء" : "إظهار"}
               </button>
@@ -1278,28 +1282,28 @@ export function StudentView({
                   <div
                     key={item.id || `timeline-item-${idx}`}
                     className="md-lv-tl-item flex gap-4 p-4 rounded-2xl border"
-                    style={{ background: "#FAF6ED", borderColor: "#DED4BD" }}
+                    style={{ background: "#F7F5FB", borderColor: "#E3E0EE" }}
                   >
                     <div
                       className="md-lv-tl-date font-black px-3 py-2 rounded-xl h-fit text-sm whitespace-nowrap"
-                      style={{ background: "#10665A", color: "#FAF6ED" }}
+                      style={{ background: "#4B2FD1", color: "#F7F5FB" }}
                     >
                       {item.date}
                     </div>
                     <div className="flex-1">
                       <h4
                         className="font-bold text-base mb-1"
-                        style={{ color: "#22291F" }}
+                        style={{ color: "#171333" }}
                       >
                         {item.title}
                       </h4>
-                      <p className="text-sm mb-2" style={{ color: "#5C5A4A" }}>
+                      <p className="text-sm mb-2" style={{ color: "#433F66" }}>
                         {item.description}
                       </p>
                       {item.location && (
                         <p
                           className="text-xs font-semibold"
-                          style={{ color: "#B9791F" }}
+                          style={{ color: "#C9972E" }}
                         >
                           📍 الموقع: {item.location}
                         </p>
@@ -1322,10 +1326,11 @@ export function StudentView({
         {/* قسم الأسئلة والتحقق من الفهم */}
         {!sceneContentLocked && scene && !isFinalReviewScene && Array.isArray(scene.questions) && scene.questions.length > 0 && (
           <div
+            data-kind="questions"
             className="md-lv-card rounded-3xl p-6 mb-6 shadow-sm bg-white"
-            style={{ border: "1px solid #DED4BD" }}
+            style={{ border: "1px solid #E3E0EE" }}
           >
-            <h3 className="md-lv-card-title font-bold text-lg mb-4" style={{ color: "#10665A" }}>
+            <h3 className="md-lv-card-title font-bold text-lg mb-4" style={{ color: "#4B2FD1" }}>
               ❓ تحقق من فهمك
             </h3>
             <div className="flex flex-col gap-4">
@@ -1354,7 +1359,7 @@ export function StudentView({
                   journey.completeScene?.(sceneIndex);
                 }}
                 className={`md-lv-btn md-lv-btn-primary${isSceneCompleted(sceneIndex) ? " md-lv-btn-done" : ""} w-full px-5 py-3 rounded-2xl text-sm font-bold text-white`}
-                style={{ background: isSceneCompleted(sceneIndex) ? "#0E5348" : "#10665A" }}
+                style={{ background: isSceneCompleted(sceneIndex) ? "#2E1C86" : "#4B2FD1" }}
               >
                 {isSceneCompleted(sceneIndex)
                   ? (sceneIndex + 1 < sceneCount
@@ -1371,7 +1376,7 @@ export function StudentView({
                 onClick={() => tryOpenScene(sceneIndex - 1)}
                 disabled={sceneIndex <= 0}
                 className="md-lv-btn md-lv-btn-ghost px-5 py-2.5 rounded-2xl text-sm font-bold disabled:opacity-40"
-                style={{ background: "#EAE6F1", color: "#4C3F63" }}
+                style={{ background: "#F6E8F1", color: "#7D2E68" }}
               >
                 ← السابق
               </button>
@@ -1395,7 +1400,7 @@ export function StudentView({
                     : sceneIndex >= sceneCount - 1
                 }
                 className="md-lv-btn md-lv-btn-primary px-5 py-2.5 rounded-2xl text-sm font-bold text-white disabled:opacity-40"
-                style={{ background: "#10665A" }}
+                style={{ background: "#4B2FD1" }}
               >
                 {sceneIndex + 1 >= sceneCount && showAggregatedReviewFlow ? "المراجعة النهائية →" : "التالي →"}
               </button>
@@ -1407,18 +1412,18 @@ export function StudentView({
         {isFinalReview && !sceneContentLocked && (
           <div className="space-y-6 mb-6">
             {isLessonDone && (
-              <div className="md-lv-notice rounded-3xl p-6 text-center bg-white shadow-sm" style={{ border: "1px solid #10665A" }}>
+              <div className="md-lv-notice rounded-3xl p-6 text-center bg-white shadow-sm" style={{ border: "1px solid #4B2FD1" }}>
                 <p className="text-3xl mb-2">🎉</p>
-                <p className="font-black text-lg" style={{ color: "#10665A" }}>تم إكمال الدرس</p>
-                <p className="text-sm mt-1" style={{ color: "#5C5A4A" }}>أحسنت — أنهيت رحلة هذا الدرس على مَدَار.</p>
+                <p className="font-black text-lg" style={{ color: "#4B2FD1" }}>تم إكمال الدرس</p>
+                <p className="text-sm mt-1" style={{ color: "#433F66" }}>أحسنت — أنهيت رحلة هذا الدرس على مَدَار.</p>
               </div>
             )}
-            <div className="md-lv-card md-lv-card--accent rounded-3xl p-5 bg-white shadow-sm" style={{ border: "1px solid #DED4BD" }}>
-              <h3 className="md-lv-card-title font-bold text-lg mb-3" style={{ color: "#10665A" }}>🧠 المراجعة النهائية</h3>
-              <p className="text-xs mb-4" style={{ color: "#8A8570" }}>ملخص من كل مشاهد الدرس: خريطة ذهنية وخط زمني وأسئلة.</p>
+            <div data-kind="review" className="md-lv-card md-lv-card--accent rounded-3xl p-5 bg-white shadow-sm" style={{ border: "1px solid #E3E0EE" }}>
+              <h3 className="md-lv-card-title font-bold text-lg mb-3" style={{ color: "#4B2FD1" }}>🧠 المراجعة النهائية</h3>
+              <p className="text-xs mb-4" style={{ color: "#6E6B85" }}>ملخص من كل مشاهد الدرس: خريطة ذهنية وخط زمني وأسئلة.</p>
               {fullMindMap && fullMindMap.label && (
                 <div className="mb-6">
-                  <p className="font-bold text-sm mb-2" style={{ color: "#0E5348" }}>الخريطة الذهنية الكاملة</p>
+                  <p className="font-bold text-sm mb-2" style={{ color: "#2E1C86" }}>الخريطة الذهنية الكاملة</p>
                   <MindMapViewerNode
                     node={fullMindMap}
                     onSelectNode={(node) => setSelectedMindNode(node)}
@@ -1428,13 +1433,13 @@ export function StudentView({
               )}
               {Array.isArray(fullTimeline) && fullTimeline.length > 0 && (
                 <div className="mb-6">
-                  <p className="font-bold text-sm mb-2" style={{ color: "#0E5348" }}>الخط الزمني الكامل</p>
+                  <p className="font-bold text-sm mb-2" style={{ color: "#2E1C86" }}>الخط الزمني الكامل</p>
                   <div className="flex flex-col gap-3">
                     {fullTimeline.map((item, idx) => (
-                      <div key={item.id || `ft-${idx}`} className="md-lv-tl-item p-3 rounded-xl" style={{ background: "#FAF6ED", border: "1px solid #DED4BD" }}>
-                        <p className="font-bold text-xs" style={{ color: "#10665A" }}>{item.date}</p>
-                        <p className="text-sm font-bold" style={{ color: "#22291F" }}>{item.title}</p>
-                        {item.description && <p className="text-xs mt-1" style={{ color: "#5C5A4A" }}>{item.description}</p>}
+                      <div key={item.id || `ft-${idx}`} className="md-lv-tl-item p-3 rounded-xl" style={{ background: "#F7F5FB", border: "1px solid #E3E0EE" }}>
+                        <p className="font-bold text-xs" style={{ color: "#4B2FD1" }}>{item.date}</p>
+                        <p className="text-sm font-bold" style={{ color: "#171333" }}>{item.title}</p>
+                        {item.description && <p className="text-xs mt-1" style={{ color: "#433F66" }}>{item.description}</p>}
                       </div>
                     ))}
                   </div>
@@ -1442,7 +1447,7 @@ export function StudentView({
               )}
               {Array.isArray(fullQuestions) && fullQuestions.length > 0 && (
                 <div className="mb-4">
-                  <p className="font-bold text-sm mb-2" style={{ color: "#0E5348" }}>أسئلة المراجعة</p>
+                  <p className="font-bold text-sm mb-2" style={{ color: "#2E1C86" }}>أسئلة المراجعة</p>
                   <div className="flex flex-col gap-3">
                     {fullQuestions.map((q, idx) => (
                       <QuestionItem key={q.id || `fq-${idx}`} q={q} />
@@ -1451,7 +1456,7 @@ export function StudentView({
                 </div>
               )}
               {!fullMindMap?.label && !(fullTimeline || []).length && !(fullQuestions || []).length && (
-                <p className="text-sm" style={{ color: "#8A8570" }}>لا توجد عناصر مراجعة مجمّعة بعد — أضف محتوى في المشاهد من الاستوديو.</p>
+                <p className="text-sm" style={{ color: "#6E6B85" }}>لا توجد عناصر مراجعة مجمّعة بعد — أضف محتوى في المشاهد من الاستوديو.</p>
               )}
             </div>
             {hasJourney && !isTeacherView && !isLessonDone && (
@@ -1459,7 +1464,7 @@ export function StudentView({
                 type="button"
                 onClick={() => journey.completeFinalReview?.()}
                 className="md-lv-btn md-lv-btn-primary w-full px-5 py-3 rounded-2xl text-sm font-bold text-white"
-                style={{ background: "#10665A" }}
+                style={{ background: "#4B2FD1" }}
               >
                 ✓ إنهاء المراجعة وإكمال الدرس
               </button>
@@ -1468,7 +1473,7 @@ export function StudentView({
               type="button"
               onClick={() => tryOpenScene(Math.max(0, sceneCount - 1))}
               className="md-lv-btn md-lv-btn-ghost w-full px-5 py-2.5 rounded-2xl text-sm font-bold"
-              style={{ background: "#EAE6F1", color: "#4C3F63" }}
+              style={{ background: "#F6E8F1", color: "#7D2E68" }}
             >
               ← العودة لآخر مشهد
             </button>

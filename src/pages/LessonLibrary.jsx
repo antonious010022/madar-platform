@@ -115,41 +115,41 @@ export default function LessonLibraryPage({ session }) {
   const stageKeys = Object.keys(groupedLessons);
 
   return (
-    <div className="ts-root" style={{ minHeight: "calc(100vh - 41px)", background: "#FAF6ED" }}>
+    <div className="ts-root" style={{ minHeight: "calc(100vh - 41px)", background: "#F7F5FB" }}>
       {showCreate && (
         <CreateLessonModal onClose={() => setShowCreate(false)} onCreate={handleCreate} />
       )}
 
       <div
         className="flex items-center justify-between px-6 py-5 bg-white shadow-sm border-b flex-wrap gap-3"
-        style={{ borderColor: "#DED4BD" }}
+        style={{ borderColor: "#E3E0EE" }}
       >
-        <h1 className="font-black text-xl" style={{ color: "#10665A" }}>
+        <h1 className="font-black text-xl" style={{ color: "#4B2FD1" }}>
           مكتبة الدروس والتحكم الشخصي
         </h1>
         <div className="flex items-center gap-2 flex-wrap">
           <Link
             to="/teacher/settings"
             className="px-3 py-2 rounded-xl text-xs font-bold"
-            style={{ background: "#E4F0EC", color: "#0E5348" }}
+            style={{ background: "#EFEAFD", color: "#2E1C86" }}
           >
             إعدادات المنهج والمنصة
           </Link>
-          <span className="text-xs" style={{ color: "#8A8570" }}>
+          <span className="text-xs" style={{ color: "#6E6B85" }}>
             {session.user.email}
           </span>
           <button
             onClick={() => setShowCreate(true)}
             disabled={busy}
             className="px-4 py-2 rounded-xl text-xs font-bold text-white shadow-sm"
-            style={{ background: "#10665A" }}
+            style={{ background: "#4B2FD1" }}
           >
             + إنشاء درس جديد
           </button>
           <button
             onClick={() => signOutTeacher()}
             className="px-3 py-2 rounded-xl text-xs font-bold"
-            style={{ background: "#EAE6F1", color: "#4C3F63" }}
+            style={{ background: "#F6E8F1", color: "#7D2E68" }}
           >
             تسجيل الخروج
           </button>
@@ -158,7 +158,7 @@ export default function LessonLibraryPage({ session }) {
 
       <div className="max-w-4xl mx-auto px-6 py-8">
         {error && (
-          <p className="text-sm mb-4" style={{ color: "#C53030" }}>
+          <p className="text-sm mb-4" style={{ color: "#D6334B" }}>
             {error}
           </p>
         )}
@@ -173,21 +173,21 @@ export default function LessonLibraryPage({ session }) {
         </div>
 
         {lessons === null && (
-          <p className="text-sm" style={{ color: "#8A8570" }}>
+          <p className="text-sm" style={{ color: "#6E6B85" }}>
             جاري التحميل...
           </p>
         )}
 
         {lessons && lessons.length === 0 && (
-          <div className="rounded-3xl p-10 text-center bg-white border" style={{ borderColor: "#DED4BD" }}>
-            <p className="mb-4" style={{ color: "#8A8570" }}>
+          <div className="rounded-3xl p-10 text-center bg-white border" style={{ borderColor: "#E3E0EE" }}>
+            <p className="mb-4" style={{ color: "#6E6B85" }}>
               لا توجد دروس بعد. ابدأ بإنشاء درسك الأول.
             </p>
             <div className="flex items-center justify-center gap-2 flex-wrap">
               <button
                 onClick={() => setShowCreate(true)}
                 className="px-4 py-2 rounded-xl text-xs font-bold text-white shadow-sm"
-                style={{ background: "#10665A" }}
+                style={{ background: "#4B2FD1" }}
               >
                 + إنشاء درس جديد
               </button>
@@ -195,7 +195,7 @@ export default function LessonLibraryPage({ session }) {
                 onClick={handleImportDemo}
                 disabled={busy}
                 className="px-4 py-2 rounded-xl text-xs font-bold"
-                style={{ background: "#EAE6F1", color: "#4C3F63" }}
+                style={{ background: "#F6E8F1", color: "#7D2E68" }}
               >
                 استيراد درس تجريبي (للتطوير فقط)
               </button>
@@ -206,29 +206,29 @@ export default function LessonLibraryPage({ session }) {
         {lessons && lessons.length > 0 && (
           <div className="flex flex-col gap-6">
             {filtered.length === 0 && (
-              <p className="text-sm" style={{ color: "#8A8570" }}>
+              <p className="text-sm" style={{ color: "#6E6B85" }}>
                 لا توجد دروس مطابقة.
               </p>
             )}
 
             {stageKeys.map((stage) => (
               <div key={stage}>
-                <h2 className="font-black text-sm mb-3" style={{ color: "#10665A" }}>
+                <h2 className="font-black text-sm mb-3" style={{ color: "#4B2FD1" }}>
                   📚 {stage}
                 </h2>
                 {Object.keys(groupedLessons[stage]).map((grade) => (
                   <div key={grade} className="mb-4" style={{ paddingInlineStart: 8 }}>
-                    <h3 className="font-bold text-xs mb-2" style={{ color: "#0E5348" }}>
+                    <h3 className="font-bold text-xs mb-2" style={{ color: "#2E1C86" }}>
                       {grade}
                     </h3>
                     {Object.keys(groupedLessons[stage][grade]).map((term) => (
                       <div key={term} className="mb-3" style={{ paddingInlineStart: 8 }}>
-                        <p className="text-[11px] font-bold mb-2" style={{ color: "#8A8570" }}>
+                        <p className="text-[11px] font-bold mb-2" style={{ color: "#6E6B85" }}>
                           {term}
                         </p>
                         {Object.keys(groupedLessons[stage][grade][term]).map((subject) => (
                           <div key={subject} className="mb-3" style={{ paddingInlineStart: 8 }}>
-                            <p className="text-xs font-bold mb-2" style={{ color: "#5C5A4A" }}>
+                            <p className="text-xs font-bold mb-2" style={{ color: "#433F66" }}>
                               {subject}
                             </p>
                             <div className="flex flex-col gap-3">
@@ -236,23 +236,23 @@ export default function LessonLibraryPage({ session }) {
                                 <div
                                   key={l.id}
                                   className="ts-fade rounded-3xl p-5 flex items-center justify-between flex-wrap gap-4 bg-white border shadow-sm"
-                                  style={{ borderColor: "#DED4BD" }}
+                                  style={{ borderColor: "#E3E0EE" }}
                                 >
                                   <div className="min-w-0 flex-1">
                                     <div className="flex items-center gap-2 flex-wrap mb-1">
-                                      <h3 className="font-bold text-base" style={{ color: "#22291F" }}>
+                                      <h3 className="font-bold text-base" style={{ color: "#171333" }}>
                                         {l.title}
                                       </h3>
                                       <Pill tone={statusMeta(l.status).tone}>
                                         {statusMeta(l.status).label}
                                       </Pill>
                                     </div>
-                                    <p className="text-xs mb-1" style={{ color: "#8A8570" }}>
+                                    <p className="text-xs mb-1" style={{ color: "#6E6B85" }}>
                                       {[l.stage, l.grade, l.term, l.subject].filter(Boolean).join(" / ")}
                                       {l.updatedAt ? ` · تعديل ${timeAgo(l.updatedAt)}` : ""}
                                     </p>
                                     {l.description && (
-                                      <p className="text-sm" style={{ color: "#5C5A4A" }}>
+                                      <p className="text-sm" style={{ color: "#433F66" }}>
                                         {l.description}
                                       </p>
                                     )}
@@ -261,7 +261,7 @@ export default function LessonLibraryPage({ session }) {
                                     <button
                                       onClick={() => navigate(`/teacher/lesson/${l.id}`)}
                                       className="px-4 py-2 rounded-xl text-xs font-bold text-white shadow-sm"
-                                      style={{ background: "#10665A" }}
+                                      style={{ background: "#4B2FD1" }}
                                     >
                                       فتح الاستوديو
                                     </button>
@@ -269,7 +269,7 @@ export default function LessonLibraryPage({ session }) {
                                       onClick={() => handleDuplicate(l.id)}
                                       disabled={busy}
                                       className="px-4 py-2 rounded-xl text-xs font-bold"
-                                      style={{ background: "#EAE6F1", color: "#4C3F63" }}
+                                      style={{ background: "#F6E8F1", color: "#7D2E68" }}
                                     >
                                       نسخ الدرس
                                     </button>
@@ -279,14 +279,14 @@ export default function LessonLibraryPage({ session }) {
                                           onClick={() => handleDelete(l.id)}
                                           disabled={busy}
                                           className="px-3 py-2 rounded-xl text-xs font-bold text-white"
-                                          style={{ background: "#C53030" }}
+                                          style={{ background: "#D6334B" }}
                                         >
                                           تأكيد الحذف
                                         </button>
                                         <button
                                           onClick={() => setConfirmDeleteId(null)}
                                           className="px-2 py-2 text-xs"
-                                          style={{ color: "#8A8570" }}
+                                          style={{ color: "#6E6B85" }}
                                         >
                                           إلغاء
                                         </button>
@@ -295,7 +295,7 @@ export default function LessonLibraryPage({ session }) {
                                       <button
                                         onClick={() => setConfirmDeleteId(l.id)}
                                         className="px-3 py-2 rounded-xl text-xs font-bold"
-                                        style={{ color: "#C53030" }}
+                                        style={{ color: "#D6334B" }}
                                       >
                                         حذف
                                       </button>

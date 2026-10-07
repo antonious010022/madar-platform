@@ -190,8 +190,8 @@ function ToolBtn({ active, title, onClick, children, disabled, style }) {
         width: 34,
         height: 34,
         fontSize: 16,
-        background: active ? "#10665A" : "rgba(255,255,255,0.08)",
-        color: "#FAF6ED",
+        background: active ? "#4B2FD1" : "rgba(255,255,255,0.08)",
+        color: "#F7F5FB",
         transition: "background 0.15s ease",
         opacity: disabled ? 0.35 : 1,
         ...style,
@@ -214,8 +214,8 @@ function Seg({ options, value, onChange }) {
           onClick={() => onChange(o.value)}
           className="rounded-lg px-2 py-1 text-[11px]"
           style={{
-            background: value === o.value ? "#10665A" : "rgba(255,255,255,0.08)",
-            color: "#FAF6ED",
+            background: value === o.value ? "#4B2FD1" : "rgba(255,255,255,0.08)",
+            color: "#F7F5FB",
             opacity: o.disabled ? 0.35 : 1,
           }}
         >
@@ -228,7 +228,7 @@ function Seg({ options, value, onChange }) {
 
 function Check({ checked, onChange, children }) {
   return (
-    <label className="flex items-center gap-2 text-[12px] cursor-pointer" style={{ color: "#FAF6ED" }}>
+    <label className="flex items-center gap-2 text-[12px] cursor-pointer" style={{ color: "#F7F5FB" }}>
       <input type="checkbox" checked={checked} onChange={(e) => onChange(e.target.checked)} />
       <span>{children}</span>
     </label>
@@ -1443,7 +1443,7 @@ export default function PresentationTools({ onExit, children }) {
       maxHeight: "calc(100vh - 90px)",
       overflowY: "auto",
       background: "rgba(20,26,20,0.97)",
-      color: "#FAF6ED",
+      color: "#F7F5FB",
       zIndex: Z.menu,
       pointerEvents: "auto",
       direction: "rtl",
@@ -1510,7 +1510,7 @@ export default function PresentationTools({ onExit, children }) {
               top: box.top,
               width: box.width,
               height: box.height,
-              boxShadow: "0 0 0 3px rgba(250,246,237,0.35)", // خارج الإطار تمامًا فلا يدخل في منطقة التصوير
+              boxShadow: "0 0 0 3px rgba(247, 245, 251,0.35)", // خارج الإطار تمامًا فلا يدخل في منطقة التصوير
             }}
           />
         )}
@@ -1639,7 +1639,7 @@ export default function PresentationTools({ onExit, children }) {
                   width: ERASE_R * 2,
                   height: ERASE_R * 2,
                   borderRadius: "50%",
-                  border: "2px dashed #FAF6ED",
+                  border: "2px dashed #F7F5FB",
                   boxShadow: "0 0 0 1px rgba(0,0,0,0.35)",
                 }}
               />
@@ -1686,7 +1686,7 @@ export default function PresentationTools({ onExit, children }) {
                   width: 32,
                   height: 32,
                   borderRadius: "50%",
-                  border: "2px solid #FAF6ED",
+                  border: "2px solid #F7F5FB",
                   animation: "ts-pulse-anim 0.45s ease-out",
                 }}
               />
@@ -1706,7 +1706,7 @@ export default function PresentationTools({ onExit, children }) {
             width: 320,
             maxWidth: "calc(100vw - 24px)",
             background: "rgba(20,26,20,0.97)",
-            color: "#FAF6ED",
+            color: "#F7F5FB",
             zIndex: Z.menu,
             pointerEvents: "auto",
             direction: "rtl",
@@ -1727,7 +1727,7 @@ export default function PresentationTools({ onExit, children }) {
               type="button"
               onClick={restoreDraft}
               className="rounded-lg px-3 py-1.5 text-[12px]"
-              style={{ background: "#10665A" }}
+              style={{ background: "#4B2FD1" }}
             >
               استعادة التسجيل
             </button>
@@ -1746,7 +1746,7 @@ export default function PresentationTools({ onExit, children }) {
             <button
               onClick={exit}
               className="px-3 py-2 rounded-xl text-xs shadow-lg"
-              style={{ background: "rgba(255,255,255,0.2)", color: "#FAF6ED" }}
+              style={{ background: "rgba(255,255,255,0.2)", color: "#F7F5FB" }}
             >
               خروج من التصوير (Esc)
             </button>
@@ -1755,8 +1755,8 @@ export default function PresentationTools({ onExit, children }) {
               onClick={() => setRecPanelOpen((v) => !v)}
               className="px-3 py-2 rounded-xl text-xs shadow-lg flex items-center justify-center gap-1.5"
               style={{
-                background: recStatus === "RECORDING" ? "#B91C1C" : recStatus === "PAUSED" ? "#92400E" : "rgba(255,255,255,0.2)",
-                color: "#FAF6ED",
+                background: recStatus === "RECORDING" ? "#A1172B" : recStatus === "PAUSED" ? "#8A4A12" : "rgba(255,255,255,0.2)",
+                color: "#F7F5FB",
               }}
             >
               {recStatus === "RECORDING" && <span>🔴 {formatClock(recElapsedSec)}</span>}
@@ -1767,17 +1767,17 @@ export default function PresentationTools({ onExit, children }) {
             {isRecActive && (
               <div className="flex flex-col gap-1.5 p-1.5 rounded-xl" style={{ background: "rgba(20,26,20,0.92)" }}>
                 {recStatus === "RECORDING" && (
-                  <button type="button" onClick={pauseRecording} className="rounded-lg px-2 py-1 text-[11px]" style={{ background: "rgba(255,255,255,0.12)", color: "#FAF6ED" }}>
+                  <button type="button" onClick={pauseRecording} className="rounded-lg px-2 py-1 text-[11px]" style={{ background: "rgba(255,255,255,0.12)", color: "#F7F5FB" }}>
                     إيقاف مؤقت
                   </button>
                 )}
                 {recStatus === "PAUSED" && (
-                  <button type="button" onClick={resumeRecording} className="rounded-lg px-2 py-1 text-[11px]" style={{ background: "#10665A", color: "#FAF6ED" }}>
+                  <button type="button" onClick={resumeRecording} className="rounded-lg px-2 py-1 text-[11px]" style={{ background: "#4B2FD1", color: "#F7F5FB" }}>
                     استئناف
                   </button>
                 )}
                 {recStatus !== "STOPPING" && (
-                  <button type="button" onClick={stopRecording} className="rounded-lg px-2 py-1 text-[11px]" style={{ background: "#B91C1C", color: "#FAF6ED" }}>
+                  <button type="button" onClick={stopRecording} className="rounded-lg px-2 py-1 text-[11px]" style={{ background: "#A1172B", color: "#F7F5FB" }}>
                     إيقاف نهائي
                   </button>
                 )}
@@ -1798,7 +1798,7 @@ export default function PresentationTools({ onExit, children }) {
                 </p>
               )}
               {recError && (
-                <div className="text-[11px] rounded-lg p-2 flex flex-col gap-1.5" style={{ background: "rgba(239,68,68,0.15)", color: "#FCA5A5" }}>
+                <div className="text-[11px] rounded-lg p-2 flex flex-col gap-1.5" style={{ background: "rgba(161, 23, 43,0.15)", color: "#F0919E" }}>
                   <span>{recError}</span>
                   <button type="button" onClick={dismissRecError} className="self-start rounded px-2 py-0.5" style={{ background: "rgba(255,255,255,0.1)" }}>
                     إغلاق
@@ -1844,7 +1844,7 @@ export default function PresentationTools({ onExit, children }) {
                     type="button"
                     onClick={startRecording}
                     className="rounded-lg px-3 py-2 text-[12px] font-medium"
-                    style={{ background: "#10665A" }}
+                    style={{ background: "#4B2FD1" }}
                   >
                     ابدأ التسجيل
                   </button>
@@ -1875,12 +1875,12 @@ export default function PresentationTools({ onExit, children }) {
                       </button>
                     )}
                     {recStatus === "PAUSED" && (
-                      <button type="button" onClick={resumeRecording} className="rounded-lg px-3 py-1.5 text-[12px]" style={{ background: "#10665A" }}>
+                      <button type="button" onClick={resumeRecording} className="rounded-lg px-3 py-1.5 text-[12px]" style={{ background: "#4B2FD1" }}>
                         استئناف
                       </button>
                     )}
                     {recStatus !== "STOPPING" && (
-                      <button type="button" onClick={stopRecording} className="rounded-lg px-3 py-1.5 text-[12px]" style={{ background: "#B91C1C" }}>
+                      <button type="button" onClick={stopRecording} className="rounded-lg px-3 py-1.5 text-[12px]" style={{ background: "#A1172B" }}>
                         إيقاف نهائي
                       </button>
                     )}
@@ -1891,13 +1891,13 @@ export default function PresentationTools({ onExit, children }) {
                     )}
                   </div>
                   {recCancelConfirm && (
-                    <div className="rounded-lg p-2 text-[11px] flex flex-col gap-1.5" style={{ background: "rgba(239,68,68,0.15)" }}>
+                    <div className="rounded-lg p-2 text-[11px] flex flex-col gap-1.5" style={{ background: "rgba(161, 23, 43,0.15)" }}>
                       <span>هل تريد إلغاء التسجيل؟ سيتم حذف التسجيل الحالي.</span>
                       <div className="flex gap-2 justify-end">
                         <button type="button" onClick={dismissCancel} className="rounded px-2 py-1" style={{ background: "rgba(255,255,255,0.12)" }}>
                           تراجع
                         </button>
-                        <button type="button" onClick={confirmCancel} className="rounded px-2 py-1" style={{ background: "#B91C1C" }}>
+                        <button type="button" onClick={confirmCancel} className="rounded px-2 py-1" style={{ background: "#A1172B" }}>
                           تأكيد الإلغاء
                         </button>
                       </div>
@@ -1924,7 +1924,7 @@ export default function PresentationTools({ onExit, children }) {
                       href={recPreview.url}
                       download={`recording-${Date.now()}.webm`}
                       className="rounded-lg px-3 py-1.5 text-[12px]"
-                      style={{ background: "#10665A", color: "#FAF6ED", textDecoration: "none" }}
+                      style={{ background: "#4B2FD1", color: "#F7F5FB", textDecoration: "none" }}
                     >
                       تنزيل الفيديو
                     </a>
@@ -1958,7 +1958,7 @@ export default function PresentationTools({ onExit, children }) {
               onClick={() => setToolbarMinimized((v) => !v)}
               title={toolbarMinimized ? "إظهار الأدوات" : "إخفاء الأدوات"}
               className="text-[11px] mb-1"
-              style={{ color: "#FAF6ED", opacity: 0.75 }}
+              style={{ color: "#F7F5FB", opacity: 0.75 }}
             >
               {toolbarMinimized ? "⤢" : "⤡"}
             </button>
@@ -1988,7 +1988,7 @@ export default function PresentationTools({ onExit, children }) {
                               width: 16,
                               height: 16,
                               background: c,
-                              border: activeColor === c ? "2px solid #FAF6ED" : "1px solid rgba(255,255,255,0.4)",
+                              border: activeColor === c ? "2px solid #F7F5FB" : "1px solid rgba(255,255,255,0.4)",
                             }}
                           />
                         ))}
@@ -2024,7 +2024,7 @@ export default function PresentationTools({ onExit, children }) {
                 <div
                   data-pt-timer
                   className="text-[12px] font-mono"
-                  style={{ color: timerRunning ? "#FAF6ED" : "rgba(250,246,237,0.6)", direction: "ltr" }}
+                  style={{ color: timerRunning ? "#F7F5FB" : "rgba(247, 245, 251,0.6)", direction: "ltr" }}
                 >
                   {formatClock(timerSec)}
                 </div>
@@ -2044,7 +2044,7 @@ export default function PresentationTools({ onExit, children }) {
                 maxHeight: "calc(100vh - 120px)",
                 overflowY: "auto",
                 background: "rgba(20,26,20,0.96)",
-                color: "#FAF6ED",
+                color: "#F7F5FB",
                 zIndex: Z.menu,
                 pointerEvents: "auto",
                 direction: "rtl",
