@@ -895,3 +895,108 @@ export async function setLessonComingSoon(lessonId, currentJourneyConfig = {}) {
   await updateLessonJourney(lessonId, cfg);
   return cfg;
 }
+
+
+// ===========================================================================
+// STUDENT PROGRESS (per account — table public.student_lesson_progress)
+// Guests have no progress: every function returns empty / does nothing without a session.
+// RLS guarantees a student can only read and write their own rows.
+// ===========================================================================
+
+// Writes still in flight (e.g. the final save fired when leaving a lesson). Reads wait for them,
+// so the home page never shows progress that is one save behind.
+const inflightProgressWrites = new Set();
+async function waitForProgressWrites() {
+  if (inflightProgressWrites.size) await Promise.allSettled(Array.from(inflightProgressWrites));
+}
+
+async function getCurrentUserId() {
+  const { data, error } = await supabase.auth.getSession();
+  if (error) return null;
+  return data?.session?.user?.id ?? null;
+}
+
+/** App progress object (lesson page shape) -> DB row fields. */
+function progressToRow(progress) {
+  const {
+    currentScene,
+    completedScenes,
+    finalReviewCompleted,
+    lessonCompleted,
+    lessonId, // not stored inside state (it is a column)
+    savedAt, // legacy localStorage field
+    ...rest
+  } = progress || {};
+  return {
+    current_scene: Number.isInteger(currentScene) && currentScene >= 0 ? currentScene : 0,
+    completed_scenes: Array.isArray(completedScenes) ? completedScenes : [],
+    final_review_completed: !!finalReviewCompleted,
+    lesson_completed: !!lessonCompleted,
+    state: rest,
+  };
+}
+
+/** DB row -> app progress object (lesson page shape). */
+function rowToProgress(row) {
+  return {
+    ...(row.state && typeof row.state === "object" ? row.state : {}),
+    currentScene: row.current_scene ?? 0,
+    completedScenes: Array.isArray(row.completed_scenes) ? row.completed_scenes : [],
+    finalReviewCompleted: !!row.final_review_completed,
+    lessonCompleted: !!row.lesson_completed,
+  };
+}
+
+/** Progress of the current student in ONE lesson (lesson-page shape), or null if none / guest. */
+export async function getMyLessonProgress(lessonId) {
+  await waitForProgressWrites();
+  const userId = await getCurrentUserId();
+  if (!userId || !lessonId) return null;
+  const { data, error } = await supabase
+    .from("student_lesson_progress")
+    .select("*")
+    .eq("user_id", userId)
+    .eq("lesson_id", lessonId)
+    .maybeSingle();
+  if (error) throw error;
+  return data ? rowToProgress(data) : null;
+}
+
+/** Create or update the current student's progress in one lesson. No-op for guests. */
+export function saveMyLessonProgress(lessonId, progress) {
+  const task = (async () => {
+    const userId = await getCurrentUserId();
+    if (!userId || !lessonId) return false;
+    const row = { user_id: userId, lesson_id: lessonId, ...progressToRow(progress) };
+    const { error } = await supabase
+      .from("student_lesson_progress")
+      .upsert(row, { onConflict: "user_id,lesson_id" });
+    if (error) throw error;
+    return true;
+  })();
+  inflightProgressWrites.add(task);
+  task.finally(() => inflightProgressWrites.delete(task)).catch(() => {});
+  return task;
+}
+
+/** All of the current student's progress rows, most recently updated first. Empty for guests. */
+export async function listMyProgress() {
+  await waitForProgressWrites();
+  const userId = await getCurrentUserId();
+  if (!userId) return [];
+  const { data, error } = await supabase
+    .from("student_lesson_progress")
+    .select("lesson_id, current_scene, completed_scenes, final_review_completed, lesson_completed, completed_at, updated_at")
+    .eq("user_id", userId)
+    .order("updated_at", { ascending: false });
+  if (error) throw error;
+  return (data || []).map((r) => ({
+    lessonId: String(r.lesson_id),
+    currentScene: r.current_scene ?? 0,
+    completedScenes: Array.isArray(r.completed_scenes) ? r.completed_scenes : [],
+    finalReviewCompleted: !!r.final_review_completed,
+    lessonCompleted: !!r.lesson_completed,
+    completedAt: r.completed_at || null,
+    updatedAt: r.updated_at || null,
+  }));
+}

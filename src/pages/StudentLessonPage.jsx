@@ -1,13 +1,12 @@
-import { useEffect, useState, useCallback, useMemo } from "react";
+import { useEffect, useRef, useState, useCallback, useMemo } from "react";
 import { useNavigate, useParams, useLocation } from "react-router-dom";
-import { getLessonWithScenes, signOut, listCompletionTemplates } from "../lib/db";
+import { getLessonWithScenes, signOut, listCompletionTemplates, getMyLessonProgress, saveMyLessonProgress } from "../lib/db";
 import { useAuth } from "../lib/hooks";
 import { StudentView, isLessonMembersOnly } from "../components/Viewer";
 import Footer from "../components/Footer";
 import AuthModal, { GuestWelcomeBanner, LetterAvatar } from "../components/AuthModal";
 import { slugify } from "../lib/slugify";
 
-const PROGRESS_KEY = "ts_student_progress_v2";
 // Same origin already used for canonical links elsewhere in this project.
 const SITE_ORIGIN = "https://madar-platform-five.vercel.app";
 
@@ -53,12 +52,11 @@ function defaultProgress() {
   };
 }
 
-function loadProgress(lessonId, sceneCount) {
+/** Turns saved progress (from Supabase) into a safe progress object for this lesson. null → fresh start. */
+function normalizeProgress(saved, sceneCount) {
+  if (!saved) return defaultProgress();
   try {
-    const raw = localStorage.getItem(PROGRESS_KEY);
-    if (!raw) return defaultProgress();
-    const parsed = JSON.parse(raw);
-    if (!parsed || parsed.lessonId !== lessonId) return defaultProgress();
+    const parsed = saved;
     const p = { ...defaultProgress(), ...parsed };
     // migrate from v1 shape
     if (typeof parsed.sceneIndex === "number" && !Array.isArray(parsed.completedScenes)) {
@@ -81,15 +79,6 @@ function loadProgress(lessonId, sceneCount) {
   }
 }
 
-function saveProgress(lessonId, progress) {
-  try {
-    localStorage.setItem(
-      PROGRESS_KEY,
-      JSON.stringify({ lessonId, ...progress, savedAt: Date.now() })
-    );
-  } catch (_) {}
-}
-
 function displayName(session) {
   if (!session?.user) return "";
   const u = session.user;
@@ -110,6 +99,13 @@ export default function StudentLessonPage() {
   const [authOpen, setAuthOpen] = useState(false);
   const [menuOpen, setMenuOpen] = useState(false);
   const [progress, setProgress] = useState(defaultProgress);
+  // Progress is saved in Supabase for the logged-in account only. Guest (null) = in-memory for this visit, never stored. `undefined` = auth still loading.
+  const progressOwner = session === undefined ? undefined : session?.user?.id || null;
+  const [progressLoadedKey, setProgressLoadedKey] = useState("");
+  const skipNextSaveRef = useRef(false); // the first state after a load is not a change → don't write it back
+  const saveBlockedRef = useRef(false); // loading failed → never overwrite what is stored with a blank state
+  const pendingSaveRef = useRef(null); // { lessonId, progress } waiting for the debounce
+  const saveTimerRef = useRef(null);
   const [templates, setTemplates] = useState([]);
 
   useEffect(() => {
@@ -123,8 +119,6 @@ export default function StudentLessonPage() {
         }
         setLesson(data);
         setTemplates(tpls || []);
-        const sc = data.scenes?.length || 0;
-        setProgress(loadProgress(id, sc));
       })
       .catch(() => mounted && setLesson(false));
     return () => {
@@ -132,9 +126,79 @@ export default function StudentLessonPage() {
     };
   }, [id]);
 
+  // Load this account's saved progress once the lesson AND the auth state are both known.
   useEffect(() => {
-    if (lesson && id) saveProgress(id, progress);
-  }, [id, lesson, progress]);
+    if (!lesson || !id || progressOwner === undefined) return undefined;
+    const sc = lesson.scenes?.length || 0;
+    const key = `${progressOwner || "guest"}:${id}`;
+    skipNextSaveRef.current = true;
+    if (!progressOwner) {
+      // Guest: nothing is stored anywhere — fresh in-memory progress for this visit.
+      setProgress(defaultProgress());
+      setProgressLoadedKey(key);
+      return undefined;
+    }
+    let cancelled = false;
+    saveBlockedRef.current = false;
+    getMyLessonProgress(id)
+      .then((saved) => {
+        if (!cancelled) setProgress(normalizeProgress(saved, sc));
+      })
+      .catch((err) => {
+        console.warn("getMyLessonProgress:", err);
+        saveBlockedRef.current = true;
+        if (!cancelled) setProgress(defaultProgress());
+      })
+      .finally(() => {
+        if (!cancelled) setProgressLoadedKey(key);
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [lesson, id, progressOwner]);
+
+  // Write the pending progress to Supabase right now (also used when leaving the page).
+  const flushProgressSave = useCallback(() => {
+    if (saveTimerRef.current) {
+      clearTimeout(saveTimerRef.current);
+      saveTimerRef.current = null;
+    }
+    const pending = pendingSaveRef.current;
+    if (!pending) return;
+    pendingSaveRef.current = null;
+    if (saveBlockedRef.current) return;
+    saveMyLessonProgress(pending.lessonId, pending.progress).catch((err) =>
+      console.warn("saveMyLessonProgress:", err)
+    );
+  }, []);
+
+  // Save (debounced) only for a logged-in account, and only after the load above finished for that account+lesson.
+  useEffect(() => {
+    if (!lesson || !id || !progressOwner) return;
+    if (progressLoadedKey !== `${progressOwner}:${id}`) return;
+    if (skipNextSaveRef.current) {
+      skipNextSaveRef.current = false;
+      return;
+    }
+    if (pendingSaveRef.current && pendingSaveRef.current.lessonId !== id) flushProgressSave();
+    pendingSaveRef.current = { lessonId: id, progress };
+    if (saveTimerRef.current) clearTimeout(saveTimerRef.current);
+    saveTimerRef.current = setTimeout(flushProgressSave, 800);
+  }, [id, lesson, progress, progressOwner, progressLoadedKey, flushProgressSave]);
+
+  // Never lose the last step: flush when leaving the page / hiding the tab.
+  useEffect(() => {
+    const onHide = () => {
+      if (document.visibilityState === "hidden") flushProgressSave();
+    };
+    document.addEventListener("visibilitychange", onHide);
+    window.addEventListener("pagehide", flushProgressSave);
+    return () => {
+      document.removeEventListener("visibilitychange", onHide);
+      window.removeEventListener("pagehide", flushProgressSave);
+      flushProgressSave();
+    };
+  }, [flushProgressSave]);
 
   // URL freshening: lesson.id is always the real lookup key — the slug segment
   // is cosmetic — so an outdated or missing slug never breaks access; it's just
@@ -404,7 +468,12 @@ export default function StudentLessonPage() {
     [progress, sceneCount, setCurrentScene, completeScene, openFinalReview, completeFinalReview]
   );
 
-  if (lesson === null) {
+  // Logged-in student: wait for the saved progress so the lesson never flashes a blank/locked state.
+  const progressLoading =
+    !!lesson &&
+    (progressOwner === undefined || (!!progressOwner && progressLoadedKey !== `${progressOwner}:${id}`));
+
+  if (lesson === null || progressLoading) {
     // نفس ارتفاع/بنية الهيدر الموجود في العرض النهائي (سطر lesson.title لاحقًا) حتى لا تقفز
     // الصفحة (Layout Shift) لحظة انتهاء التحميل — Visual/Layout فقط، لا تأثير على تحميل الدرس.
     return (

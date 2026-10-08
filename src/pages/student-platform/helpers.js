@@ -1,4 +1,5 @@
-// Pure helpers for the student home page (progress, ordering, lock states).
+// Pure helpers for the student home page (ordering, lock states, guest grade).
+// Student progress itself lives in Supabase (see listMyProgress in lib/db.js) — nothing here reads or writes it.
 // Moved verbatim from StudentPlatform.jsx — logic unchanged.
 import { slugify } from "../../lib/slugify";
 
@@ -17,53 +18,7 @@ function lessonPath(lesson) {
   return slug ? `/lessons/${lesson.id}/${slug}` : `/lessons/${lesson.id}`;
 }
 
-const PROGRESS_KEY = "ts_student_progress_v2";
 const GUEST_GRADE_KEY = "madar_guest_stage_grade_v1";
-/** Accumulator of completed lesson IDs (StudentPlatform only). Does not change v2 progress shape. */
-const COMPLETED_LESSON_IDS_KEY = "madar_completed_lesson_ids_v1";
-
-function readLocalProgress() {
-  try {
-    const raw = localStorage.getItem(PROGRESS_KEY);
-    if (!raw) return null;
-    const parsed = JSON.parse(raw);
-    if (!parsed || !parsed.lessonId) return null;
-    return parsed;
-  } catch {
-    return null;
-  }
-}
-
-/** Merge single-lesson v2 completion into a multi-lesson id set for sequential UI. */
-function readCompletedLessonIds() {
-  let ids = [];
-  try {
-    const raw = localStorage.getItem(COMPLETED_LESSON_IDS_KEY);
-    if (raw) {
-      const parsed = JSON.parse(raw);
-      if (Array.isArray(parsed)) ids = parsed.map(String);
-    }
-  } catch {
-    /* ignore */
-  }
-  try {
-    const p = readLocalProgress();
-    if (p?.lessonCompleted && p.lessonId) {
-      const lid = String(p.lessonId);
-      if (!ids.includes(lid)) {
-        ids.push(lid);
-        try {
-          localStorage.setItem(COMPLETED_LESSON_IDS_KEY, JSON.stringify(ids));
-        } catch {
-          /* ignore */
-        }
-      }
-    }
-  } catch {
-    /* ignore */
-  }
-  return new Set(ids);
-}
 
 function isLessonComingSoon(lesson) {
   if (!lesson) return false;
@@ -111,6 +66,15 @@ function sortLessonsForSequence(list) {
  */
 function buildLessonLockStates(lessons, completedSet, isGuest) {
   const ordered = sortLessonsForSequence(lessons || []);
+  if (isGuest) {
+    // Guests have no saved progress: no completion marks and no sequence lock.
+    // Only "coming soon" and members-only (login required) still apply.
+    return ordered.map((lesson) => {
+      if (isLessonComingSoon(lesson)) return { lesson, kind: "COMING_SOON" };
+      if (isLessonExclusive(lesson)) return { lesson, kind: "ACCESS_LOCK" };
+      return { lesson, kind: "CURRENT" };
+    });
+  }
   let blockingIncomplete = false;
   return ordered.map((lesson) => {
     const id = String(lesson.id);
@@ -131,7 +95,7 @@ function buildLessonLockStates(lessons, completedSet, isGuest) {
   });
 }
 
-function lessonLockUi(kind) {
+function lessonLockUi(kind, isGuest = false) {
   switch (kind) {
     case "COMING_SOON":
       return { mark: "⏳", cta: "قريبًا", hint: "هذا الدرس سيتوفر قريبًا" };
@@ -143,6 +107,7 @@ function lessonLockUi(kind) {
       return { mark: "🔒", cta: "أكمل الدرس السابق أولًا", hint: "أكمل الدرس السابق أولًا" };
     case "CURRENT":
     default:
+      if (isGuest) return { mark: "⭐", cta: "ابدأ الدرس", hint: "متاح — ابدأ الدرس" };
       return { mark: "⭐", cta: "استكمال التعلم", hint: "متاح — استكمال التعلم" };
   }
 }
@@ -180,4 +145,4 @@ function writeGuestGradeLocal(stage, grade) {
   }
 }
 
-export { ARABIC_ORDINALS, arabicLessonOrdinal, lessonPath, PROGRESS_KEY, GUEST_GRADE_KEY, COMPLETED_LESSON_IDS_KEY, readLocalProgress, readCompletedLessonIds, isLessonComingSoon, isLessonExclusive, lessonDisplayNumber, sortLessonsForSequence, buildLessonLockStates, lessonLockUi, readGuestGradeLocal, writeGuestGradeLocal };
+export { ARABIC_ORDINALS, arabicLessonOrdinal, lessonPath, GUEST_GRADE_KEY, isLessonComingSoon, isLessonExclusive, lessonDisplayNumber, sortLessonsForSequence, buildLessonLockStates, lessonLockUi, readGuestGradeLocal, writeGuestGradeLocal };
