@@ -265,7 +265,7 @@ function ComingSoonAssistantBubble() {
         onClick={() => setOpen((v) => !v)}
         aria-label="المساعد الذكي - قريبًا يكون متاح"
       >
-        <img src="/photo/IevsR.png" alt="" aria-hidden="true" className="md-assistant-bubble-logo" />
+        <img src="/photo/0MSCh.png" alt="" aria-hidden="true" className="md-assistant-bubble-logo" />
       </button>
     </div>
   );

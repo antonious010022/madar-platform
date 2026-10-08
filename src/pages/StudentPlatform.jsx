@@ -448,7 +448,7 @@ export default function StudentPlatform() {
         <header className="md-hero">
   <div className="md-hero-logo-wrap">
     <img 
-      src="/photo/IevsR.png" 
+      src="/photo/0MSCh.png" 
       alt="مَدَار" 
       className="md-hero-logo"
     />

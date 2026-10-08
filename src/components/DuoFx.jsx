@@ -28,7 +28,7 @@ export function LoadSplash() {
   return (
     <div className={`duo-splash${phase === "leaving" ? " leaving" : ""}`} aria-hidden="true">
       <div className="duo-splash-logo">
-        {logoOk ? <img src="/photo/IevsR.png" alt="" onError={() => setLogoOk(false)} /> : <b>م</b>}
+        {logoOk ? <img src="/photo/0MSCh.png" alt="" onError={() => setLogoOk(false)} /> : <b>م</b>}
       </div>
       <div className="duo-splash-dots">
         <span /><span /><span /><span /><span />

@@ -36,7 +36,7 @@ export default function Footer() {
         <div className="flex flex-col gap-5">
           <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-4">
             <div className="flex items-start gap-3">
-              <img src="/photo/IevsR.png" alt={brand.name} className="h-9 w-auto shrink-0 mt-0.5" />
+              <img src="/photo/0MSCh.png" alt={brand.name} className="h-9 w-auto shrink-0 mt-0.5" />
               <div>
                 <p className="font-black text-base" style={{ color: "var(--duo-green-ink)" }}>{brand.name}</p>
                 <p className="text-xs mt-1 max-w-md leading-5" style={{ color: "var(--duo-muted)" }}>{brand.description}</p>

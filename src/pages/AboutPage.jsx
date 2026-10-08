@@ -10,7 +10,7 @@ export default function AboutPage() {
         </Link>
 
         <div className="flex items-center gap-3 mb-6">
-          <img src="/photo/IevsR.png" alt="مَدَار" className="h-10 w-auto" />
+          <img src="/photo/0MSCh.png" alt="مَدَار" className="h-10 w-auto" />
           <h1 className="font-black text-2xl" style={{ color: "#4B2FD1" }}>عن مَدَار</h1>
         </div>
 

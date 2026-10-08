@@ -190,7 +190,7 @@ index 44f1402..a91b7e7 100644
          <div className="flex flex-col gap-5">
            <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-4">
              <div className="flex items-start gap-3">
-               <img src="/photo/IevsR.png" alt={brand.name} className="h-9 w-auto shrink-0 mt-0.5" />
+               <img src="/photo/0MSCh.png" alt={brand.name} className="h-9 w-auto shrink-0 mt-0.5" />
                <div>
 -                <p className="font-black text-base" style={{ color: "#10665A" }}>{brand.name}</p>
 -                <p className="text-xs mt-1 max-w-md leading-5" style={{ color: "#8A8570" }}>{brand.description}</p>
@@ -2113,7 +2113,7 @@ index b030647..50f062b 100644
          </Link>
  
          <div className="flex items-center gap-3 mb-6">
-           <img src="/photo/IevsR.png" alt="مَدَار" className="h-10 w-auto" />
+           <img src="/photo/0MSCh.png" alt="مَدَار" className="h-10 w-auto" />
 -          <h1 className="font-black text-2xl" style={{ color: "#10665A" }}>عن مَدَار</h1>
 +          <h1 className="font-black text-2xl" style={{ color: "#4B2FD1" }}>عن مَدَار</h1>
          </div>
