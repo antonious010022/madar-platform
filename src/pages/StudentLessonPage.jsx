@@ -5,6 +5,7 @@ import { useAuth } from "../lib/hooks";
 import { StudentView, isLessonMembersOnly } from "../components/Viewer";
 import Footer from "../components/Footer";
 import AuthModal, { GuestWelcomeBanner, LetterAvatar } from "../components/AuthModal";
+import LessonActions from "../components/LessonActions";
 import { slugify } from "../lib/slugify";
 
 // Same origin already used for canonical links elsewhere in this project.
@@ -107,7 +108,6 @@ export default function StudentLessonPage() {
   const pendingSaveRef = useRef(null); // { lessonId, progress } waiting for the debounce
   const saveTimerRef = useRef(null);
   const [templates, setTemplates] = useState([]);
-  const [shareNote, setShareNote] = useState("");
 
   useEffect(() => {
     let mounted = true;
@@ -355,31 +355,6 @@ export default function StudentLessonPage() {
   }, [lesson, id]);
 
   const sceneCount = lesson?.scenes?.length || 0;
-
-  // Share the lesson: native phone share sheet (WhatsApp, TikTok, Messenger, ... — the student picks);
-  // on desktops without it, copy the link instead. Uses the same canonical lesson URL as the SEO tags.
-  async function shareLesson() {
-    if (!lesson) return;
-    const url = `${SITE_ORIGIN}${lessonPath(lesson)}`;
-    const title = lesson.title || "مَدَار";
-    const text = `تعلّم درس "${title}" على منصة مَدَار`;
-    try {
-      if (typeof navigator !== "undefined" && navigator.share) {
-        await navigator.share({ title, text, url });
-        return;
-      }
-    } catch (err) {
-      if (err && err.name === "AbortError") return; // student closed the share sheet
-    }
-    try {
-      await navigator.clipboard.writeText(url);
-      setShareNote("تم نسخ الرابط ✓");
-    } catch (_) {
-      window.prompt("انسخ رابط الدرس:", url);
-      return;
-    }
-    setTimeout(() => setShareNote(""), 2500);
-  }
 
   const setCurrentScene = useCallback((i) => {
     setProgress((prev) => ({
@@ -659,22 +634,6 @@ export default function StudentLessonPage() {
           {lesson?.title || "منصة الطالب التعليمية"}
         </span>
         <div className="flex items-center gap-2">
-        <button
-          type="button"
-          onClick={shareLesson}
-          className="md-lv-share inline-flex items-center gap-1.5 rounded-full py-1.5 px-3 text-xs font-bold bg-white/90 transition hover:brightness-95 active:scale-95"
-          style={{ border: "2px solid var(--duo-line)", color: "var(--duo-green-ink)", lineHeight: 1 }}
-          aria-label="مشاركة الدرس"
-          title="مشاركة الدرس"
-        >
-          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
-            <circle cx="18" cy="5" r="3" />
-            <circle cx="6" cy="12" r="3" />
-            <circle cx="18" cy="19" r="3" />
-            <path d="M8.6 13.5l6.8 4M15.4 6.5l-6.8 4" />
-          </svg>
-          <span className={shareNote ? "" : "hidden sm:inline"}>{shareNote || "مشاركة"}</span>
-        </button>
         <div className="relative">
           {session === undefined ? (
             <span className="text-xs" style={{ color: "var(--duo-muted)" }}>...</span>
@@ -752,6 +711,9 @@ export default function StudentLessonPage() {
         requireAuthForTools
         session={session}
         journey={journey}
+        heroExtra={
+          <LessonActions lesson={lesson} session={session} shareOrigin={SITE_ORIGIN} onRequireLogin={() => setAuthOpen(true)} />
+        }
       />
 
       <Footer />
