@@ -74,8 +74,7 @@ html body {
 ::selection { background: var(--duo-green-s); color: var(--duo-green-ink); }
 .ts-root, .ts-root * { font-family: var(--duo-font-body); }
 .ts-display { font-family: var(--duo-font-display); }
-.ts-richtext, .ProseMirror { font-family: 'Amiri', serif; }
-.ts-richtext *, .ProseMirror * { font-family: inherit; }
+.ts-richtext, .ts-richtext *, .ProseMirror, .ProseMirror * { font-family: 'Amiri', serif; } /* lesson text font unchanged */
 
 /* soft dotted paper under everything */
 .md-platform, .md-lesson-page, .ts-root {
@@ -722,6 +721,221 @@ html body {
 @keyframes duo-slide-up { from { opacity: 0; transform: translateY(40px) scale(0.96); } to { opacity: 1; transform: none; } }
 
 /* ---------------------------------------------------------------------------
+   18c) PICK-CARD CHARACTERS (PickArt in uiParts.jsx)
+--------------------------------------------------------------------------- */
+
+.md-art { width: 88%; height: 88%; }
+.md-art .pa-body { transform-box: fill-box; transform-origin: 50% 100%; animation: duo-bob 3.2s ease-in-out infinite; }
+.md-pick-grid > :nth-child(even) .md-art .pa-body { animation-delay: -1.4s; }
+.md-pick-grid > :nth-child(3n) .md-art .pa-body { animation-delay: -2.2s; }
+.md-art .pa-eye { transform-box: fill-box; transform-origin: center; animation: duo-blink 4.4s infinite; }
+.md-pick-grid > :nth-child(even) .md-art .pa-eye { animation-delay: -2s; }
+.md-art .pa-spark { transform-box: fill-box; transform-origin: center; animation: duo-twinkle 2.6s ease-in-out infinite; }
+.md-art .pa-spark:nth-of-type(2) { animation-delay: -0.9s; }
+.md-art .pa-spark:nth-of-type(3) { animation-delay: -1.7s; }
+.md-pick-card:hover:not(:disabled) .md-art .pa-body { animation: duo-hop 0.5s var(--duo-spring) infinite alternate; }
+.md-pick-card.selected .md-art .pa-body { animation: duo-hop 0.7s var(--duo-spring) infinite alternate; }
+.md-pick-card:hover:not(:disabled) .md-art { animation: none; }
+@keyframes duo-bob { 0%, 100% { transform: translateY(0) scale(1, 1); } 50% { transform: translateY(-1.6px) scale(1.015, 0.99); } }
+@keyframes duo-hop { from { transform: translateY(0) scale(1.04, 0.95); } to { transform: translateY(-4px) scale(0.97, 1.04); } }
+@keyframes duo-blink { 0%, 92%, 100% { transform: scaleY(1); } 95% { transform: scaleY(0.08); } }
+@keyframes duo-twinkle { 0%, 100% { transform: scale(0.7) rotate(0); opacity: 0.55; } 50% { transform: scale(1.15) rotate(20deg); opacity: 1; } }
+
+/* ---------------------------------------------------------------------------
+   18d) SAVED LESSONS ("دروسي المحفوظة") — chip, home section, page, locked guest state
+--------------------------------------------------------------------------- */
+.duo-saved-chip {
+  display: inline-flex; align-items: center; gap: 6px; min-height: 40px; padding: 6px 12px;
+  background: #FFFFFF; color: var(--duo-orange-ink); border: 2px solid var(--duo-line); border-radius: 16px;
+  box-shadow: 0 3px 0 var(--duo-line); font-family: var(--duo-font-display); font-size: 0.8rem; font-weight: 800; cursor: pointer;
+  transition: transform 0.14s var(--duo-spring), box-shadow 0.14s ease, background-color 0.18s ease, border-color 0.18s ease;
+}
+.duo-saved-chip svg { width: 18px; height: 18px; }
+.duo-saved-chip:hover { background: var(--duo-orange-s); border-color: var(--duo-orange); box-shadow: 0 4px 0 var(--duo-orange-d); transform: translateY(-1px); }
+.duo-saved-chip:active { transform: translateY(3px); box-shadow: 0 0 0 transparent; }
+
+.duo-saved-head { display: flex; align-items: center; justify-content: space-between; gap: 10px; margin-bottom: 12px; }
+.duo-saved-title { display: flex; align-items: center; gap: 10px; margin: 0; font-family: var(--duo-font-display); font-size: 1.1rem; font-weight: 800; color: var(--duo-ink); }
+.duo-saved-title .ico { display: inline-flex; align-items: center; justify-content: center; width: 38px; height: 38px; border-radius: 13px; background: var(--duo-orange); color: #FFFFFF; box-shadow: 0 4px 0 var(--duo-orange-d); }
+.duo-saved-title .ico svg { width: 20px; height: 20px; }
+.duo-saved-count { padding: 1px 11px; border-radius: 999px; background: var(--duo-yellow); color: var(--duo-yellow-ink); box-shadow: 0 3px 0 var(--duo-yellow-d); font-size: 0.82rem; }
+.duo-saved-all { padding: 8px 20px; border-radius: 14px; background: #FFFFFF; color: var(--duo-blue-ink); border: 2px solid var(--duo-line); box-shadow: 0 4px 0 var(--duo-line); font-family: var(--duo-font-display); font-weight: 800; font-size: 0.85rem; cursor: pointer; transition: transform 0.14s var(--duo-spring), box-shadow 0.14s ease, background-color 0.15s ease; }
+.duo-saved-all:hover { background: var(--duo-blue-s); border-color: var(--duo-blue); box-shadow: 0 5px 0 var(--duo-blue-d); transform: translateY(-1px); }
+.duo-saved-all:active { transform: translateY(4px); box-shadow: 0 0 0 transparent; }
+
+.duo-saved-list { display: grid; gap: 12px; grid-template-columns: repeat(auto-fill, minmax(min(100%, 270px), 1fr)); }
+.duo-saved-card {
+  display: flex; align-items: stretch; overflow: hidden; background: #FFFFFF;
+  border: 2px solid var(--duo-line); border-radius: 20px; box-shadow: 0 5px 0 var(--duo-line);
+  animation: duo-pop 0.5s var(--duo-spring) both;
+  transition: transform 0.14s var(--duo-spring), box-shadow 0.14s ease, border-color 0.18s ease;
+}
+.duo-saved-card:not(.ghost):hover { border-color: var(--acc); box-shadow: 0 7px 0 var(--acc); transform: translateY(-2px); }
+.duo-saved-open { flex: 1; min-width: 0; display: flex; align-items: center; gap: 12px; padding: 14px; background: transparent; border: 0; text-align: right; color: inherit; font: inherit; cursor: pointer; }
+.duo-saved-open:disabled { cursor: not-allowed; opacity: 0.75; }
+.duo-saved-badge { flex: none; display: flex; align-items: center; justify-content: center; width: 46px; height: 46px; border-radius: 15px; background: var(--acc); color: #FFFFFF; box-shadow: 0 4px 0 var(--acc-deep); }
+.duo-saved-badge svg { width: 22px; height: 22px; }
+.duo-saved-body { display: flex; flex-direction: column; gap: 3px; min-width: 0; }
+.duo-saved-name { font-family: var(--duo-font-display); font-size: 1rem; font-weight: 800; line-height: 1.35; color: var(--duo-ink); overflow-wrap: anywhere; }
+.duo-saved-meta { font-size: 0.76rem; font-weight: 700; color: var(--duo-muted); }
+.duo-saved-soon { align-self: flex-start; padding: 1px 10px; border-radius: 999px; background: var(--duo-yellow-s); color: var(--duo-yellow-ink); font-size: 0.72rem; font-weight: 800; }
+.duo-saved-go { flex: none; margin-inline-start: auto; display: flex; align-items: center; justify-content: center; width: 30px; height: 30px; border-radius: 50%; background: var(--acc-soft); color: var(--acc-ink); font-size: 1.2rem; font-weight: 800; transition: background-color 0.15s ease, color 0.15s ease; }
+.duo-saved-card:hover .duo-saved-go { background: var(--acc); color: #FFFFFF; }
+.duo-saved-remove { flex: none; display: flex; align-items: center; justify-content: center; width: 54px; border: 0; border-inline-start: 2px solid var(--duo-line); background: var(--duo-snow); color: var(--duo-orange); cursor: pointer; transition: background-color 0.15s ease, color 0.15s ease, transform 0.14s var(--duo-spring); }
+.duo-saved-remove svg { width: 22px; height: 22px; }
+.duo-saved-remove:hover { background: var(--duo-red-s); color: var(--duo-red-d); }
+.duo-saved-remove:active { transform: scale(0.88); }
+
+.duo-saved-card.ghost { box-shadow: 0 5px 0 var(--duo-line); }
+.duo-saved-ghostbadge { flex: none; width: 46px; height: 46px; border-radius: 15px; background: var(--acc-light); opacity: 0.6; }
+.duo-saved-bar { display: block; height: 13px; border-radius: 99px; background: linear-gradient(90deg, var(--duo-line) 25%, #F6F6F6 50%, var(--duo-line) 75%); background-size: 220% 100%; animation: duo-shimmer 1.5s linear infinite; }
+@keyframes duo-shimmer { from { background-position: 100% 0; } to { background-position: -100% 0; } }
+
+.duo-saved-locked { position: relative; }
+.duo-saved-locked .duo-saved-list { filter: blur(3px); opacity: 0.7; pointer-events: none; user-select: none; }
+.duo-saved-lockmsg { position: absolute; inset: 0; display: flex; align-items: center; justify-content: center; padding: 10px; }
+.duo-saved-lockbox { display: flex; flex-direction: column; align-items: center; gap: 8px; max-width: 340px; padding: 18px 22px; text-align: center; background: #FFFFFF; border: 2px solid var(--duo-line); border-radius: 24px; box-shadow: 0 6px 0 var(--duo-line); animation: duo-pop 0.55s var(--duo-spring) both; }
+.duo-saved-lockbox p { margin: 0; font-family: var(--duo-font-display); font-size: 1.05rem; font-weight: 800; color: var(--duo-ink); }
+.duo-saved-lockbox small { font-size: 0.8rem; font-weight: 600; color: var(--duo-muted); }
+.duo-saved-lockicon { display: flex; align-items: center; justify-content: center; width: 54px; height: 54px; border-radius: 18px; background: var(--duo-orange); color: #FFFFFF; box-shadow: 0 5px 0 var(--duo-orange-d); animation: duo-wiggle 2.6s ease-in-out infinite; }
+.duo-saved-empty { padding: 24px 16px; text-align: center; background: var(--duo-snow); border: 3px dashed var(--duo-line-d); border-radius: 22px; color: var(--duo-muted); font-weight: 700; }
+.duo-saved-empty b { display: block; margin-bottom: 4px; font-family: var(--duo-font-display); font-size: 1.05rem; color: var(--duo-ink); }
+
+/* /student/saved page */
+.duo-saved-hero {
+  position: relative; margin: 4px 0 26px; padding: 26px 20px 34px; text-align: center; color: #FFFFFF;
+  background:
+    radial-gradient(circle at 9% 28%, rgba(255, 255, 255, 0.22) 0 46px, transparent 48px),
+    radial-gradient(circle at 92% 70%, rgba(255, 255, 255, 0.16) 0 82px, transparent 84px),
+    radial-gradient(circle at 78% 12%, rgba(28, 176, 246, 0.55) 0 24px, transparent 26px),
+    linear-gradient(180deg, #FFA928 0%, #FF9600 100%);
+  border-radius: 0 0 clamp(34px, 6vw, 60px) clamp(34px, 6vw, 60px); box-shadow: 0 8px 0 var(--duo-orange-d);
+}
+.duo-saved-hero > * { animation: duo-pop 0.65s var(--duo-spring) both; }
+.duo-saved-hero > *:nth-child(2) { animation-delay: 0.08s; } .duo-saved-hero > *:nth-child(3) { animation-delay: 0.16s; }
+.duo-saved-hero-ico { display: inline-flex; align-items: center; justify-content: center; width: 70px; height: 70px; margin-bottom: 8px; border-radius: 24px; background: #FFFFFF; color: var(--duo-orange); box-shadow: 0 6px 0 rgba(0, 0, 0, 0.18); }
+.duo-saved-hero-ico svg { width: 36px; height: 36px; }
+.duo-saved-hero h1 { margin: 0; font-family: var(--duo-font-display); font-size: clamp(1.7rem, 5vw, 2.3rem); font-weight: 800; color: #FFFFFF; text-shadow: 0 4px 0 rgba(0, 0, 0, 0.14); }
+.duo-saved-hero p { margin: 6px 0 0; font-weight: 700; opacity: 0.96; }
+.duo-saved-main { width: 100%; max-width: 920px; margin: 0 auto; padding: 0 16px 36px; flex: 1; }
+/* ---------------------------------------------------------------------------
+   Guest lock — dimmed dashboard (60%) with one sign-in card in front.
+   Paste inside DUO_CSS, right after the duo-facts block (before the final
+   @media (max-width: 640px) block). No backticks / dollar-brace sequences.
+--------------------------------------------------------------------------- */
+.duo-guest-lock { display: grid; margin-bottom: 24px; }
+.duo-guest-lock-body { grid-area: 1 / 1; opacity: 0.6; pointer-events: none; user-select: none; }
+.duo-guest-lock-card {
+  grid-area: 1 / 1; align-self: start; justify-self: center;
+  position: sticky; top: 22vh; z-index: 6;
+  width: min(92%, 420px); margin-top: 90px; padding: 22px 22px 24px; text-align: center;
+  border-radius: 24px; background: #FFFFFF;
+  border: 2px solid var(--duo-line); box-shadow: 0 6px 0 var(--duo-line-d);
+  animation: duo-pop 0.5s var(--duo-spring) both;
+}
+.duo-guest-lock-icon { display: inline-flex; align-items: center; justify-content: center; width: 54px; height: 54px; margin-bottom: 8px; border-radius: 18px; font-size: 1.6rem; background: var(--duo-yellow-s); border: 2px solid var(--duo-yellow); box-shadow: 0 4px 0 var(--duo-yellow-d); }
+.duo-guest-lock-card h3 { margin: 0 0 6px; color: var(--duo-green-ink); font-family: var(--duo-font-display); font-size: 1.15rem; font-weight: 800; }
+.duo-guest-lock-card p { margin: 0 0 14px; color: var(--duo-ink-soft); font-size: 0.92rem; line-height: 1.8; }
+@media (max-width: 640px) {
+  .duo-guest-lock-card { margin-top: 60px; padding: 18px 16px 20px; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .duo-guest-lock-card { animation: none !important; }
+}
+  
+/* ---------------------------------------------------------------------------
+   "هل تعلم؟" — student card (.duo-dyk-*) + teacher page /teacher/facts (.duo-tf-*)
+   Paste inside DUO_CSS (duoTheme.js), before the final @media (max-width: 640px) block.
+   Contains no backticks or dollar-brace sequences, so it is safe inside the template literal.
+--------------------------------------------------------------------------- */
+
+/* ---- student card: art + speech bubble ---------------------------------- */
+.duo-dyk { display: flex; align-items: center; gap: 18px; }
+.duo-dyk-art { flex: 0 0 auto; width: 96px; height: 96px; display: flex; align-items: center; justify-content: center; animation: duo-pop 0.5s var(--duo-spring) both; }
+.duo-dyk-art .md-art { width: 100%; height: 100%; }
+.duo-dyk-bubble {
+  position: relative; flex: 1 1 auto; min-width: 0;
+  padding: 16px 20px; border-radius: 22px;
+  background: var(--acc-soft, var(--duo-yellow-s));
+  border: 2px solid var(--acc, var(--duo-yellow));
+  box-shadow: 0 5px 0 var(--acc-deep, var(--duo-yellow-d));
+  animation: duo-slide-up 0.5s var(--duo-spring) both;
+}
+/* tail pointing at the art (page is RTL → art is on the right) */
+.duo-dyk-bubble::before {
+  content: ""; position: absolute; top: 50%; right: -9px; width: 16px; height: 16px;
+  background: var(--acc-soft, var(--duo-yellow-s));
+  border-top: 2px solid var(--acc, var(--duo-yellow)); border-right: 2px solid var(--acc, var(--duo-yellow));
+  border-radius: 0 4px 0 0; transform: translateY(-50%) rotate(45deg);
+}
+.duo-dyk-tag {
+  display: inline-block; margin-bottom: 6px; padding: 2px 12px; border-radius: 999px;
+  background: var(--acc, var(--duo-yellow)); color: var(--acc-ink, var(--duo-yellow-ink));
+  font-family: var(--duo-font-display); font-size: 0.85rem; font-weight: 800;
+}
+.duo-dyk-text { margin: 0; color: var(--duo-ink); font-size: 1.02rem; font-weight: 700; line-height: 1.85; overflow-wrap: anywhere; }
+/* guest teaser */
+.duo-dyk.locked .duo-dyk-art { filter: grayscale(0.55); opacity: 0.85; }
+.duo-dyk.locked .duo-dyk-bubble { background: var(--duo-snow); border-color: var(--duo-line); box-shadow: 0 5px 0 var(--duo-line); }
+.duo-dyk.locked .duo-dyk-bubble::before { background: var(--duo-snow); border-color: var(--duo-line); }
+.duo-dyk.locked .duo-dyk-tag { background: var(--duo-line); color: var(--duo-muted); }
+.duo-dyk.locked .duo-dyk-text { color: var(--duo-ink-soft); }
+
+/* ---- teacher page ------------------------------------------------------- */
+.duo-tf { min-height: 100vh; background: #FFFFFF; }
+.duo-tf-wrap { max-width: 760px; margin: 0 auto; padding: 24px 16px 64px; }
+.duo-tf-back { display: inline-block; margin-bottom: 14px; color: var(--duo-blue-ink); font-family: var(--duo-font-display); font-weight: 800; text-decoration: none; transition: transform 0.15s var(--duo-spring), color 0.15s ease; }
+.duo-tf-back:hover { color: var(--duo-blue-d); transform: translateX(3px); }
+
+.duo-tf-head { display: flex; align-items: flex-start; gap: 14px; margin-bottom: 20px; }
+.duo-tf-bulb { flex: 0 0 auto; display: inline-flex; align-items: center; justify-content: center; width: 56px; height: 56px; border-radius: 18px; font-size: 1.8rem; background: var(--duo-yellow-s); border: 2px solid var(--duo-yellow); box-shadow: 0 4px 0 var(--duo-yellow-d); }
+.duo-tf-head h1 { margin: 0 0 4px; color: var(--duo-green-ink); font-family: var(--duo-font-display); font-size: 1.6rem; font-weight: 800; }
+.duo-tf-head p { margin: 0; color: var(--duo-ink-soft); font-size: 0.92rem; line-height: 1.8; }
+
+.duo-tf-card { margin-bottom: 18px; padding: 20px; border-radius: 22px; background: #FFFFFF; border: 2px solid var(--duo-line); box-shadow: 0 5px 0 var(--duo-line); }
+.duo-tf-card h2, .duo-tf-listhead h2 { margin: 0 0 12px; color: var(--duo-ink); font-family: var(--duo-font-display); font-size: 1.1rem; font-weight: 800; }
+.duo-tf-field { display: flex; flex-direction: column; gap: 6px; margin-bottom: 12px; }
+.duo-tf-field > span { color: var(--duo-ink-soft); font-family: var(--duo-font-display); font-size: 0.92rem; font-weight: 800; }
+.duo-tf-field > small { align-self: flex-end; color: var(--duo-muted); font-size: 0.78rem; }
+.duo-tf-field .ts-input { width: 100%; }
+.duo-tf-field textarea.ts-input { resize: vertical; min-height: 84px; line-height: 1.8; }
+.duo-tf-row { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+.duo-tf-check { display: inline-flex; align-items: center; gap: 8px; margin: 2px 0 14px; cursor: pointer; color: var(--duo-ink-soft); font-weight: 700; }
+.duo-tf-check input { width: 20px; height: 20px; accent-color: var(--duo-green); cursor: pointer; }
+.duo-tf-actions { display: flex; flex-wrap: wrap; align-items: center; gap: 10px; }
+.duo-tf-msg { color: var(--duo-green-ink); font-family: var(--duo-font-display); font-weight: 800; animation: duo-fade 0.3s ease both; }
+
+.duo-tf-listhead { display: flex; align-items: center; justify-content: space-between; gap: 10px; margin: 6px 0 12px; }
+.duo-tf-listhead h2 { margin: 0; }
+.duo-tf-empty { padding: 28px 16px; text-align: center; border-radius: 20px; border: 2px dashed var(--duo-line-d); background: var(--duo-snow); color: var(--duo-muted); font-weight: 700; }
+.duo-tf-list { display: flex; flex-direction: column; gap: 12px; margin: 0; padding: 0; list-style: none; }
+.duo-tf-item { padding: 14px 16px; border-radius: 20px; background: #FFFFFF; border: 2px solid var(--duo-line); box-shadow: 0 4px 0 var(--duo-line); transition: transform 0.15s var(--duo-spring), box-shadow 0.15s ease; }
+.duo-tf-item:hover { transform: translateY(-2px); box-shadow: 0 6px 0 var(--duo-line); }
+.duo-tf-item.off { background: var(--duo-snow); }
+.duo-tf-item.off .duo-tf-body { color: var(--duo-muted); }
+.duo-tf-body { margin: 0 0 10px; color: var(--duo-ink); font-weight: 700; line-height: 1.85; overflow-wrap: anywhere; }
+.duo-tf-meta { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; }
+.duo-tf-spacer { flex: 1 1 auto; }
+.duo-tf-badge { padding: 2px 11px; border-radius: 999px; background: var(--duo-blue-s); color: var(--duo-blue-ink); font-size: 0.8rem; font-weight: 800; }
+.duo-tf-badge.off { background: var(--duo-line); color: var(--duo-muted); }
+.duo-tf-mini { padding: 5px 14px; border-radius: 12px; cursor: pointer; background: #FFFFFF; color: var(--duo-ink-soft); border: 2px solid var(--duo-line); box-shadow: 0 3px 0 var(--duo-line); font-family: var(--duo-font-display); font-size: 0.85rem; font-weight: 800; transition: transform 0.14s var(--duo-spring), box-shadow 0.14s ease, border-color 0.15s ease, color 0.15s ease; }
+.duo-tf-mini:hover { border-color: var(--duo-blue); color: var(--duo-blue-ink); box-shadow: 0 3px 0 var(--duo-blue-d); }
+.duo-tf-mini:active { transform: translateY(3px); box-shadow: 0 0 0 transparent; }
+.duo-tf-mini.danger:hover { background: var(--duo-red-s); border-color: var(--duo-red); color: var(--duo-red-d); box-shadow: 0 3px 0 var(--duo-red-d); }
+
+@media (max-width: 640px) {
+  .duo-dyk { flex-direction: column; align-items: stretch; gap: 14px; }
+  .duo-dyk-art { width: 76px; height: 76px; align-self: center; }
+  .duo-dyk-bubble::before { top: -9px; right: 50%; transform: translateX(50%) rotate(-45deg); }
+  .duo-tf-row { grid-template-columns: 1fr; }
+  .duo-tf-head h1 { font-size: 1.35rem; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .duo-dyk-art, .duo-dyk-bubble, .duo-tf-msg { animation: none !important; }
+  .duo-tf-item, .duo-tf-mini, .duo-tf-back { transition: none !important; }
+}
+
+/* ---------------------------------------------------------------------------
    19) RESPONSIVE TUNING
 --------------------------------------------------------------------------- */
 @media (max-width: 640px) {
@@ -745,7 +959,8 @@ html body {
   .md-page-enter, .md-hero > *, .md-pick-card, .md-lesson-card::after, .md-column-shaft, .md-badge::before,
   .md-split-empty-icon, .md-jp-seg.current, .md-spinner-rose, .md-assistant-tooltip, .md-topbar div.absolute,
   .md-lesson-page .md-lv-hero > *, .md-lesson-page .md-lv-notice, .duo-routebar, .duo-routebar i,
-  .duo-overlay, .duo-modal, .duo-banner { animation: none !important; }
+  .duo-saved-card, .duo-saved-lockbox, .duo-saved-lockicon, .duo-saved-bar, .duo-saved-hero > *,
+  .duo-overlay, .duo-modal, .duo-banner, .md-art .pa-body, .md-art .pa-eye, .md-art .pa-spark { animation: none !important; }
   .duo-splash { display: none !important; }
   .md-chip, .md-unit-card, .md-lesson-card, .md-pick-card, .md-feature, .md-recent-chip { transition: none !important; }
 }

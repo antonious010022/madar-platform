@@ -1,14 +1,18 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { useNavigate } from "react-router-dom";
-import { listPublishedLessons, signOut, getStudentGradeMeta, saveStudentGradeMeta, listMyProgress } from "../lib/db";
+import { listPublishedLessons, listMyProgress, signOut, getStudentGradeMeta, saveStudentGradeMeta } from "../lib/db";
 import { useAuth } from "../lib/hooks";
 import Footer from "../components/Footer";
 import AuthModal, { GuestWelcomeBanner, LetterAvatar } from "../components/AuthModal";
+import { SavedLessonsSection, BookmarkIcon, SAVED_AUTH_COPY } from "../components/SavedLessons";
+import { DidYouKnowCard, DYK_AUTH_COPY } from "../components/DidYouKnow";
 import { slugify } from "../lib/slugify";
 import { arabicLessonOrdinal, lessonPath, isLessonComingSoon, lessonDisplayNumber, sortLessonsForSequence, buildLessonLockStates, lessonLockUi, readGuestGradeLocal, writeGuestGradeLocal } from "./student-platform/helpers";
 import { CompassRose, Galaxy, ContinentsAtlas, usePointerParallax, HistoryFrieze, CompassSpinner, ComingSoonAssistantBubble } from "./student-platform/decor";
 import { MADAR_FEATURES, gradeNumber, gradeArtKind, stageArtKind, PickArt } from "./student-platform/uiParts";
 import { PLATFORM_CSS } from "./student-platform/platformStyles";
+import GuestLock, { GUEST_AUTH_COPY } from "../components/GuestLock";
+import GuestPreview from "../components/GuestPreview";
 
 /* ---------------------------------------------------------------------------
    Main Component — Logic 100% preserved
@@ -19,7 +23,13 @@ export default function StudentPlatform() {
   const pointer = usePointerParallax();
   const [lessons, setLessons] = useState(null);
   const [error, setError] = useState("");
+  const [myProgress, setMyProgress] = useState([]); // student_lesson_progress rows (Supabase); [] for guests
   const [authOpen, setAuthOpen] = useState(false);
+  const [authCtx, setAuthCtx] = useState(null); // optional {title, subtitle} for the sign-in modal
+  function openAuthFor(ctx) {
+    setAuthCtx(ctx || null);
+    setAuthOpen(true);
+  }
   const [menuOpen, setMenuOpen] = useState(false);
   // UX only: after the student taps a unit, bring the lessons list into view
   const lessonsSectionRef = useRef(null);
@@ -33,8 +43,6 @@ export default function StudentPlatform() {
   const [pickingGrade, setPickingGrade] = useState(false);
   const [gradeSaveError, setGradeSaveError] = useState("");
   const [gradeSaving, setGradeSaving] = useState(false);
-  // Rows of the logged-in student's progress (Supabase). null = not loaded yet. Guests always get [].
-  const [myProgress, setMyProgress] = useState(null);
 
   useEffect(() => {
     listPublishedLessons()
@@ -186,40 +194,30 @@ export default function StudentPlatform() {
     return list;
   }, [termScopedLessons, selectedSubject]);
 
-  // Personal progress is a logged-in-only feature. `session === undefined` (still loading) counts as
-  // "not logged in" so progress never flashes for a guest.
-  const isLoggedIn = !!session;
-  const userId = session?.user?.id || null;
-
-  // Student progress comes from Supabase (student_lesson_progress), for the logged-in account only.
-  // Guests never have any: myProgress = [] and nothing is fetched.
+  // Progress lives in Supabase now (listMyProgress, most recently updated first). Guests have none.
   useEffect(() => {
-    let cancelled = false;
-    if (session === undefined) return undefined; // auth still loading
+    if (session === undefined) return undefined;
     if (!session) {
       setMyProgress([]);
       return undefined;
     }
-    setMyProgress(null);
+    let cancelled = false;
     listMyProgress()
       .then((rows) => {
-        if (!cancelled) setMyProgress(rows);
+        if (!cancelled) setMyProgress(Array.isArray(rows) ? rows : []);
       })
-      .catch((err) => {
-        console.warn("listMyProgress:", err);
+      .catch(() => {
         if (!cancelled) setMyProgress([]);
       });
     return () => {
       cancelled = true;
     };
-  }, [userId]);
-  const progressReady = !isLoggedIn || myProgress !== null;
+  }, [session === undefined, session?.user?.id]); // eslint-disable-line react-hooks/exhaustive-deps
 
-  // Completed lesson ids — drive the lock logic (logged-in only) and the progress UI below.
-  const completedLessonIds = useMemo(() => {
-    if (!isLoggedIn || !myProgress) return new Set();
-    return new Set(myProgress.filter((r) => r.lessonCompleted).map((r) => String(r.lessonId)));
-  }, [isLoggedIn, myProgress]);
+  const completedLessonIds = useMemo(
+    () => new Set(myProgress.filter((p) => p.lessonCompleted).map((p) => String(p.lessonId))),
+    [myProgress]
+  );
 
   const sequentialLessons = useMemo(() => {
     if (!selectedSubject || !filteredLessons.length) return [];
@@ -234,23 +232,25 @@ export default function StudentPlatform() {
     !!selectedSubject,
   ];
 
-  // Most recently updated lesson of the student's grade (rows arrive newest first). Guests never get it.
+  const localProgress = useMemo(() => (myProgress.length ? myProgress[0] : null), [myProgress]);
   const continueLesson = useMemo(() => {
     // Prefer current term; fall back to any lesson in the grade
     const pool = termScopedLessons.length ? termScopedLessons : gradeScopedLessons;
-    if (!isLoggedIn || !pool.length || !myProgress || !myProgress.length) return null;
-    for (const row of myProgress) {
-      const lesson = pool.find((l) => String(l.id) === String(row.lessonId));
-      if (!lesson || isLessonComingSoon(lesson)) continue;
-      const sceneIdx = typeof row.currentScene === "number" ? row.currentScene : 0;
-      return { lesson, sceneIdx, done: !!row.lessonCompleted };
-    }
-    return null;
-  }, [isLoggedIn, termScopedLessons, gradeScopedLessons, myProgress]);
+    if (!pool.length || !localProgress?.lessonId) return null;
+    const lesson = pool.find((l) => String(l.id) === String(localProgress.lessonId));
+    if (!lesson || isLessonComingSoon(lesson)) return null;
+    const sceneIdx =
+      typeof localProgress.currentScene === "number"
+        ? localProgress.currentScene
+        : typeof localProgress.sceneIndex === "number"
+          ? localProgress.sceneIndex
+          : 0;
+    const done = !!localProgress.lessonCompleted;
+    return { lesson, sceneIdx, done };
+  }, [termScopedLessons, gradeScopedLessons, localProgress]);
 
   // Learning path in order (unit by unit, lesson by lesson) → one segment per lesson
   const progressPath = useMemo(() => {
-    if (!isLoggedIn) return { segments: [], current: null, completed: 0, total: 0, pct: 0 };
     const done = completedLessonIds instanceof Set ? completedLessonIds : new Set(completedLessonIds || []);
     const segments = [];
     for (const sub of availableSubjects) {
@@ -272,7 +272,27 @@ export default function StudentPlatform() {
       total: segments.length,
       pct: segments.length ? Math.round((completed / segments.length) * 100) : 0,
     };
-  }, [isLoggedIn, availableSubjects, lessonsBySubject, completedLessonIds, continueLesson]);
+  }, [availableSubjects, lessonsBySubject, completedLessonIds, continueLesson]);
+
+  const isLoggedIn = !!session;
+  // Progress counters are per selected term only — same subject name in another term is separate
+  const progressBySubject = useMemo(() => {
+    if (!isLoggedIn || !selectedGrade || !selectedTerm || !termScopedLessons.length) return [];
+    const base = termScopedLessons;
+    const map = {};
+    for (const l of base) {
+      const sub = l.subject || "أخرى";
+      map[sub] = map[sub] || { subject: sub, total: 0, completed: 0 };
+      map[sub].total += 1;
+    }
+    for (const l of base) {
+      if (completedLessonIds.has(String(l.id))) {
+        const sub = l.subject || "أخرى";
+        if (map[sub]) map[sub].completed = Math.min(map[sub].total, (map[sub].completed || 0) + 1);
+      }
+    }
+    return Object.values(map).sort((a, b) => a.subject.localeCompare(b.subject, "ar"));
+  }, [isLoggedIn, selectedGrade, selectedTerm, termScopedLessons, completedLessonIds]);
 
   const recentLessons = useMemo(() => {
     // Latest 3 lessons (by creation time) of the grade the student selected
@@ -285,10 +305,10 @@ export default function StudentPlatform() {
     return sorted.slice(0, 3);
   }, [gradeScopedLessons]);
 
-  // Per-unit progress (unit-card bars). Logged-in students only; uses the same completed-lesson ids
-  // that drive the lesson-card states, so the numbers always match what the student sees.
+  // Progress shown in the top bar. Uses the same completed-lesson ids that drive the ✓ marks on
+  // the lesson cards, so the numbers always match what the student sees (guests included).
   const progressView = useMemo(() => {
-    if (!isLoggedIn || !selectedGrade || !selectedTerm || !termScopedLessons.length) return [];
+    if (!selectedGrade || !selectedTerm || !termScopedLessons.length) return [];
     const done = completedLessonIds instanceof Set ? completedLessonIds : new Set(completedLessonIds || []);
     const map = {};
     for (const l of termScopedLessons) {
@@ -301,7 +321,7 @@ export default function StudentPlatform() {
     const order = availableSubjects.filter((x) => map[x]);
     const rest = Object.keys(map).filter((x) => !order.includes(x));
     return [...order, ...rest].map((x) => map[x]);
-  }, [isLoggedIn, selectedGrade, selectedTerm, termScopedLessons, completedLessonIds, availableSubjects]);
+  }, [selectedGrade, selectedTerm, termScopedLessons, completedLessonIds, availableSubjects]);
 
   const progressTotals = useMemo(() => {
     const total = progressView.reduce((n, r) => n + (r.total || 0), 0);
@@ -383,7 +403,7 @@ export default function StudentPlatform() {
   return (
     <div className="md-platform">
       <div className="md-topbar flex justify-end items-center gap-2 px-4 sm:px-6 py-2 relative z-20" style={{ background: "transparent" }}>
-        {lessons && lessons.length > 0 && gradeMetaReady && selectedGrade && !pickingGrade && isLoggedIn && continueLesson && (
+        {lessons && lessons.length > 0 && gradeMetaReady && selectedGrade && !pickingGrade && continueLesson && (
           <button
             type="button"
             className="md-continue-chip"
@@ -401,6 +421,17 @@ export default function StudentPlatform() {
             </span>
           </button>
         )}
+        {session === undefined ? null : (
+          <button
+            type="button"
+            className="duo-saved-chip"
+            onClick={() => (session ? navigate("/student/saved") : openAuthFor(SAVED_AUTH_COPY))}
+            aria-label="دروسي المحفوظة"
+          >
+            <BookmarkIcon />
+            <span className="hidden sm:inline">دروسي المحفوظة</span>
+          </button>
+        )}
         {session === undefined ? null : session ? (
           <div className="relative">
             <button type="button" onClick={() => setMenuOpen((v) => !v)}
@@ -410,6 +441,8 @@ export default function StudentPlatform() {
             </button>
             {menuOpen && (
               <div className="absolute left-0 mt-2 w-52 rounded-2xl bg-white py-2 z-50 dir-rtl text-right" style={{ border: "2px solid var(--duo-line)" }}>
+                <button type="button" className="w-full text-right px-4 py-2 text-xs font-bold" style={{ color: "var(--duo-orange-ink)" }}
+                  onClick={() => { setMenuOpen(false); navigate("/student/saved"); }}>دروسي المحفوظة</button>
                 <button type="button" className="w-full text-right px-4 py-2 text-xs font-bold" style={{ color: "var(--duo-green-ink)" }}
                   onClick={openChangeGrade}>تغيير الصف الدراسي</button>
                 {selectedGrade ? (
@@ -448,7 +481,7 @@ export default function StudentPlatform() {
         <header className="md-hero">
   <div className="md-hero-logo-wrap">
     <img 
-      src="/photo/0MSCh.png" 
+      src="/photo/IevsR.png" 
       alt="مَدَار" 
       className="md-hero-logo"
     />
@@ -535,10 +568,10 @@ export default function StudentPlatform() {
           </section>
         )}
 
-        {/* لوحة متابعة — فقط بعد تحديد الصف، ومحتوى الصف فقط */}
+        {/* لوحة متابعة — فقط بعد تحديد الصف، ومحتوى الصف فقط (تحت الجزء الأخضر مباشرة) */}
         {lessons && lessons.length > 0 && selectedGrade && !pickingGrade && (
           <section className="md-dashboard mb-6" aria-label="متابعة التعلم">
-            {isLoggedIn && progressPath.total > 0 && (
+            {progressPath.total > 0 && (
               <div
                 className="md-jp"
                 role="progressbar"
@@ -592,7 +625,6 @@ export default function StudentPlatform() {
                 </div>
               </div>
             )}
-
           </section>
         )}
 
@@ -661,6 +693,7 @@ export default function StudentPlatform() {
               <p className="md-empty">لا توجد فصول دراسية منشورة لهذا الصف حالياً.</p>
             )}
 
+
             {selectedTerm && (
               <div className="md-split">
                 <aside className="md-units-rail" aria-label="الوحدات">
@@ -686,15 +719,13 @@ export default function StudentPlatform() {
                           >
                             <span className="md-unit-card-title">{sub}</span>
                             <span className="md-unit-card-count">{subLessons.length} درس</span>
-                            {isLoggedIn && (
-                              <span
-                                className="md-unit-card-progress"
-                                aria-hidden="true"
-                                title={unitProg ? `${unitProg.completed} / ${unitProg.total}` : undefined}
-                              >
-                                <i style={{ width: unitPct + "%" }} />
-                              </span>
-                            )}
+                            <span
+                              className="md-unit-card-progress"
+                              aria-hidden="true"
+                              title={unitProg ? `${unitProg.completed} / ${unitProg.total}` : undefined}
+                            >
+                              <i style={{ width: unitPct + "%" }} />
+                            </span>
                           </button>
                           {!isOpen && subLessons.length > 0 && (
                             <ul className="md-unit-preview">
@@ -726,14 +757,12 @@ export default function StudentPlatform() {
                   <span className="md-count">{filteredLessons.length} درس</span>
                 </div>
 
-                {isLoggedIn && !progressReady ? (
-                  <div className="md-loading"><CompassSpinner /></div>
-                ) : filteredLessons.length === 0 ? (
+                {filteredLessons.length === 0 ? (
                   <p className="md-empty">لا توجد دروس منشورة حالياً في هذه المادة.</p>
                 ) : (
                   <div className="md-lessons-grid">
                     {sequentialLessons.map(({ lesson: l, kind }, lessonIdx) => {
-                      const ui = lessonLockUi(kind, !isLoggedIn);
+                      const ui = lessonLockUi(kind, !session);
                       const comingSoon = kind === "COMING_SOON";
                       const lockedSeq = kind === "SEQUENCE_LOCK" || comingSoon;
                       const lockedAccess = kind === "ACCESS_LOCK";
@@ -801,6 +830,25 @@ export default function StudentPlatform() {
           </div>
         )}
 
+        {(session !== null || (selectedGrade && !pickingGrade)) && (
+          <GuestLock locked={session === null} onLogin={() => openAuthFor(GUEST_AUTH_COPY)}>
+            {session === null ? (
+              <GuestPreview samples={recentLessons} />
+            ) : (
+              <>
+                <DidYouKnowCard
+                  session={session}
+                  stage={selectedStage}
+                  grade={selectedGrade}
+                  ready={gradeMetaReady}
+                  onRequireLogin={() => openAuthFor(DYK_AUTH_COPY)}
+                />
+                <SavedLessonsSection session={session} lessons={lessons} limit={3} onRequireLogin={() => openAuthFor(SAVED_AUTH_COPY)} />
+              </>
+            )}
+          </GuestLock>
+        )}
+
         <section className="md-features" aria-label="ماذا ستجد في مَدَار">
           <div className="md-features-head">
             <h2>كل ما تحتاجه لتفهم الدرس</h2>
@@ -821,7 +869,7 @@ export default function StudentPlatform() {
       <HistoryFrieze />
       <Footer />
       <GuestWelcomeBanner session={session} />
-      <AuthModal open={authOpen} onClose={() => setAuthOpen(false)} />
+      <AuthModal open={authOpen} onClose={() => { setAuthOpen(false); setAuthCtx(null); }} title={authCtx?.title} subtitle={authCtx?.subtitle} />
       <ComingSoonAssistantBubble />
 
       {/* Global Styles for this page */}

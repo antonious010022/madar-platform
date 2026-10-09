@@ -4,8 +4,10 @@ import { useTeacherAuth, useStaffStatus } from "./lib/hooks";
 import TeacherLogin from "./pages/TeacherLogin";
 import LessonLibraryPage from "./pages/LessonLibrary";
 import TeacherStudioPage from "./pages/TeacherStudio";
+import TeacherFacts from "./pages/TeacherFacts";
 import StudentPlatform from "./pages/StudentPlatform";
 import StudentLessonPage from "./pages/StudentLessonPage";
+import SavedLessonsPage from "./pages/SavedLessonsPage";
 import AboutPage from "./pages/AboutPage";
 import PrivacyPage from "./pages/PrivacyPage";
 import TermsPage from "./pages/TermsPage";
@@ -211,6 +213,7 @@ function AppRoutes() {
           <Route path="lesson/:id" element={<TeacherStudioPage />} />
           <Route path="lesson/:id/record" element={<TeacherStudioPage />} />
           <Route path="settings" element={<TeacherSettings />} />
+          <Route path="facts" element={<TeacherFacts />} />
         </Route>
 
         <Route path="/student" element={<StudentPlatform />} />
@@ -220,6 +223,7 @@ function AppRoutes() {
         <Route path="/lessons/:id" element={<StudentLessonPage />} />
         {/* Legacy URL kept for backward compatibility; redirects to /lessons/:id/:slug after load. */}
         <Route path="/student/lesson/:id" element={<StudentLessonPage />} />
+        <Route path="/student/saved" element={<SavedLessonsPage />} />
         <Route path="/student/page/:slug" element={<CmsPage />} />
         <Route path="/student/about" element={<AboutPage />} />
         <Route path="/student/privacy" element={<PrivacyPage />} />
