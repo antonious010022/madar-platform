@@ -731,6 +731,7 @@ export function StudentView({
   onAuthSuccess,
   recordingMode = false,
   journey = null,
+  heroExtra = null,
 }) {
   const [internalIndex, setInternalIndex] = useState(0);
   const hasJourney = !!journey && !isTeacherView;
@@ -919,6 +920,7 @@ export function StudentView({
               {lesson.description}
             </p>
           )}
+          {heroExtra ? <div className="md-lv-hero-actions">{heroExtra}</div> : null}
         </div>
         </div>
 
