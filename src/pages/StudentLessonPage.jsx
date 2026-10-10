@@ -1,10 +1,11 @@
 import { useEffect, useRef, useState, useCallback, useMemo } from "react";
 import { useNavigate, useParams, useLocation } from "react-router-dom";
-import { getLessonWithScenes, signOut, listCompletionTemplates, getMyLessonProgress, saveMyLessonProgress } from "../lib/db";
+import { getLessonWithScenes, listCompletionTemplates, getMyLessonProgress, saveMyLessonProgress } from "../lib/db";
 import { useAuth } from "../lib/hooks";
 import { StudentView, isLessonMembersOnly } from "../components/Viewer";
 import Footer from "../components/Footer";
-import AuthModal, { GuestWelcomeBanner, LetterAvatar } from "../components/AuthModal";
+import AuthModal, { GuestWelcomeBanner } from "../components/AuthModal";
+import StudentAccountMenu from "../components/StudentAccountMenu";
 import LessonActions from "../components/LessonActions";
 import { slugify } from "../lib/slugify";
 
@@ -98,7 +99,6 @@ export default function StudentLessonPage() {
   const session = useAuth();
   const [lesson, setLesson] = useState(null);
   const [authOpen, setAuthOpen] = useState(false);
-  const [menuOpen, setMenuOpen] = useState(false);
   const [progress, setProgress] = useState(defaultProgress);
   // Progress is saved in Supabase for the logged-in account only. Guest (null) = in-memory for this visit, never stored. `undefined` = auth still loading.
   const progressOwner = session === undefined ? undefined : session?.user?.id || null;
@@ -638,53 +638,7 @@ export default function StudentLessonPage() {
           {session === undefined ? (
             <span className="text-xs" style={{ color: "var(--duo-muted)" }}>...</span>
           ) : session ? (
-            <>
-              <button
-                type="button"
-                onClick={() => setMenuOpen((v) => !v)}
-                className="md-lv-account flex items-center gap-2 rounded-full py-1 px-2"
-                aria-expanded={menuOpen}
-              >
-                <LetterAvatar name={name} email={session.user?.email} size={28} />
-                <span className="text-xs font-bold hidden sm:inline" style={{ color: "var(--duo-ink)" }}>
-                  {name}
-                </span>
-              </button>
-              {menuOpen && (
-                <div
-                  className="md-lv-menu absolute left-0 mt-2 w-48 rounded-2xl bg-white py-2 z-50 dir-rtl text-right"
-                  style={{ border: "2px solid var(--duo-line)" }}
-                >
-                  <p className="px-4 py-1 text-xs font-bold" style={{ color: "var(--duo-green-ink)" }}>
-                    {name}
-                  </p>
-                  <button
-                    type="button"
-                    className="w-full text-right px-4 py-2 text-xs"
-                    style={{ color: "var(--duo-ink-soft)" }}
-                    onClick={() => {
-                      setMenuOpen(false);
-                      navigate("/student");
-                    }}
-                  >
-                    لوحة الطالب
-                  </button>
-                  <button
-                    type="button"
-                    className="w-full text-right px-4 py-2 text-xs"
-                    style={{ color: "var(--duo-red-d)" }}
-                    onClick={async () => {
-                      setMenuOpen(false);
-                      try {
-                        await signOut();
-                      } catch (_) {}
-                    }}
-                  >
-                    تسجيل الخروج
-                  </button>
-                </div>
-              )}
-            </>
+            <StudentAccountMenu session={session} name={name} />
           ) : (
             <button
               type="button"

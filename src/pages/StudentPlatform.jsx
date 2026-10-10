@@ -1,9 +1,10 @@
 import { useEffect, useMemo, useRef, useState } from "react";
-import { useNavigate } from "react-router-dom";
-import { listPublishedLessons, listMyProgress, signOut, getStudentGradeMeta, saveStudentGradeMeta } from "../lib/db";
+import { useNavigate, useLocation } from "react-router-dom";
+import { listPublishedLessons, listMyProgress, getStudentGradeMeta, saveStudentGradeMeta } from "../lib/db";
 import { useAuth } from "../lib/hooks";
 import Footer from "../components/Footer";
-import AuthModal, { GuestWelcomeBanner, LetterAvatar } from "../components/AuthModal";
+import AuthModal, { GuestWelcomeBanner } from "../components/AuthModal";
+import StudentAccountMenu from "../components/StudentAccountMenu";
 import { DidYouKnowCard, DYK_AUTH_COPY } from "../components/DidYouKnow";
 import { slugify } from "../lib/slugify";
 import { arabicLessonOrdinal, lessonPath, isLessonComingSoon, lessonDisplayNumber, sortLessonsForSequence, buildLessonLockStates, lessonLockUi, readGuestGradeLocal, writeGuestGradeLocal } from "./student-platform/helpers";
@@ -16,6 +17,7 @@ import { PLATFORM_CSS } from "./student-platform/platformStyles";
 --------------------------------------------------------------------------- */
 export default function StudentPlatform() {
   const navigate = useNavigate();
+  const location = useLocation();
   const session = useAuth();
   const pointer = usePointerParallax();
   const [lessons, setLessons] = useState(null);
@@ -27,7 +29,6 @@ export default function StudentPlatform() {
     setAuthCtx(ctx || null);
     setAuthOpen(true);
   }
-  const [menuOpen, setMenuOpen] = useState(false);
   // UX only: after the student taps a unit, bring the lessons list into view
   const lessonsSectionRef = useRef(null);
   const scrollToLessonsRef = useRef(false);
@@ -93,6 +94,14 @@ export default function StudentPlatform() {
       cancelled = true;
     };
   }, [session]);
+
+  // Arrived from another page's account menu ("تغيير الصف الدراسي"): open the same grade picker, once.
+  useEffect(() => {
+    if (!gradeMetaReady || !session || !location.state?.changeGrade) return;
+    setPickingGrade(true);
+    setGradeSaveError("");
+    navigate(location.pathname, { replace: true, state: null });
+  }, [gradeMetaReady, session, location.state]); // eslint-disable-line react-hooks/exhaustive-deps
 
   useEffect(() => {
     if (!pickingGrade || !lessons || !lessons.length) return;
@@ -368,7 +377,6 @@ export default function StudentPlatform() {
   }, [selectedSubject]);
 
   function openChangeGrade() {
-    setMenuOpen(false);
     setPickingGrade(true);
     setGradeSaveError("");
   }
@@ -419,28 +427,7 @@ export default function StudentPlatform() {
           </button>
         )}
         {session === undefined ? null : session ? (
-          <div className="relative">
-            <button type="button" onClick={() => setMenuOpen((v) => !v)}
-              className="md-account-btn flex items-center gap-2 rounded-full py-1 px-2 bg-white/90" style={{ border: "2px solid var(--duo-line)" }}>
-              <LetterAvatar name={studentName} email={session.user?.email} size={28} />
-              <span className="text-xs font-bold hidden sm:inline" style={{ color: "var(--duo-ink)" }}>{studentName}</span>
-            </button>
-            {menuOpen && (
-              <div className="absolute left-0 mt-2 w-52 rounded-2xl bg-white py-2 z-50 dir-rtl text-right" style={{ border: "2px solid var(--duo-line)" }}>
-                <button type="button" className="w-full text-right px-4 py-2 text-xs font-bold flex items-center gap-2" style={{ color: "var(--duo-orange-ink)" }}
-                  onClick={() => { setMenuOpen(false); navigate("/student/saved"); }}><span aria-hidden="true">🔖</span><span>دروسي المحفوظة</span></button>
-                <button type="button" className="w-full text-right px-4 py-2 text-xs font-bold flex items-center gap-2" style={{ color: "var(--duo-green-ink)" }}
-                  onClick={openChangeGrade}><span aria-hidden="true">🎓</span><span>تغيير الصف الدراسي</span></button>
-                {selectedGrade ? (
-                  <p className="px-4 pb-2 text-[11px]" style={{ color: "var(--duo-muted)" }}>
-                    الحالي: {selectedStage ? selectedStage + " · " : ""}{selectedGrade}
-                  </p>
-                ) : null}
-                <button type="button" className="w-full text-right px-4 py-2 text-xs flex items-center gap-2" style={{ color: "var(--duo-red-d)" }}
-                  onClick={async () => { setMenuOpen(false); try { await signOut(); } catch (_) {} }}><span aria-hidden="true">🚪</span><span>تسجيل الخروج</span></button>
-              </div>
-            )}
-          </div>
+          <StudentAccountMenu session={session} name={studentName} stage={selectedStage} grade={selectedGrade} onChangeGrade={openChangeGrade} />
         ) : (
           <button type="button" onClick={() => setAuthOpen(true)}
             className="md-login-btn text-xs font-bold px-3 py-1.5 rounded-xl text-white" style={{ background: "var(--duo-green)" }}>تسجيل الدخول</button>

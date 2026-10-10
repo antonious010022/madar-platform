@@ -3,7 +3,8 @@ import { useNavigate } from "react-router-dom";
 import { listPublishedLessons } from "../lib/db";
 import { useAuth } from "../lib/hooks";
 import Footer from "../components/Footer";
-import AuthModal, { LetterAvatar } from "../components/AuthModal";
+import AuthModal from "../components/AuthModal";
+import StudentAccountMenu from "../components/StudentAccountMenu";
 import { SavedLessonsPanel, BookmarkIcon, SAVED_AUTH_COPY } from "../components/SavedLessons";
 import { PLATFORM_CSS } from "./student-platform/platformStyles";
 
@@ -47,10 +48,7 @@ export default function SavedLessonsPage() {
           <span aria-hidden="true">→</span> الرئيسية
         </button>
         {session === undefined ? null : session ? (
-          <span className="md-account-btn flex items-center gap-2 rounded-full py-1 px-2 bg-white/90" style={{ border: "2px solid var(--duo-line)" }}>
-            <LetterAvatar name={studentName} email={session.user?.email} size={28} />
-            <span className="text-xs font-bold hidden sm:inline" style={{ color: "var(--duo-ink)" }}>{studentName}</span>
-          </span>
+          <StudentAccountMenu session={session} name={studentName} />
         ) : (
           <button type="button" onClick={() => setAuthOpen(true)} className="md-login-btn text-xs font-bold px-3 py-1.5 rounded-xl text-white" style={{ background: "var(--duo-green)" }}>
             تسجيل الدخول

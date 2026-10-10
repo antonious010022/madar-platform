@@ -191,32 +191,55 @@ export function HotwordRenderer({ text, hotwords = [], onJumpToScene }) {
           line-height: 1.8;
           color: #171333;
         }
-        /* تصميم متوهج فخم بدلاً من المستطيل الملوّن */
+        /* كلمة تفاعلية: نص بتدرّج لوني بألوان المنصة + نجمة صغيرة، بدون خلفية أو خطوط */
         .ts-richtext-content .ts-hotword-highlight {
           font-size: inherit !important;
           font-family: inherit !important;
-          font-weight: 700 !important;
-          color: #C9972E !important;
+          font-weight: 800 !important;
+          color: var(--duo-blue-ink, #1899D6) !important;
           background: none !important;
-          padding: 0 1px !important;
+          padding: 0 !important;
           margin: 0 1px !important;
+          border: none !important;
           border-radius: 0 !important;
-          border-bottom: 1.5px dotted rgba(201, 151, 46,0.55) !important;
           text-decoration: none !important;
+          text-shadow: none !important;
+          box-shadow: none !important;
           cursor: pointer !important;
-          transition: color 0.25s ease, text-shadow 0.25s ease, border-color 0.25s ease !important;
-          text-shadow: 0 0 6px rgba(201, 151, 46,0.45), 0 0 14px rgba(201, 151, 46,0.2) !important;
-          animation: ts-hotword-glow 2.6s ease-in-out infinite;
+          -webkit-box-decoration-break: clone;
+          box-decoration-break: clone;
+          transition: background-position 0.5s ease, filter 0.25s ease !important;
+        }
+        @supports ((-webkit-background-clip: text) or (background-clip: text)) {
+          .ts-richtext-content .ts-hotword-highlight {
+            background-image: linear-gradient(100deg, #4B2FD1 0%, #1CB0F6 50%, #4B2FD1 100%) !important;
+            background-size: 200% 100% !important;
+            background-position: 0% 50% !important;
+            -webkit-background-clip: text !important;
+            background-clip: text !important;
+            -webkit-text-fill-color: transparent !important;
+          }
+        }
+        .ts-richtext-content .ts-hotword-highlight::after {
+          content: "\\2726";
+          display: inline-block;
+          margin-inline-start: 3px;
+          font-size: 0.55em;
+          font-weight: 400;
+          vertical-align: super;
+          line-height: 1;
+          color: #1CB0F6;
+          -webkit-text-fill-color: #1CB0F6;
+          opacity: 0.85;
+          transition: transform 0.35s ease, opacity 0.25s ease;
         }
         .ts-richtext-content .ts-hotword-highlight:hover {
-          color: #E3B659 !important;
-          border-bottom-color: rgba(227, 182, 89,0.9) !important;
-          text-shadow: 0 0 10px rgba(227, 182, 89,0.85), 0 0 22px rgba(227, 182, 89,0.45) !important;
-          animation-play-state: paused;
+          background-position: 100% 50% !important;
+          filter: brightness(1.08);
         }
-        @keyframes ts-hotword-glow {
-          0%, 100% { text-shadow: 0 0 6px rgba(201, 151, 46,0.4), 0 0 14px rgba(201, 151, 46,0.18); }
-          50% { text-shadow: 0 0 10px rgba(201, 151, 46,0.75), 0 0 20px rgba(201, 151, 46,0.4); }
+        .ts-richtext-content .ts-hotword-highlight:hover::after {
+          transform: rotate(90deg) scale(1.25);
+          opacity: 1;
         }
         .ts-richtext-content img {
           display: block !important;
