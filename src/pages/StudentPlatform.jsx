@@ -4,15 +4,12 @@ import { listPublishedLessons, listMyProgress, signOut, getStudentGradeMeta, sav
 import { useAuth } from "../lib/hooks";
 import Footer from "../components/Footer";
 import AuthModal, { GuestWelcomeBanner, LetterAvatar } from "../components/AuthModal";
-import { SavedLessonsSection, BookmarkIcon, SAVED_AUTH_COPY } from "../components/SavedLessons";
 import { DidYouKnowCard, DYK_AUTH_COPY } from "../components/DidYouKnow";
 import { slugify } from "../lib/slugify";
 import { arabicLessonOrdinal, lessonPath, isLessonComingSoon, lessonDisplayNumber, sortLessonsForSequence, buildLessonLockStates, lessonLockUi, readGuestGradeLocal, writeGuestGradeLocal } from "./student-platform/helpers";
-import { CompassRose, Galaxy, ContinentsAtlas, usePointerParallax, HistoryFrieze, CompassSpinner, ComingSoonAssistantBubble } from "./student-platform/decor";
+import { CompassRose, Galaxy, ContinentsAtlas, usePointerParallax, HistoryFrieze, CompassSpinner } from "./student-platform/decor";
 import { MADAR_FEATURES, gradeNumber, gradeArtKind, stageArtKind, PickArt } from "./student-platform/uiParts";
 import { PLATFORM_CSS } from "./student-platform/platformStyles";
-import GuestLock, { GUEST_AUTH_COPY } from "../components/GuestLock";
-import GuestPreview from "../components/GuestPreview";
 
 /* ---------------------------------------------------------------------------
    Main Component — Logic 100% preserved
@@ -421,17 +418,6 @@ export default function StudentPlatform() {
             </span>
           </button>
         )}
-        {session === undefined ? null : (
-          <button
-            type="button"
-            className="duo-saved-chip"
-            onClick={() => (session ? navigate("/student/saved") : openAuthFor(SAVED_AUTH_COPY))}
-            aria-label="دروسي المحفوظة"
-          >
-            <BookmarkIcon />
-            <span className="hidden sm:inline">دروسي المحفوظة</span>
-          </button>
-        )}
         {session === undefined ? null : session ? (
           <div className="relative">
             <button type="button" onClick={() => setMenuOpen((v) => !v)}
@@ -441,17 +427,17 @@ export default function StudentPlatform() {
             </button>
             {menuOpen && (
               <div className="absolute left-0 mt-2 w-52 rounded-2xl bg-white py-2 z-50 dir-rtl text-right" style={{ border: "2px solid var(--duo-line)" }}>
-                <button type="button" className="w-full text-right px-4 py-2 text-xs font-bold" style={{ color: "var(--duo-orange-ink)" }}
-                  onClick={() => { setMenuOpen(false); navigate("/student/saved"); }}>دروسي المحفوظة</button>
-                <button type="button" className="w-full text-right px-4 py-2 text-xs font-bold" style={{ color: "var(--duo-green-ink)" }}
-                  onClick={openChangeGrade}>تغيير الصف الدراسي</button>
+                <button type="button" className="w-full text-right px-4 py-2 text-xs font-bold flex items-center gap-2" style={{ color: "var(--duo-orange-ink)" }}
+                  onClick={() => { setMenuOpen(false); navigate("/student/saved"); }}><span aria-hidden="true">🔖</span><span>دروسي المحفوظة</span></button>
+                <button type="button" className="w-full text-right px-4 py-2 text-xs font-bold flex items-center gap-2" style={{ color: "var(--duo-green-ink)" }}
+                  onClick={openChangeGrade}><span aria-hidden="true">🎓</span><span>تغيير الصف الدراسي</span></button>
                 {selectedGrade ? (
                   <p className="px-4 pb-2 text-[11px]" style={{ color: "var(--duo-muted)" }}>
                     الحالي: {selectedStage ? selectedStage + " · " : ""}{selectedGrade}
                   </p>
                 ) : null}
-                <button type="button" className="w-full text-right px-4 py-2 text-xs" style={{ color: "var(--duo-red-d)" }}
-                  onClick={async () => { setMenuOpen(false); try { await signOut(); } catch (_) {} }}>تسجيل الخروج</button>
+                <button type="button" className="w-full text-right px-4 py-2 text-xs flex items-center gap-2" style={{ color: "var(--duo-red-d)" }}
+                  onClick={async () => { setMenuOpen(false); try { await signOut(); } catch (_) {} }}><span aria-hidden="true">🚪</span><span>تسجيل الخروج</span></button>
               </div>
             )}
           </div>
@@ -495,13 +481,18 @@ export default function StudentPlatform() {
         {lessons && lessons.length > 0 && gradeMetaReady && pickingGrade && (
           <section className="md-dashboard mb-6" aria-label="اختيار الصف الدراسي">
             <div className="md-panel rounded-2xl p-5 bg-white" style={{ border: "2px solid var(--duo-line)" }}>
-              <h2 className="font-black text-base mb-1" style={{ color: "var(--duo-green-ink)" }}>اختر صفك الدراسي</h2>
-              <p className="text-xs mb-4" style={{ color: "var(--duo-muted)" }}>
-                سنعرض لك الدروس الخاصة بصفك فقط. يمكنك تغيير الصف لاحقًا من قائمة الحساب.
-              </p>
+              <div className="md-pick-head">
+                <span className="md-pick-head-icon" aria-hidden="true">🎓</span>
+                <div>
+                  <h2 className="font-black text-base mb-1" style={{ color: "var(--duo-green-ink)" }}>اختر صفك الدراسي</h2>
+                  <p className="text-xs" style={{ color: "var(--duo-muted)" }}>
+                    سنعرض لك الدروس الخاصة بصفك فقط. يمكنك تغيير الصف لاحقًا من قائمة الحساب.
+                  </p>
+                </div>
+              </div>
               {availableStages.length > 1 && (
                 <div className="mb-4">
-                  <p className="text-xs font-bold mb-2" style={{ color: "var(--duo-ink-soft)" }}>المرحلة الدراسية</p>
+                  <p className="md-pick-label text-xs font-bold mb-2">المرحلة الدراسية</p>
                   <div className="md-pick-grid">
                     {availableStages.map((st) => (
                       <button
@@ -524,7 +515,7 @@ export default function StudentPlatform() {
               )}
               {(selectedStage || availableStages.length <= 1) && (
                 <div>
-                  <p className="text-xs font-bold mb-2" style={{ color: "var(--duo-ink-soft)" }}>الصف الدراسي</p>
+                  <p className="md-pick-label text-xs font-bold mb-2">الصف الدراسي</p>
                   {availableGrades.length === 0 ? (
                     <p className="md-empty">لا توجد صفوف منشورة لهذه المرحلة حالياً.</p>
                   ) : (
@@ -539,7 +530,7 @@ export default function StudentPlatform() {
                           onClick={() => persistGradeChoice(selectedStage || (availableStages.length === 1 ? availableStages[0] : ""), g)}
                         >
                           {gradeNumber(g) ? <span className="md-pick-num" aria-hidden="true">{gradeNumber(g)}</span> : null}
-                          <span className="md-pick-art"><PickArt kind={gradeArtKind(g)} /></span>
+                          <span className="md-pick-art"><PickArt kind={gradeArtKind(g, selectedStage || (availableStages.length === 1 ? availableStages[0] : ""))} /></span>
                           <span className="md-pick-title">الصف {g}</span>
                         </button>
                       ))}
@@ -556,8 +547,7 @@ export default function StudentPlatform() {
               {selectedGrade && (
                 <button
                   type="button"
-                  className="mt-4 text-xs font-bold"
-                  style={{ color: "var(--duo-muted)" }}
+                  className="duo-btn duo-btn-ghost mt-4 px-5 py-2 text-xs"
                   disabled={gradeSaving}
                   onClick={cancelGradePick}
                 >
@@ -658,18 +648,27 @@ export default function StudentPlatform() {
         {lessons !== null && selectedGrade && !pickingGrade && (
           <div className="md-journey">
             <div className="md-context">
-              <button
-                type="button"
-                className="md-ctx-grade"
-                onClick={() => setPickingGrade(true)}
-                title="تغيير الصف"
-                aria-label={`تغيير الصف: ${selectedGrade}`}
-              >
+              <div className="md-ctx-grade" role="group" aria-label={`الصف الحالي: ${selectedGrade}`}>
                 <span className="md-ctx-grade-text">
                   {selectedStage ? selectedStage + " · " : ""}{selectedGrade}
                 </span>
-                <span className="md-ctx-caret" aria-hidden="true">▾</span>
-              </button>
+                <button
+                  type="button"
+                  className="md-ctx-door"
+                  onClick={() => setPickingGrade(true)}
+                  title="تغيير الصف"
+                  aria-label={`تغيير الصف: ${selectedGrade}`}
+                >
+                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+                    <path d="M13 4h3a2 2 0 0 1 2 2v14" />
+                    <path d="M2 20h3" />
+                    <path d="M13 20h9" />
+                    <path d="M10 12v.01" />
+                    <path d="M13 4.562v16.157a1 1 0 0 1-1.242.97L5 20V5.562a2 2 0 0 1 1.515-1.94l4-1A2 2 0 0 1 13 4.561Z" />
+                  </svg>
+                  <span>تغيير</span>
+                </button>
+              </div>
               {availableTerms.length > 0 && (
                 <div className="md-ctx-terms" role="group" aria-label="الفصل الدراسي">
                   {availableTerms.map((t) => (
@@ -830,24 +829,13 @@ export default function StudentPlatform() {
           </div>
         )}
 
-        {(session !== null || (selectedGrade && !pickingGrade)) && (
-          <GuestLock locked={session === null} onLogin={() => openAuthFor(GUEST_AUTH_COPY)}>
-            {session === null ? (
-              <GuestPreview samples={recentLessons} />
-            ) : (
-              <>
-                <DidYouKnowCard
-                  session={session}
-                  stage={selectedStage}
-                  grade={selectedGrade}
-                  ready={gradeMetaReady}
-                  onRequireLogin={() => openAuthFor(DYK_AUTH_COPY)}
-                />
-                <SavedLessonsSection session={session} lessons={lessons} limit={3} onRequireLogin={() => openAuthFor(SAVED_AUTH_COPY)} />
-              </>
-            )}
-          </GuestLock>
-        )}
+        <DidYouKnowCard
+          session={session}
+          stage={selectedStage}
+          grade={selectedGrade}
+          ready={gradeMetaReady}
+          onRequireLogin={() => openAuthFor(DYK_AUTH_COPY)}
+        />
 
         <section className="md-features" aria-label="ماذا ستجد في مَدَار">
           <div className="md-features-head">
@@ -870,7 +858,6 @@ export default function StudentPlatform() {
       <Footer />
       <GuestWelcomeBanner session={session} />
       <AuthModal open={authOpen} onClose={() => { setAuthOpen(false); setAuthCtx(null); }} title={authCtx?.title} subtitle={authCtx?.subtitle} />
-      <ComingSoonAssistantBubble />
 
       {/* Global Styles for this page */}
       <style>{PLATFORM_CSS}</style>

@@ -819,6 +819,52 @@ html body {
 .duo-saved-hero p { margin: 6px 0 0; font-weight: 700; opacity: 0.96; }
 .duo-saved-main { width: 100%; max-width: 920px; margin: 0 auto; padding: 0 16px 36px; flex: 1; }
 /* ---------------------------------------------------------------------------
+
+/* ---------------------------------------------------------------------------
+   Grade / stage picker polish ("اختر صفك الدراسي")
+   Paste inside DUO_CSS (duoTheme.js), right after section "9) STAGE / GRADE PICKER"
+   (after the .md-pick-card.selected .md-pick-num rule, ~line 315).
+   No backticks / dollar-brace sequences, so it is safe inside the template literal.
+--------------------------------------------------------------------------- */
+.md-pick-head { display: flex; align-items: center; gap: 14px; margin-bottom: 18px; }
+.md-pick-head-icon {
+  flex: none; display: inline-flex; align-items: center; justify-content: center;
+  width: 56px; height: 56px; border-radius: 18px; font-size: 1.75rem;
+  background: var(--duo-yellow-s); border: 2px solid var(--duo-yellow); box-shadow: 0 4px 0 var(--duo-yellow-d);
+  animation: duo-pop 0.5s var(--duo-spring) both;
+}
+.md-pick-head h2 { margin: 0 0 3px !important; font-family: var(--duo-font-display); font-size: 1.3rem !important; }
+.md-pick-head p { margin: 0 !important; line-height: 1.8; }
+
+.md-pick-label {
+  display: flex; align-items: center; gap: 10px; margin: 6px 0 12px !important;
+  color: var(--duo-ink-soft) !important; font-family: var(--duo-font-display); font-size: 0.95rem !important; font-weight: 800;
+}
+.md-pick-label::after { content: ""; flex: 1; height: 2px; border-radius: 2px; background: var(--duo-line); }
+
+/* bigger, fluid cards so the drawings can breathe (desktop: fills the panel, no empty strip) */
+@media (min-width: 641px) {
+  .md-pick-grid { grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); gap: 16px; }
+}
+@media (max-width: 640px) {
+  .md-pick-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px; }
+  .md-pick-card { padding: 10px 10px 14px; }
+}
+.md-pick-art { aspect-ratio: 1 / 0.92; }
+.md-pick-art .md-art { width: 94%; height: 94%; }
+.md-pick-title { font-size: 1.02rem; }
+
+/* clear "this is your pick" tick on the selected card */
+.md-pick-card.selected::after {
+  content: "✓"; position: absolute; top: 8px; inset-inline-end: 8px; z-index: 1;
+  display: inline-flex; align-items: center; justify-content: center; width: 28px; height: 28px; border-radius: 50%;
+  background: #FFFFFF; color: var(--acc-ink); font-size: 0.95rem; font-weight: 900; box-shadow: 0 3px 0 rgba(0, 0, 0, 0.15);
+  animation: duo-pop 0.4s var(--duo-spring) both;
+}
+@media (prefers-reduced-motion: reduce) {
+  .md-pick-head-icon, .md-pick-card.selected::after { animation: none !important; }
+}
+  
    Guest lock — dimmed dashboard (60%) with one sign-in card in front.
    Paste inside DUO_CSS, right after the duo-facts block (before the final
    @media (max-width: 640px) block). No backticks / dollar-brace sequences.

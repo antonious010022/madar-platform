@@ -1,3 +1,5 @@
+import { gradeArtMarkup } from "./gradeArt";
+
 // Feature boxes, stage/grade picker art and StepRow for the student home page.
 // Moved verbatim from StudentPlatform.jsx — logic unchanged.
 
@@ -87,16 +89,31 @@ function gradeNumber(grade) {
   return null;
 }
 
-function gradeArtKind(grade) {
+/* Which of the 12 school-year drawings (g1…g12) a grade gets.
+   Primary = 1–6, prep/middle = 7–9, secondary = 10–12. `stage` is optional but makes
+   "الأول الإعدادي" / "الأول الثانوي" get their own drawing instead of repeating "الأول". */
+function gradeSlot(grade, stage) {
   const n = gradeNumber(grade);
-  return n ? GRADE_ART[(n - 1) % GRADE_ART.length] : "book";
+  if (!n) return 0;
+  const ctx = `${stage || ""} ${grade || ""}`;
+  let slot = n;
+  if (n <= 3) {
+    if (/ثانو/.test(ctx)) slot = 9 + n;
+    else if (/إعداد|اعداد|متوسط/.test(ctx)) slot = 6 + n;
+  }
+  return Math.min(12, Math.max(1, slot));
+}
+
+function gradeArtKind(grade, stage) {
+  const slot = gradeSlot(grade, stage);
+  return slot ? `g${slot}` : "book";
 }
 
 function stageArtKind(stage) {
   const st = String(stage || "");
-  if (st.includes("ابتدائ")) return "pencil";
-  if (st.includes("إعداد") || st.includes("اعداد")) return "globe";
-  if (st.includes("ثانو")) return "cap";
+  if (st.includes("ابتدائ")) return "g3"; // backpack
+  if (st.includes("إعداد") || st.includes("اعداد") || st.includes("متوسط")) return "g7"; // globe
+  if (st.includes("ثانو")) return "g12"; // graduate
   return "book";
 }
 
@@ -143,6 +160,7 @@ function Spark({ x, y, r, fill }) {
 }
 
 function PickArt({ kind }) {
+  const markup = gradeArtMarkup(kind);
   const render = () => {
     switch (kind) {
       case "sprout": // الصف الأول — a seedling peeking out of the soil
@@ -315,7 +333,7 @@ function PickArt({ kind }) {
     <svg className="md-art" viewBox="0 0 80 80" aria-hidden="true" focusable="false">
       <circle cx="40" cy="42" r="31" style={{ fill: "var(--acc-light)" }} opacity=".3" />
       <ellipse cx="40" cy="73.5" rx="19" ry="3" fill="#000000" opacity=".1" />
-      <g className="pa-body">{render()}</g>
+      <g className="pa-body">{markup ? <g dangerouslySetInnerHTML={{ __html: markup }} /> : render()}</g>
       <Spark x={11} y={17} r={4.2} fill="#FFC800" />
       <Spark x={69} y={25} r={3.2} fill="var(--acc)" />
       <Spark x={67} y={62} r={2.6} fill="#FFFFFF" />

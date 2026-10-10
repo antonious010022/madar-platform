@@ -2354,4 +2354,36 @@ export const PLATFORM_CSS = `
   @media (prefers-reduced-motion: reduce) {
     .md-feature, .md-unit-card-progress i, .md-lesson-card, .md-jp-seg, .md-lessons, .md-pick-card { animation: none !important; transition: none !important; }
   }
+
+  /* ---------- grade pill: label + inset "door" button to change the grade (style only) ---------- */
+  .md-ctx-grade {
+    gap: 10px;
+    padding: 4px 4px 4px 16px;
+    cursor: default;
+  }
+  .md-ctx-grade:hover { transform: none; background: var(--md-blue-soft, #DDF4FD); border-color: #B7E7FA; }
+  .md-ctx-door {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    flex-shrink: 0;
+    min-height: 34px;
+    padding: 4px 12px 4px 10px;
+    border: 2px solid #B7E7FA;
+    border-bottom-width: 4px;
+    border-radius: 12px;
+    background: #FFFFFF;
+    color: #1899D6;
+    font: inherit;
+    font-size: 0.8rem;
+    font-weight: 900;
+    line-height: 1;
+    cursor: pointer;
+    transition: transform 0.08s ease, background 0.15s ease, color 0.15s ease, border-color 0.15s ease;
+  }
+  .md-ctx-door svg { width: 18px; height: 18px; flex-shrink: 0; }
+  .md-ctx-door:hover { background: #1CB0F6; border-color: #1899D6; color: #FFFFFF; }
+  .md-ctx-door:active { transform: translateY(2px); border-bottom-width: 2px; }
+  .md-ctx-door:focus-visible { outline: 3px solid #1CB0F6; outline-offset: 2px; }
+  @media (max-width: 380px) { .md-ctx-door span { display: none; } .md-ctx-door { padding: 4px 10px; } }
 `;
