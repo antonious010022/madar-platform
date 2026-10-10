@@ -7,7 +7,7 @@ import AuthModal, { GuestWelcomeBanner } from "../components/AuthModal";
 import StudentAccountMenu from "../components/StudentAccountMenu";
 import { DidYouKnowCard, DYK_AUTH_COPY } from "../components/DidYouKnow";
 import { slugify } from "../lib/slugify";
-import { arabicLessonOrdinal, lessonPath, isLessonComingSoon, lessonDisplayNumber, sortLessonsForSequence, buildLessonLockStates, lessonLockUi, readGuestGradeLocal, writeGuestGradeLocal } from "./student-platform/helpers";
+import { arabicLessonOrdinal, lessonPath, isLessonComingSoon, lessonDisplayNumber, sortLessonsForSequence, buildLessonLockStates, readGuestGradeLocal, writeGuestGradeLocal } from "./student-platform/helpers";
 import { CompassRose, Galaxy, ContinentsAtlas, usePointerParallax, HistoryFrieze, CompassSpinner } from "./student-platform/decor";
 import { MADAR_FEATURES, gradeNumber, gradeArtKind, stageArtKind, PickArt } from "./student-platform/uiParts";
 import { PLATFORM_CSS } from "./student-platform/platformStyles";
@@ -584,6 +584,15 @@ export default function StudentPlatform() {
                 </div>
               </div>
             )}
+            
+            <DidYouKnowCard
+              session={session}
+              stage={selectedStage}
+              grade={selectedGrade}
+              ready={gradeMetaReady}
+              onRequireLogin={() => openAuthFor(DYK_AUTH_COPY)}
+            />
+
             {recentLessons.length > 0 && (
               <div>
                 <p className="md-section-label text-xs font-bold mb-2" style={{ color: "var(--duo-muted)" }}>أحدث الدروس </p>
@@ -815,14 +824,6 @@ export default function StudentPlatform() {
             )}
           </div>
         )}
-
-        <DidYouKnowCard
-          session={session}
-          stage={selectedStage}
-          grade={selectedGrade}
-          ready={gradeMetaReady}
-          onRequireLogin={() => openAuthFor(DYK_AUTH_COPY)}
-        />
 
         <section className="md-features" aria-label="ماذا ستجد في مَدَار">
           <div className="md-features-head">

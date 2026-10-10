@@ -4,7 +4,6 @@ import { useTeacherAuth, useStaffStatus } from "./lib/hooks";
 import TeacherLogin from "./pages/TeacherLogin";
 import LessonLibraryPage from "./pages/LessonLibrary";
 import TeacherStudioPage from "./pages/TeacherStudio";
-import TeacherFacts from "./pages/TeacherFacts";
 import StudentPlatform from "./pages/StudentPlatform";
 import StudentLessonPage from "./pages/StudentLessonPage";
 import SavedLessonsPage from "./pages/SavedLessonsPage";
@@ -13,6 +12,7 @@ import PrivacyPage from "./pages/PrivacyPage";
 import TermsPage from "./pages/TermsPage";
 import CmsPage from "./pages/CmsPage";
 import TeacherSettings from "./pages/TeacherSettings";
+import TeacherFacts from "./pages/TeacherFacts";
 import { DUO_CSS } from "./styles/duoTheme";
 import { LoadSplash, RouteProgress, SwipeBackBubble } from "./components/DuoFx";
 
@@ -61,7 +61,24 @@ function TeacherGate() {
   if (!staff) {
     return <AccessDenied />;
   }
-  return <Outlet context={{ session }} />;
+  return (
+    <>
+      <Outlet context={{ session }} />
+      <TeacherFactsShortcut />
+    </>
+  );
+}
+
+/* Shortcut to the "هل تعلم؟" manager, shown to staff on every /teacher page
+   (except the manager itself and the recording screen). */
+function TeacherFactsShortcut() {
+  const { pathname } = useLocation();
+  if (pathname.startsWith("/teacher/facts") || pathname.endsWith("/record")) return null;
+  return (
+    <Link to="/teacher/facts" className="duo-tf-fab" title="إدارة «هل تعلم؟»">
+      <span aria-hidden="true">💡</span> هل تعلم؟
+    </Link>
+  );
 }
 
 function TeacherLibraryRoute() {

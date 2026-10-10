@@ -865,8 +865,8 @@ html body {
   .md-pick-head-icon, .md-pick-card.selected::after { animation: none !important; }
 }
   
-   Guest lock — dimmed dashboard (60%) with one sign-in card in front.
-   Paste inside DUO_CSS, right after the duo-facts block (before the final
+/* ---------------------------------------------------------------------------
+   Guest lock — dimmed dashboard (60%) with one sign-in card in front.   Paste inside DUO_CSS, right after the duo-facts block (before the final
    @media (max-width: 640px) block). No backticks / dollar-brace sequences.
 --------------------------------------------------------------------------- */
 .duo-guest-lock { display: grid; margin-bottom: 24px; }
@@ -980,6 +980,11 @@ html body {
   .duo-dyk-art, .duo-dyk-bubble, .duo-tf-msg { animation: none !important; }
   .duo-tf-item, .duo-tf-mini, .duo-tf-back { transition: none !important; }
 }
+.duo-saved-inline { margin-bottom: 22px; }
+.duo-tf-fab { position: fixed; bottom: 18px; left: 18px; z-index: 60; display: inline-flex; align-items: center; gap: 6px; padding: 10px 18px; border-radius: 16px; background: var(--duo-yellow); color: #FFFFFF; font-family: var(--duo-font-display); font-size: 0.95rem; font-weight: 800; text-decoration: none; box-shadow: 0 5px 0 var(--duo-yellow-d); transition: transform 0.14s var(--duo-spring), box-shadow 0.14s ease; }
+.duo-tf-fab:hover { transform: translateY(-2px); box-shadow: 0 7px 0 var(--duo-yellow-d); }
+.duo-tf-fab:active { transform: translateY(5px); box-shadow: 0 0 0 transparent; }
+@media (max-width: 640px) { .duo-tf-fab { bottom: 12px; left: 12px; padding: 9px 14px; } }
 
 /* ---------------------------------------------------------------------------
    19) RESPONSIVE TUNING
