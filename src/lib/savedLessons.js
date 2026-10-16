@@ -1,17 +1,19 @@
 import { supabase } from "./supabaseClient";
-
-/* "حفظ الدرس" — per-account saved lessons (table public.student_saved_lessons,
-   see supabase/migration_saved_lessons.sql). RLS: each student only sees / changes own rows. */
+import {
+  listGuestSavedLessonIds,
+  isGuestLessonSaved,
+  setGuestLessonSaved,
+} from "./guestStorage";
 
 async function currentUserId() {
   const { data } = await supabase.auth.getSession();
   return data?.session?.user?.id ?? null;
 }
 
-/** Is this lesson saved by the current student? (false for guests) */
 export async function isLessonSaved(lessonId) {
+  if (!lessonId) return false;
   const uid = await currentUserId();
-  if (!uid || !lessonId) return false;
+  if (!uid) return isGuestLessonSaved(lessonId);
   const { data, error } = await supabase
     .from("student_saved_lessons")
     .select("lesson_id")
@@ -22,10 +24,9 @@ export async function isLessonSaved(lessonId) {
   return !!data;
 }
 
-/** Ids of all lessons saved by the current student (empty for guests). */
 export async function listMySavedLessonIds() {
   const uid = await currentUserId();
-  if (!uid) return [];
+  if (!uid) return listGuestSavedLessonIds();
   const { data, error } = await supabase
     .from("student_saved_lessons")
     .select("lesson_id, created_at")
@@ -35,10 +36,13 @@ export async function listMySavedLessonIds() {
   return (data || []).map((r) => String(r.lesson_id));
 }
 
-/** Save / un-save a lesson for the current student. */
 export async function setLessonSaved(lessonId, saved) {
+  if (!lessonId) return;
   const uid = await currentUserId();
-  if (!uid) throw new Error("not signed in");
+  if (!uid) {
+    setGuestLessonSaved(lessonId, saved);
+    return;
+  }
   if (saved) {
     const { error } = await supabase
       .from("student_saved_lessons")

@@ -100,7 +100,7 @@ export default function StudentLessonPage() {
   const [lesson, setLesson] = useState(null);
   const [authOpen, setAuthOpen] = useState(false);
   const [progress, setProgress] = useState(defaultProgress);
-  // Progress is saved in Supabase for the logged-in account only. Guest (null) = in-memory for this visit, never stored. `undefined` = auth still loading.
+  // progressOwner: user id | null (guest) | undefined (auth loading). Save/load via db.js (Supabase or guestStorage).
   const progressOwner = session === undefined ? undefined : session?.user?.id || null;
   const [progressLoadedKey, setProgressLoadedKey] = useState("");
   const skipNextSaveRef = useRef(false); // the first state after a load is not a change → don't write it back
@@ -127,18 +127,13 @@ export default function StudentLessonPage() {
     };
   }, [id]);
 
-  // Load this account's saved progress once the lesson AND the auth state are both known.
+  // Load progress once lesson + auth are known.
+  // Account → Supabase; guest → localStorage (getMyLessonProgress routes both).
   useEffect(() => {
     if (!lesson || !id || progressOwner === undefined) return undefined;
     const sc = lesson.scenes?.length || 0;
     const key = `${progressOwner || "guest"}:${id}`;
     skipNextSaveRef.current = true;
-    if (!progressOwner) {
-      // Guest: nothing is stored anywhere — fresh in-memory progress for this visit.
-      setProgress(defaultProgress());
-      setProgressLoadedKey(key);
-      return undefined;
-    }
     let cancelled = false;
     saveBlockedRef.current = false;
     getMyLessonProgress(id)
@@ -147,7 +142,8 @@ export default function StudentLessonPage() {
       })
       .catch((err) => {
         console.warn("getMyLessonProgress:", err);
-        saveBlockedRef.current = true;
+        // Guest local read failure should not block future saves with a blank overwrite.
+        if (progressOwner) saveBlockedRef.current = true;
         if (!cancelled) setProgress(defaultProgress());
       })
       .finally(() => {
@@ -173,10 +169,11 @@ export default function StudentLessonPage() {
     );
   }, []);
 
-  // Save (debounced) only for a logged-in account, and only after the load above finished for that account+lesson.
+  // Save (debounced) for account (Supabase) and guest (localStorage) after load finished.
   useEffect(() => {
-    if (!lesson || !id || !progressOwner) return;
-    if (progressLoadedKey !== `${progressOwner}:${id}`) return;
+    if (!lesson || !id || progressOwner === undefined) return;
+    const key = `${progressOwner || "guest"}:${id}`;
+    if (progressLoadedKey !== key) return;
     if (skipNextSaveRef.current) {
       skipNextSaveRef.current = false;
       return;
@@ -469,10 +466,11 @@ export default function StudentLessonPage() {
     [progress, sceneCount, setCurrentScene, completeScene, openFinalReview, completeFinalReview]
   );
 
-  // Logged-in student: wait for the saved progress so the lesson never flashes a blank/locked state.
+  // Wait for progress load (account or guest) so the lesson never flashes a blank/locked state.
   const progressLoading =
     !!lesson &&
-    (progressOwner === undefined || (!!progressOwner && progressLoadedKey !== `${progressOwner}:${id}`));
+    (progressOwner === undefined ||
+      progressLoadedKey !== `${progressOwner || "guest"}:${id}`);
 
   if (lesson === null || progressLoading) {
     // نفس ارتفاع/بنية الهيدر الموجود في العرض النهائي (سطر lesson.title لاحقًا) حتى لا تقفز

@@ -845,6 +845,50 @@ export async function saveBrandSettings(value) {
   if (error) throw error;
 }
 
+/** grade_covers: { [gradeName]: imageUrl } in platform_settings */
+export async function getGradeCovers() {
+  const { data, error } = await supabase
+    .from("platform_settings")
+    .select("value")
+    .eq("key", "grade_covers")
+    .maybeSingle();
+  if (error) throw error;
+  const v = data?.value;
+  return v && typeof v === "object" && !Array.isArray(v) ? v : {};
+}
+
+export async function saveGradeCovers(covers) {
+  if (!(await isStaffUser())) throw new Error("ليس لديك صلاحية.");
+  const value =
+    covers && typeof covers === "object" && !Array.isArray(covers) ? covers : {};
+  const { error } = await supabase.from("platform_settings").upsert({
+    key: "grade_covers",
+    value,
+    updated_at: new Date().toISOString(),
+  });
+  if (error) throw error;
+}
+
+export async function uploadGradeCover(file, gradeLabel) {
+  if (!(await isStaffUser())) throw new Error("ليس لديك صلاحية.");
+  if (!file) throw new Error("لا يوجد ملف.");
+  const safe =
+    String(gradeLabel || "grade")
+      .trim()
+      .replace(/[^\w\u0600-\u06FF-]+/g, "_")
+      .slice(0, 40) || "grade";
+  const ext = (file.name.split(".").pop() || "jpg").toLowerCase();
+  const path = `grade-covers/${safe}-${Date.now()}.${ext}`;
+  const bucketName = "lesson-images";
+  const { error } = await supabase.storage
+    .from(bucketName)
+    .upload(path, file, { cacheControl: "3600", upsert: true });
+  if (error) throw error;
+  const { data } = supabase.storage.from(bucketName).getPublicUrl(path);
+  return data.publicUrl;
+}
+
+
 /** Default journey: sequential scenes only (no forced final review). */
 export function defaultJourneyConfig(sceneCount) {
   return {

@@ -1,25 +1,16 @@
--- ============================================================================
--- Madar — "هل تعلم؟" (Did you know?). Run once in Supabase → SQL Editor.
--- Safe to re-run.
---   did_you_know_facts : written by staff (teacher/admin) only. Each fact can target
---                        a stage and/or a grade (NULL = everyone / all of that stage).
---   student_seen_facts : which facts each student has already been shown, so the
---                        rotation is random but never repeats until all were seen.
--- Uses the existing public.is_staff() function (same one db.js calls via rpc).
--- ============================================================================
+-- Fix "هل تعلم؟" read access. Safe to re-run in Supabase SQL Editor.
+
+-- 1) Ensure tables exist (no-op if already created)
 create table if not exists public.did_you_know_facts (
   id          uuid primary key default gen_random_uuid(),
   body        text not null check (char_length(btrim(body)) between 1 and 600),
-  stage       text,                       -- NULL = all stages
-  grade       text,                       -- NULL = all grades (of the chosen stage)
+  stage       text,
+  grade       text,
   is_active   boolean not null default true,
   created_by  uuid references auth.users(id) on delete set null default auth.uid(),
   created_at  timestamptz not null default now(),
   updated_at  timestamptz not null default now()
 );
-
-create index if not exists did_you_know_facts_active_idx
-  on public.did_you_know_facts (is_active, created_at);
 
 create table if not exists public.student_seen_facts (
   user_id  uuid not null references auth.users(id) on delete cascade,
@@ -31,45 +22,81 @@ create table if not exists public.student_seen_facts (
 alter table public.did_you_know_facts enable row level security;
 alter table public.student_seen_facts enable row level security;
 
--- facts: any signed-in user reads ACTIVE facts (staff also see inactive); only staff write
+-- 2) Drop old policies and recreate simple ones
 drop policy if exists "dyk_select" on public.did_you_know_facts;
-create policy "dyk_select" on public.did_you_know_facts
-  for select to authenticated
-  using (is_active = true or public.is_staff());
+drop policy if exists "dyk_select_authenticated" on public.did_you_know_facts;
+drop policy if exists "dyk_select_anon" on public.did_you_know_facts;
+drop policy if exists "dyk_select_active" on public.did_you_know_facts;
+drop policy if exists "dyk_select_staff_all" on public.did_you_know_facts;
+
+-- Anyone (guest + logged-in) can read ACTIVE facts only
+create policy "dyk_select_active" on public.did_you_know_facts
+  for select
+  to anon, authenticated
+  using (is_active = true);
+
+-- Staff can read all rows (including inactive) if is_staff() exists
+do $$
+begin
+  if exists (
+    select 1 from pg_proc p
+    join pg_namespace n on n.oid = p.pronamespace
+    where n.nspname = 'public' and p.proname = 'is_staff'
+  ) then
+    execute $p$
+      create policy "dyk_select_staff_all" on public.did_you_know_facts
+        for select to authenticated
+        using (public.is_staff())
+    $p$;
+  end if;
+end$$;
 
 drop policy if exists "dyk_insert_staff" on public.did_you_know_facts;
-create policy "dyk_insert_staff" on public.did_you_know_facts
-  for insert to authenticated
-  with check (public.is_staff());
-
 drop policy if exists "dyk_update_staff" on public.did_you_know_facts;
-create policy "dyk_update_staff" on public.did_you_know_facts
-  for update to authenticated
-  using (public.is_staff())
-  with check (public.is_staff());
-
 drop policy if exists "dyk_delete_staff" on public.did_you_know_facts;
-create policy "dyk_delete_staff" on public.did_you_know_facts
-  for delete to authenticated
-  using (public.is_staff());
 
--- seen: each student only touches their own rows
+do $$
+begin
+  if exists (
+    select 1 from pg_proc p
+    join pg_namespace n on n.oid = p.pronamespace
+    where n.nspname = 'public' and p.proname = 'is_staff'
+  ) then
+    execute $p$
+      create policy "dyk_insert_staff" on public.did_you_know_facts
+        for insert to authenticated with check (public.is_staff())
+    $p$;
+    execute $p$
+      create policy "dyk_update_staff" on public.did_you_know_facts
+        for update to authenticated using (public.is_staff()) with check (public.is_staff())
+    $p$;
+    execute $p$
+      create policy "dyk_delete_staff" on public.did_you_know_facts
+        for delete to authenticated using (public.is_staff())
+    $p$;
+  end if;
+end$$;
+
+-- Seen rows: own rows only
 drop policy if exists "seen_select_own" on public.student_seen_facts;
+drop policy if exists "seen_insert_own" on public.student_seen_facts;
+drop policy if exists "seen_update_own" on public.student_seen_facts;
+drop policy if exists "seen_delete_own" on public.student_seen_facts;
+
 create policy "seen_select_own" on public.student_seen_facts
   for select to authenticated using (auth.uid() = user_id);
-
-drop policy if exists "seen_insert_own" on public.student_seen_facts;
 create policy "seen_insert_own" on public.student_seen_facts
   for insert to authenticated with check (auth.uid() = user_id);
-
-drop policy if exists "seen_delete_own" on public.student_seen_facts;
+create policy "seen_update_own" on public.student_seen_facts
+  for update to authenticated using (auth.uid() = user_id) with check (auth.uid() = user_id);
 create policy "seen_delete_own" on public.student_seen_facts
   for delete to authenticated using (auth.uid() = user_id);
 
--- guests (anon) get nothing
-revoke all on table public.did_you_know_facts from anon;
-revoke all on table public.did_you_know_facts from public;
-revoke all on table public.student_seen_facts from anon;
-revoke all on table public.student_seen_facts from public;
+grant select on table public.did_you_know_facts to anon;
 grant select, insert, update, delete on table public.did_you_know_facts to authenticated;
-grant select, insert, delete on table public.student_seen_facts to authenticated;
+grant select, insert, update, delete on table public.student_seen_facts to authenticated;
+
+-- 3) Optional seed if table is empty (safe: only inserts when zero rows)
+insert into public.did_you_know_facts (body, stage, grade, is_active)
+select 'نهر النيل هو أطول أنهار العالم، ويمتد عبر عدة دول أفريقية قبل أن يصب في البحر المتوسط.', null, null, true
+where not exists (select 1 from public.did_you_know_facts limit 1);

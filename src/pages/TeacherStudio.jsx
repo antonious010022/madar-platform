@@ -26,6 +26,7 @@ import {
   setLessonComingSoon,
 } from "../lib/db";
 import PresentationTools from "../components/PresentationTools";
+import GradeCoversAdmin from "../components/GradeCoversAdmin";
 
 const AUTOSAVE_DELAY = 800;
 
@@ -645,6 +646,9 @@ export default function TeacherStudioPage() {
               )}
             </select>
           </div>
+
+          {/* ===== صور بطاقات الصفوف (للطالب) — GradeCoversAdmin ===== */}
+          <GradeCoversAdmin />
 
           {/* رقم الدرس داخل الوحدة — يحدّده المعلم يدويًا (عمود sort_order الموجود) */}
           <label className="block mb-4 p-3 rounded-xl" style={{ background: "#F7F5FB", border: "1px solid #E3E0EE" }}>
