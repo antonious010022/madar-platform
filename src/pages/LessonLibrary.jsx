@@ -10,6 +10,11 @@ import {
   signOutTeacher,
   importLessonBundle,
   listCurriculumNodes,
+  getGradeCovers,
+  saveGradeCovers,
+  uploadGradeCover,
+  resolveGradeCover,
+  omitGradeCover,
 } from "../lib/db";
 import { makeDemoLesson } from "../lib/demo-data";
 
@@ -91,24 +96,68 @@ const LIB_CSS = `
 
   .duo-lib-empty { padding: 34px 20px; text-align: center; border-radius: 24px; background: var(--duo-snow); border: 3px dashed var(--duo-line-d); color: var(--duo-muted); font-weight: 700; }
   .duo-lib-empty p { margin: 0 0 14px; }
+  .duo-lib-hint { margin: 0 0 14px; font-size: 0.86rem; font-weight: 700; color: var(--duo-ink-soft); }
+  .duo-lib-grades { display: grid; grid-template-columns: repeat(auto-fill, minmax(250px, 1fr)); gap: 16px; }
+  .duo-lib-gcard { display: flex; flex-direction: column; overflow: hidden; border-radius: 24px; background: #FFFFFF; border: 2px solid var(--duo-line); box-shadow: 0 5px 0 var(--duo-line); animation: duo-pop 0.45s var(--duo-spring) both; transition: transform 0.14s var(--duo-spring), box-shadow 0.14s ease, border-color 0.15s ease; }
+  .duo-lib-gcard:hover { transform: translateY(-2px); border-color: var(--acc); box-shadow: 0 7px 0 var(--acc); }
+  .duo-lib-gcard-main { position: relative; display: flex; align-items: flex-end; min-height: 150px; padding: 0; border: 0; overflow: hidden; background: linear-gradient(145deg, var(--duo-snow), #FFFFFF); text-align: right; font: inherit; color: inherit; cursor: pointer; }
+  .duo-lib-gcover { position: absolute; inset: 0; background-size: cover; background-position: center; opacity: 0.5; pointer-events: none; }
+  .duo-lib-gcard-body { position: relative; z-index: 1; width: 100%; padding: 14px 16px; display: flex; flex-direction: column; gap: 2px; text-shadow: 0 1px 6px rgba(255, 255, 255, 0.85); }
+  .duo-lib-gcard-body b { font-family: var(--duo-font-display); font-size: 1.2rem; font-weight: 800; color: var(--duo-ink); }
+  .duo-lib-gcard-body small { font-size: 0.8rem; font-weight: 800; color: var(--duo-ink-soft); }
+  .duo-lib-covertools { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
+  .duo-lib-gcard .duo-lib-covertools { padding: 10px 12px; border-top: 2px dashed var(--duo-line); background: #FFFFFF; }
+  .duo-lib-file { display: none; }
+  .duo-lib-btn.is-busy { opacity: 0.6; cursor: progress; }
+
+  .duo-lib-ghero { position: relative; overflow: hidden; display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 12px; min-height: 120px; margin-bottom: 18px; padding: 16px 18px; border-radius: 24px; background: linear-gradient(145deg, var(--duo-snow), #FFFFFF); border: 2px solid var(--duo-line); box-shadow: 0 5px 0 var(--duo-line); }
+  .duo-lib-ghero > *:not(.duo-lib-gcover) { position: relative; z-index: 1; }
+  .duo-lib-ghero-text { display: flex; flex-direction: column; align-items: flex-start; gap: 8px; text-shadow: 0 1px 6px rgba(255, 255, 255, 0.85); }
+  .duo-lib-ghero-text h2 { margin: 0; font-family: var(--duo-font-display); font-size: 1.5rem; font-weight: 800; color: var(--duo-ink); }
+  .duo-lib-terms { display: flex; align-items: center; flex-wrap: wrap; gap: 8px; margin-bottom: 16px; }
+  .duo-lib-terms-tools { display: flex; gap: 8px; margin-inline-start: auto; }
   @media (max-width: 640px) {
     .duo-lib-top { padding: 12px 14px; }
-    .duo-lib-row { flex-direction: column; gap: 4px; }
-    .duo-lib-rowlabel { width: auto; padding-top: 0; }
     .duo-lib-actions { width: 100%; }
   }
   @media (prefers-reduced-motion: reduce) { .duo-lib-group { animation: none !important; } .duo-lib-card, .duo-lib-chip, .duo-lib-btn, .duo-lib-caret { transition: none !important; } }
 `;
+
+/* أزرار صورة الصف: رفع / تغيير / إزالة */
+function CoverTools({ grade, cover, uploading, onFile, onRemove }) {
+  return (
+    <div className="duo-lib-covertools" onClick={(e) => e.stopPropagation()}>
+      <label className={`duo-lib-btn blue small${uploading ? " is-busy" : ""}`}>
+        {uploading ? "جاري الرفع..." : cover ? "🖼 تغيير الصورة" : "🖼 إضافة صورة"}
+        <input
+          type="file"
+          accept="image/*"
+          className="duo-lib-file"
+          disabled={uploading}
+          onChange={(e) => {
+            const f = e.target.files && e.target.files[0];
+            e.target.value = "";
+            if (f) onFile(grade, f);
+          }}
+        />
+      </label>
+      {cover && !uploading && (
+        <button type="button" className="duo-lib-btn danger small" onClick={() => onRemove(grade)}>إزالة الصورة</button>
+      )}
+    </div>
+  );
+}
 
 export default function LessonLibraryPage({ session }) {
   const navigate = useNavigate();
   const ownerId = session.user.id;
 
   const [lessons, setLessons] = useState(null);
-  const [nodes, setNodes] = useState([]); // curriculum — used only to order the filters/groups like in settings
-  const [query, setQuery] = useState("");
-  const [sel, setSel] = useState({ stage: "", grade: "", term: "", subject: "" });
-  const [statusFilter, setStatusFilter] = useState("");
+  const [nodes, setNodes] = useState([]); // curriculum — used only to order grades/terms/units like in settings
+  const [covers, setCovers] = useState({});
+  const [uploadingGrade, setUploadingGrade] = useState("");
+  const [gradeSel, setGradeSel] = useState(""); // الصف المفتوح حالياً ("" = شاشة اختيار الصف)
+  const [termSel, setTermSel] = useState("");
   const [openMap, setOpenMap] = useState({});
   const [showCreate, setShowCreate] = useState(false);
   const [confirmDeleteId, setConfirmDeleteId] = useState(null);
@@ -127,6 +176,7 @@ export default function LessonLibraryPage({ session }) {
   useEffect(() => {
     refresh();
     listCurriculumNodes().then((n) => setNodes(Array.isArray(n) ? n : [])).catch(() => {});
+    getGradeCovers().then((c) => setCovers(c && typeof c === "object" ? c : {})).catch(() => {});
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
@@ -150,93 +200,97 @@ export default function LessonLibraryPage({ session }) {
     return ra !== rb ? ra - rb : String(a).localeCompare(String(b), "ar");
   };
 
-  // search + status (the original search: title + subject)
-  const base = useMemo(() => {
-    if (!lessons) return [];
-    const q = query.toLowerCase();
-    return lessons.filter(
-      (l) => (l.title + l.subject).toLowerCase().includes(q) && (!statusFilter || statusMeta(l.status).label === statusFilter)
-    );
-  }, [lessons, query, statusFilter]);
-
-  const statusCounts = useMemo(() => {
+  /* كروت الصفوف: كل صف موجود في المنهج أو عليه دروس، مع عدد دروسه */
+  const gradeCards = useMemo(() => {
     const m = new Map();
+    nodes.filter((n) => n.kind === "grade" && n.isActive !== false).forEach((n) => { if (!m.has(n.name)) m.set(n.name, 0); });
     (lessons || []).forEach((l) => {
-      const lb = statusMeta(l.status).label;
-      m.set(lb, (m.get(lb) || 0) + 1);
+      const g = valueOf(l, "grade");
+      m.set(g, (m.get(g) || 0) + 1);
     });
-    return Array.from(m.entries());
-  }, [lessons]);
-
-  /* chips for each level, counted among lessons that match the levels above it */
-  const levelOptions = useMemo(() => {
-    return LEVELS.map((lv, idx) => {
-      let list = base;
-      for (let j = 0; j < idx; j++) {
-        const k = LEVELS[j].kind;
-        if (sel[k]) list = list.filter((l) => valueOf(l, k) === sel[k]);
-      }
-      const counts = new Map();
-      list.forEach((l) => {
-        const v = valueOf(l, lv.kind);
-        counts.set(v, (counts.get(v) || 0) + 1);
-      });
-      const c = cmp(lv.kind);
-      return Array.from(counts.entries()).sort((a, b) => c(a[0], b[0]));
-    });
+    const c = cmp("grade");
+    return Array.from(m.entries()).sort((a, b) => c(a[0], b[0]));
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [base, sel, rank]);
+  }, [lessons, nodes, rank]);
 
-  const filtered = useMemo(
-    () => base.filter((l) => LEVELS.every((lv) => !sel[lv.kind] || valueOf(l, lv.kind) === sel[lv.kind])),
-    [base, sel]
-  );
-
-  const groups = useMemo(() => {
-    const map = new Map();
-    for (const l of filtered) {
-      const g = { stage: valueOf(l, "stage"), grade: valueOf(l, "grade"), term: valueOf(l, "term"), subject: valueOf(l, "subject") };
-      const key = [g.stage, g.grade, g.term, g.subject].join("||");
-      if (!map.has(key)) map.set(key, { key, ...g, items: [] });
-      map.get(key).items.push(l);
+  /* داخل الصف: ترم ← وحدات ← دروس */
+  const terms = useMemo(() => {
+    if (!gradeSel) return [];
+    const tmap = new Map();
+    for (const l of lessons || []) {
+      if (valueOf(l, "grade") !== gradeSel) continue;
+      const t = valueOf(l, "term");
+      const s = valueOf(l, "subject");
+      if (!tmap.has(t)) tmap.set(t, new Map());
+      const smap = tmap.get(t);
+      if (!smap.has(s)) smap.set(s, []);
+      smap.get(s).push(l);
     }
-    const list = Array.from(map.values());
-    for (const g of list) g.items.sort((a, b) => (a.sortOrder > 0 ? a.sortOrder : 1e9) - (b.sortOrder > 0 ? b.sortOrder : 1e9));
-    const cs = LEVELS.map((lv) => cmp(lv.kind));
-    list.sort((a, b) => {
-      for (let i = 0; i < LEVELS.length; i++) {
-        const k = LEVELS[i].kind;
-        const d = cs[i](a[k], b[k]);
-        if (d) return d;
-      }
-      return 0;
-    });
-    return list;
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [filtered, rank]);
-
-  const defaultOpen = groups.length <= 3 || filtered.length <= 8;
-  const isOpen = (key) => (openMap[key] !== undefined ? openMap[key] : defaultOpen);
-  const setAllOpen = (v) => setOpenMap(Object.fromEntries(groups.map((g) => [g.key, v])));
-
-  const pick = (kind, value) => {
-    const idx = LEVELS.findIndex((l) => l.kind === kind);
-    setSel((s) => {
-      const next = { ...s };
-      LEVELS.forEach((l, i) => {
-        if (i === idx) next[kind] = s[kind] === value ? "" : value; // tap again to clear
-        if (i > idx) next[l.kind] = "";
+    const ct = cmp("term");
+    const cs = cmp("subject");
+    return Array.from(tmap.entries())
+      .sort((a, b) => ct(a[0], b[0]))
+      .map(([term, smap]) => {
+        const units = Array.from(smap.entries())
+          .sort((a, b) => cs(a[0], b[0]))
+          .map(([subject, items]) => ({
+            key: [gradeSel, term, subject].join("||"),
+            subject,
+            items: [...items].sort((a, b) => (a.sortOrder > 0 ? a.sortOrder : 1e9) - (b.sortOrder > 0 ? b.sortOrder : 1e9)),
+          }));
+        return { term, units, count: units.reduce((s, u) => s + u.items.length, 0) };
       });
-      return next;
-    });
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [lessons, gradeSel, rank]);
+
+  const activeTerm = terms.find((t) => t.term === termSel) || terms[0] || null;
+  const defaultOpen = !activeTerm || activeTerm.units.length <= 3 || activeTerm.count <= 8;
+  const isOpen = (key) => (openMap[key] !== undefined ? openMap[key] : defaultOpen);
+  const setAllOpen = (v) => setOpenMap(Object.fromEntries((activeTerm?.units || []).map((u) => [u.key, v])));
+
+  const openGrade = (g) => {
+    setGradeSel(g);
+    setTermSel("");
     setOpenMap({});
+    setConfirmDeleteId(null);
   };
-  const anyFilter = !!(query || statusFilter || LEVELS.some((l) => sel[l.kind]));
-  const clearAll = () => {
-    setQuery("");
-    setStatusFilter("");
-    setSel({ stage: "", grade: "", term: "", subject: "" });
+  const closeGrade = () => {
+    setGradeSel("");
+    setTermSel("");
     setOpenMap({});
+    setConfirmDeleteId(null);
+  };
+
+  const handleCoverFile = async (grade, file) => {
+    if (!file.type.startsWith("image/")) { setError("اختر ملف صورة فقط."); return; }
+    if (file.size > 5 * 1024 * 1024) { setError("حجم الصورة أكبر من 5 ميجا. اختر صورة أصغر."); return; }
+    setUploadingGrade(grade);
+    setError("");
+    try {
+      const url = await uploadGradeCover(file);
+      const next = { ...omitGradeCover(covers, grade), [grade]: url };
+      await saveGradeCovers(next);
+      setCovers(next);
+    } catch (e) {
+      console.error("GRADE COVER ERROR", e);
+      setError(e?.message || "تعذر رفع صورة الصف.");
+    } finally {
+      setUploadingGrade("");
+    }
+  };
+
+  const handleCoverRemove = async (grade) => {
+    setUploadingGrade(grade);
+    setError("");
+    try {
+      const next = omitGradeCover(covers, grade);
+      await saveGradeCovers(next);
+      setCovers(next);
+    } catch (e) {
+      setError(e?.message || "تعذر إزالة صورة الصف.");
+    } finally {
+      setUploadingGrade("");
+    }
   };
 
   const handleCreate = async (data) => {
@@ -292,6 +346,8 @@ export default function LessonLibraryPage({ session }) {
     }
   };
 
+  const gradeCover = gradeSel ? resolveGradeCover(covers, gradeSel) : "";
+
   return (
     <div className="ts-root duo-lib">
       <style>{LIB_CSS}</style>
@@ -317,7 +373,7 @@ export default function LessonLibraryPage({ session }) {
         {lessons === null && <p style={{ color: "var(--duo-muted)", fontWeight: 700 }}>جاري التحميل...</p>}
 
         {lessons && lessons.length === 0 && (
-          <div className="duo-lib-empty">
+          <div className="duo-lib-empty" style={{ marginBottom: 18 }}>
             <p>لا توجد دروس بعد. ابدأ بإنشاء درسك الأول.</p>
             <div style={{ display: "flex", gap: 8, justifyContent: "center", flexWrap: "wrap" }}>
               <button onClick={() => setShowCreate(true)} className="duo-lib-btn primary">+ إنشاء درس جديد</button>
@@ -326,124 +382,120 @@ export default function LessonLibraryPage({ session }) {
           </div>
         )}
 
-        {lessons && lessons.length > 0 && (
+        {/* ——— الخطوة 1: اختيار الصف ——— */}
+        {lessons && !gradeSel && gradeCards.length > 0 && (
           <>
-            <section className="duo-lib-filters" aria-label="فلاتر الدروس">
-              <div className="duo-lib-search">
-                <input className="ts-input" placeholder="🔍 بحث في الدروس..." value={query} onChange={(e) => setQuery(e.target.value)} />
-                {statusCounts.length > 1 && (
-                  <div className="duo-lib-chips">
-                    <button type="button" className={`duo-lib-chip status${statusFilter === "" ? " on" : ""}`} onClick={() => setStatusFilter("")}>
-                      كل الحالات <small>{lessons.length}</small>
-                    </button>
-                    {statusCounts.map(([label, n]) => (
-                      <button key={label} type="button" className={`duo-lib-chip status${statusFilter === label ? " on" : ""}`} onClick={() => setStatusFilter(statusFilter === label ? "" : label)}>
-                        {label} <small>{n}</small>
-                      </button>
-                    ))}
-                  </div>
-                )}
-              </div>
-
-              {LEVELS.map((lv, idx) => {
-                const opts = levelOptions[idx];
-                if (opts.length === 0 || (opts.length === 1 && !sel[lv.kind] && opts[0][0] === lv.none)) return null;
+            <p className="duo-lib-hint">اختر الصف لتفتح الترم والوحدات والدروس. ويمكنك إضافة صورة لكل صف — تظهر للطالب بشفافية 50%.</p>
+            <div className="duo-lib-grades">
+              {gradeCards.map(([g, n], gi) => {
+                const cover = resolveGradeCover(covers, g);
                 return (
-                  <div key={lv.kind} className="duo-lib-row">
-                    <span className="duo-lib-rowlabel">{lv.label}</span>
-                    <div className="duo-lib-chips">
-                      <button type="button" className={`duo-lib-chip${sel[lv.kind] === "" ? " on" : ""}`} onClick={() => sel[lv.kind] && pick(lv.kind, sel[lv.kind])}>
-                        الكل <small>{opts.reduce((s, [, n]) => s + n, 0)}</small>
-                      </button>
-                      {opts.map(([value, n]) => (
-                        <button key={value} type="button" className={`duo-lib-chip${sel[lv.kind] === value ? " on" : ""}`} onClick={() => pick(lv.kind, value)}>
-                          {value} <small>{n}</small>
-                        </button>
-                      ))}
-                    </div>
+                  <div key={g} className="duo-lib-gcard" data-accent={gi % 6} style={{ animationDelay: `${Math.min(gi, 8) * 0.04}s` }}>
+                    <button type="button" className="duo-lib-gcard-main" onClick={() => openGrade(g)}>
+                      <span className="duo-lib-gcover" aria-hidden="true" style={cover ? { backgroundImage: `url("${cover}")` } : undefined} />
+                      <span className="duo-lib-gcard-body">
+                        <b>{g}</b>
+                        <small>{n} {n === 1 ? "درس" : "دروس"}</small>
+                      </span>
+                    </button>
+                    <CoverTools grade={g} cover={cover} uploading={uploadingGrade === g} onFile={handleCoverFile} onRemove={handleCoverRemove} />
                   </div>
                 );
               })}
+            </div>
+          </>
+        )}
 
-              <div className="duo-lib-foot">
-                <span className="duo-lib-count">
-                  <b>{filtered.length}</b> درس في <b>{groups.length}</b> {groups.length === 1 ? "مجموعة" : "مجموعات"}
-                </span>
-                <span style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
-                  {groups.length > 1 && (
-                    <>
-                      <button type="button" className="duo-lib-btn small" onClick={() => setAllOpen(true)}>فتح الكل</button>
-                      <button type="button" className="duo-lib-btn small" onClick={() => setAllOpen(false)}>طي الكل</button>
-                    </>
-                  )}
-                  {anyFilter && <button type="button" className="duo-lib-btn small danger" onClick={clearAll}>✕ مسح الفلاتر</button>}
-                </span>
+        {/* ——— الخطوة 2: داخل الصف (ترم ← وحدات ← دروس) ——— */}
+        {lessons && gradeSel && (
+          <>
+            <section className="duo-lib-ghero">
+              <span className="duo-lib-gcover" aria-hidden="true" style={gradeCover ? { backgroundImage: `url("${gradeCover}")` } : undefined} />
+              <div className="duo-lib-ghero-text">
+                <button type="button" className="duo-lib-btn small" onClick={closeGrade}>→ كل الصفوف</button>
+                <h2>{gradeSel}</h2>
               </div>
+              <CoverTools grade={gradeSel} cover={gradeCover} uploading={uploadingGrade === gradeSel} onFile={handleCoverFile} onRemove={handleCoverRemove} />
             </section>
 
-            {filtered.length === 0 ? (
+            {terms.length === 0 ? (
               <div className="duo-lib-empty">
-                <p>لا توجد دروس مطابقة.</p>
-                <button type="button" className="duo-lib-btn" onClick={clearAll}>مسح الفلاتر</button>
+                <p>لا توجد دروس في هذا الصف بعد.</p>
+                <button type="button" className="duo-lib-btn primary" onClick={() => setShowCreate(true)}>+ إنشاء درس جديد</button>
               </div>
             ) : (
-              <div className="duo-lib-groups">
-                {groups.map((g, gi) => {
-                  const open = isOpen(g.key);
-                  return (
-                    <section key={g.key} className={`duo-lib-group${open ? " open" : ""}`} data-accent={gi % 6} style={{ animationDelay: `${Math.min(gi, 8) * 0.04}s` }}>
-                      <button type="button" className="duo-lib-ghead" onClick={() => setOpenMap((m) => ({ ...m, [g.key]: !open }))} aria-expanded={open}>
-                        <span className="duo-lib-gicon" aria-hidden="true">📘</span>
-                        <span className="duo-lib-gtext">
-                          <span className="duo-lib-gname">{g.subject}</span>
-                          <span className="duo-lib-gpath">
-                            <span>{g.stage}</span>
-                            <span>{g.grade}</span>
-                            <span>{g.term}</span>
+              <>
+                <div className="duo-lib-terms" role="tablist" aria-label="الترم">
+                  {terms.map((t) => (
+                    <button
+                      key={t.term}
+                      type="button"
+                      role="tab"
+                      aria-selected={activeTerm?.term === t.term}
+                      className={`duo-lib-chip${activeTerm?.term === t.term ? " on" : ""}`}
+                      onClick={() => { setTermSel(t.term); setOpenMap({}); }}
+                    >
+                      {t.term} <small>{t.count}</small>
+                    </button>
+                  ))}
+                  {activeTerm && activeTerm.units.length > 1 && (
+                    <span className="duo-lib-terms-tools">
+                      <button type="button" className="duo-lib-btn small" onClick={() => setAllOpen(true)}>فتح الكل</button>
+                      <button type="button" className="duo-lib-btn small" onClick={() => setAllOpen(false)}>طي الكل</button>
+                    </span>
+                  )}
+                </div>
+
+                <div className="duo-lib-groups">
+                  {activeTerm && activeTerm.units.map((u, gi) => {
+                    const open = isOpen(u.key);
+                    return (
+                      <section key={u.key} className={`duo-lib-group${open ? " open" : ""}`} data-accent={gi % 6} style={{ animationDelay: `${Math.min(gi, 8) * 0.04}s` }}>
+                        <button type="button" className="duo-lib-ghead" onClick={() => setOpenMap((m) => ({ ...m, [u.key]: !open }))} aria-expanded={open}>
+                          <span className="duo-lib-gicon" aria-hidden="true">📘</span>
+                          <span className="duo-lib-gtext">
+                            <span className="duo-lib-gname">{u.subject}</span>
                           </span>
-                        </span>
-                        <span className="duo-lib-gcount">{g.items.length}</span>
-                        <span className="duo-lib-caret" aria-hidden="true">‹</span>
-                      </button>
-                      {open && (
-                        <div className="duo-lib-gbody">
-                          {g.items.map((l, i) => {
-                            const st = statusMeta(l.status);
-                            return (
-                              <article key={l.id} className="duo-lib-card" data-accent={gi % 6}>
-                                <span className="duo-lib-num">{l.sortOrder > 0 ? l.sortOrder : i + 1}</span>
-                                <div className="duo-lib-main">
-                                  <div className="duo-lib-titlerow">
-                                    <h3>{l.title}</h3>
-                                    <span className="duo-lib-status" data-tone={st.tone}>{st.label}</span>
+                          <span className="duo-lib-gcount">{u.items.length}</span>
+                          <span className="duo-lib-caret" aria-hidden="true">‹</span>
+                        </button>
+                        {open && (
+                          <div className="duo-lib-gbody">
+                            {u.items.map((l, i) => {
+                              const st = statusMeta(l.status);
+                              return (
+                                <article key={l.id} className="duo-lib-card" data-accent={gi % 6}>
+                                  <span className="duo-lib-num">{l.sortOrder > 0 ? l.sortOrder : i + 1}</span>
+                                  <div className="duo-lib-main">
+                                    <div className="duo-lib-titlerow">
+                                      <h3>{l.title}</h3>
+                                      <span className="duo-lib-status" data-tone={st.tone}>{st.label}</span>
+                                    </div>
+                                    {l.updatedAt && <p className="duo-lib-meta">تعديل {timeAgo(l.updatedAt)}</p>}
+                                    {l.description && <p className="duo-lib-desc">{l.description}</p>}
                                   </div>
-                                  <p className="duo-lib-meta">
-                                    {[l.stage, l.grade, l.term, l.subject].filter(Boolean).join(" / ")}
-                                    {l.updatedAt ? ` · تعديل ${timeAgo(l.updatedAt)}` : ""}
-                                  </p>
-                                  {l.description && <p className="duo-lib-desc">{l.description}</p>}
-                                </div>
-                                <div className="duo-lib-actions">
-                                  <button onClick={() => navigate(`/teacher/lesson/${l.id}`)} className="duo-lib-btn primary small">فتح الاستوديو</button>
-                                  <button onClick={() => handleDuplicate(l.id)} disabled={busy} className="duo-lib-btn pink small">نسخ الدرس</button>
-                                  {confirmDeleteId === l.id ? (
-                                    <>
-                                      <button onClick={() => handleDelete(l.id)} disabled={busy} className="duo-lib-btn danger solid small">تأكيد الحذف</button>
-                                      <button onClick={() => setConfirmDeleteId(null)} className="duo-lib-btn small">إلغاء</button>
-                                    </>
-                                  ) : (
-                                    <button onClick={() => setConfirmDeleteId(l.id)} className="duo-lib-btn danger small">حذف</button>
-                                  )}
-                                </div>
-                              </article>
-                            );
-                          })}
-                        </div>
-                      )}
-                    </section>
-                  );
-                })}
-              </div>
+                                  <div className="duo-lib-actions">
+                                    <button onClick={() => navigate(`/teacher/lesson/${l.id}`)} className="duo-lib-btn primary small">فتح الاستوديو</button>
+                                    <button onClick={() => handleDuplicate(l.id)} disabled={busy} className="duo-lib-btn pink small">نسخ الدرس</button>
+                                    {confirmDeleteId === l.id ? (
+                                      <>
+                                        <button onClick={() => handleDelete(l.id)} disabled={busy} className="duo-lib-btn danger solid small">تأكيد الحذف</button>
+                                        <button onClick={() => setConfirmDeleteId(null)} className="duo-lib-btn small">إلغاء</button>
+                                      </>
+                                    ) : (
+                                      <button onClick={() => setConfirmDeleteId(l.id)} className="duo-lib-btn danger small">حذف</button>
+                                    )}
+                                  </div>
+                                </article>
+                              );
+                            })}
+                          </div>
+                        )}
+                      </section>
+                    );
+                  })}
+                </div>
+              </>
             )}
           </>
         )}

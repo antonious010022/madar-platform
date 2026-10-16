@@ -1,5 +1,10 @@
 import { supabase } from "./supabaseClient";
 import { uid } from "./constants";
+import {
+  getGuestLessonProgress,
+  saveGuestLessonProgress,
+  listGuestProgress,
+} from "./guestStorage";
 
 // ===========================================================================
 // AUTH (Supabase Auth — teachers and students share the same auth system)
@@ -845,49 +850,53 @@ export async function saveBrandSettings(value) {
   if (error) throw error;
 }
 
-/** grade_covers: { [gradeName]: imageUrl } in platform_settings */
+// ===========================================================================
+// GRADE COVERS — صورة كل صف (تظهر للطالب عند اختيار الصف + في مكتبة المعلم)
+// تُحفظ في platform_settings تحت المفتاح grade_covers بالشكل { "الصف الأول": "https://..." }
+// ===========================================================================
+const normGrade = (g) => String(g || "").replace(/^\s*الصف\s*/u, "").replace(/\s+/g, " ").trim();
+
 export async function getGradeCovers() {
-  const { data, error } = await supabase
-    .from("platform_settings")
-    .select("value")
-    .eq("key", "grade_covers")
-    .maybeSingle();
+  const { data, error } = await supabase.from("platform_settings").select("value").eq("key", "grade_covers").maybeSingle();
   if (error) throw error;
-  const v = data?.value;
-  return v && typeof v === "object" && !Array.isArray(v) ? v : {};
+  return data?.value && typeof data.value === "object" ? data.value : {};
 }
 
-export async function saveGradeCovers(covers) {
-  if (!(await isStaffUser())) throw new Error("ليس لديك صلاحية.");
-  const value =
-    covers && typeof covers === "object" && !Array.isArray(covers) ? covers : {};
+export async function saveGradeCovers(map) {
   const { error } = await supabase.from("platform_settings").upsert({
     key: "grade_covers",
-    value,
+    value: map || {},
     updated_at: new Date().toISOString(),
   });
   if (error) throw error;
 }
 
-export async function uploadGradeCover(file, gradeLabel) {
-  if (!(await isStaffUser())) throw new Error("ليس لديك صلاحية.");
-  if (!file) throw new Error("لا يوجد ملف.");
-  const safe =
-    String(gradeLabel || "grade")
-      .trim()
-      .replace(/[^\w\u0600-\u06FF-]+/g, "_")
-      .slice(0, 40) || "grade";
+/** رابط صورة الصف: مطابقة تامة أولاً ثم مطابقة بدون كلمة "الصف". */
+export function resolveGradeCover(covers, grade) {
+  if (!covers || !grade) return "";
+  if (covers[grade]) return covers[grade];
+  const n = normGrade(grade);
+  for (const [k, v] of Object.entries(covers)) if (v && normGrade(k) === n) return v;
+  return "";
+}
+
+/** نسخة من الخريطة بدون صورة الصف المطلوب (بكل صيغ اسمه). */
+export function omitGradeCover(covers, grade) {
+  const n = normGrade(grade);
+  const next = {};
+  for (const [k, v] of Object.entries(covers || {})) if (normGrade(k) !== n) next[k] = v;
+  return next;
+}
+
+export async function uploadGradeCover(file) {
   const ext = (file.name.split(".").pop() || "jpg").toLowerCase();
-  const path = `grade-covers/${safe}-${Date.now()}.${ext}`;
+  const path = `grade-covers/${uid("cover")}.${ext}`;
   const bucketName = "lesson-images";
-  const { error } = await supabase.storage
-    .from(bucketName)
-    .upload(path, file, { cacheControl: "3600", upsert: true });
+  const { error } = await supabase.storage.from(bucketName).upload(path, file, { cacheControl: "3600", upsert: false });
   if (error) throw error;
   const { data } = supabase.storage.from(bucketName).getPublicUrl(path);
   return data.publicUrl;
 }
-
 
 /** Default journey: sequential scenes only (no forced final review). */
 export function defaultJourneyConfig(sceneCount) {
@@ -942,9 +951,9 @@ export async function setLessonComingSoon(lessonId, currentJourneyConfig = {}) {
 
 
 // ===========================================================================
-// STUDENT PROGRESS (per account — table public.student_lesson_progress)
-// Guests have no progress: every function returns empty / does nothing without a session.
-// RLS guarantees a student can only read and write their own rows.
+// STUDENT PROGRESS
+// Authenticated → public.student_lesson_progress (RLS by auth.uid()).
+// Guest → localStorage only (guestStorage). Never mixed with account rows.
 // ===========================================================================
 
 // Writes still in flight (e.g. the final save fired when leaving a lesson). Reads wait for them,
@@ -991,11 +1000,12 @@ function rowToProgress(row) {
   };
 }
 
-/** Progress of the current student in ONE lesson (lesson-page shape), or null if none / guest. */
+/** Progress for the active identity: account row or guest local. */
 export async function getMyLessonProgress(lessonId) {
   await waitForProgressWrites();
+  if (!lessonId) return null;
   const userId = await getCurrentUserId();
-  if (!userId || !lessonId) return null;
+  if (!userId) return getGuestLessonProgress(lessonId);
   const { data, error } = await supabase
     .from("student_lesson_progress")
     .select("*")
@@ -1006,11 +1016,12 @@ export async function getMyLessonProgress(lessonId) {
   return data ? rowToProgress(data) : null;
 }
 
-/** Create or update the current student's progress in one lesson. No-op for guests. */
+/** Save progress for the active identity (Supabase account or guest local). */
 export function saveMyLessonProgress(lessonId, progress) {
   const task = (async () => {
+    if (!lessonId) return false;
     const userId = await getCurrentUserId();
-    if (!userId || !lessonId) return false;
+    if (!userId) return saveGuestLessonProgress(lessonId, progress);
     const row = { user_id: userId, lesson_id: lessonId, ...progressToRow(progress) };
     const { error } = await supabase
       .from("student_lesson_progress")
@@ -1023,11 +1034,11 @@ export function saveMyLessonProgress(lessonId, progress) {
   return task;
 }
 
-/** All of the current student's progress rows, most recently updated first. Empty for guests. */
+/** All progress for the active identity (account DB or guest local). */
 export async function listMyProgress() {
   await waitForProgressWrites();
   const userId = await getCurrentUserId();
-  if (!userId) return [];
+  if (!userId) return listGuestProgress();
   const { data, error } = await supabase
     .from("student_lesson_progress")
     .select("lesson_id, current_scene, completed_scenes, final_review_completed, lesson_completed, completed_at, updated_at")
