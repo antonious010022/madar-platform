@@ -91,6 +91,7 @@ function ProgressRing({ pct, size = 112, stroke = 11 }) {
 const SB_NAV = [
   { to: "/student", label: "الرئيسية", icon: "🏠", end: true },
   { to: "/student/saved", label: "دروسي المحفوظة", icon: "🔖" },
+  { to: "/welcome", label: "عن المنصة", icon: "✨" },
 ];
 
 /* القائمة الجانبية: ملف الطالب + تقدّمه، ثم الفصل والوحدات (تصفّح الصف)، ثم التنقّل والتخصيص */
