@@ -1,4 +1,3 @@
-
 import { useEffect, useRef } from "react";
 import {
   BrowserRouter,
@@ -29,6 +28,7 @@ import PrivacyPage from "./pages/PrivacyPage";
 import TermsPage from "./pages/TermsPage";
 import CmsPage from "./pages/CmsPage";
 import TeacherSettings from "./pages/TeacherSettings";
+import { TeacherThemeScope } from "./lib/teacherTheme";
 
 import { DUO_CSS } from "./styles/duoTheme";
 import {
@@ -99,21 +99,33 @@ function TeacherGate() {
   const session = useTeacherAuth();
   const staff = useStaffStatus(session);
 
+  // ثيم المعلم المستقل: نلفّ كل حالات /teacher/* (تحميل، تسجيل دخول، الصفحات) في Scope واحد ثابت،
+  // فيتفرض ثيم المعلم من أول لحظة ومن غير وميض. AccessDenied برّه الـScope (دي شاشة للطلاب).
   if (session === undefined || (session && staff === undefined)) {
     return (
-      <PageLoader label="جاري التحقق من الصلاحيات…" />
+      <TeacherThemeScope>
+        <PageLoader label="جاري التحقق من الصلاحيات…" />
+      </TeacherThemeScope>
     );
   }
 
   if (session === null) {
-    return <TeacherLogin />;
+    return (
+      <TeacherThemeScope>
+        <TeacherLogin />
+      </TeacherThemeScope>
+    );
   }
 
   if (!staff) {
     return <AccessDenied />;
   }
 
-  return <Outlet context={{ session }} />;
+  return (
+    <TeacherThemeScope>
+      <Outlet context={{ session }} />
+    </TeacherThemeScope>
+  );
 }
 
 function TeacherLibraryRoute() {

@@ -1,4 +1,5 @@
 import { PageLoader } from "../components/DuoFx";
+import TeacherThemeToggle from "../lib/teacherTheme";
 import { useEffect, useMemo, useState } from "react";
 import { useNavigate, Link } from "react-router-dom";
 import { CreateLessonModal } from "../components/Studio";
@@ -352,6 +353,7 @@ export default function LessonLibraryPage({ session }) {
   return (
     <div className="ts-root duo-lib">
       <style>{LIB_CSS}</style>
+      <TeacherThemeToggle />
       {showCreate && <CreateLessonModal onClose={() => setShowCreate(false)} onCreate={handleCreate} />}
 
       <div className="duo-lib-top">

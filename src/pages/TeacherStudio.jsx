@@ -9,7 +9,7 @@ import {
   TimelineStudioEditor,
   QuestionStudioEditor,
 } from "../components/Studio";
-import { STATUSES, statusMeta, uid } from "../lib/constants";
+import { STATUSES, statusMeta } from "../lib/constants";
 import { slugify } from "../lib/slugify";
 import {
   getLessonWithScenes,
@@ -27,6 +27,7 @@ import {
   setLessonComingSoon,
 } from "../lib/db";
 import PresentationTools from "../components/PresentationTools";
+import TeacherThemeToggle from "../lib/teacherTheme";
 
 const AUTOSAVE_DELAY = 800;
 
@@ -521,6 +522,7 @@ export default function TeacherStudioPage() {
 
   return (
     <div className="ts-root" style={{ minHeight: "calc(100vh - 41px)", background: "#F7F5FB" }}>
+      <TeacherThemeToggle />
       {/* Header Bar */}
       <div className="flex items-center justify-between px-6 py-3 bg-white shadow-sm border-b flex-wrap gap-2" style={{ borderColor: "#E3E0EE" }}>
         <div className="flex items-center gap-3 flex-wrap">
@@ -1050,8 +1052,11 @@ export default function TeacherStudioPage() {
 
               {showMM && (
               <MindMapStudioBuilder
-                mindmap={scene.mindmap || { id: uid("mm"), label: "", description: "", children: [] }}
+                key={scene.id}
+                mindmap={scene.mindmap || null}
                 scenes={lesson.scenes}
+                resetKey={scene.id}
+                rootPlaceholder={scene.title || lesson.title}
                 onChange={(map) => patchScene(scene.id, { mindmap: map })}
               />
               )}

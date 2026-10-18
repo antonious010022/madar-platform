@@ -1,4 +1,5 @@
 import { PageLoader } from "../components/DuoFx";
+import TeacherThemeToggle from "../lib/teacherTheme";
 import { useEffect, useMemo, useState } from "react";
 import { Link } from "react-router-dom";
 import { listAllFacts, saveFact, deleteFact } from "../lib/didYouKnow";
@@ -114,6 +115,7 @@ export default function TeacherFacts() {
 
   return (
     <div className="ts-root duo-tf" dir="rtl">
+      <TeacherThemeToggle />
       <div className="duo-tf-wrap">
         <Link to="/teacher" className="duo-tf-back">→ مكتبة الدروس</Link>
 

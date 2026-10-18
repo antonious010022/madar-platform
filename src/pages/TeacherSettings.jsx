@@ -1,4 +1,5 @@
 import { PageLoader } from "../components/DuoFx";
+import TeacherThemeToggle from "../lib/teacherTheme";
 import { useEffect, useMemo, useState } from "react";
 import { Link } from "react-router-dom";
 import { SOCIAL_PLATFORMS } from "../components/SocialIcons";
@@ -257,6 +258,7 @@ export default function TeacherSettings() {
   return (
     <div className="ts-root duo-ts min-h-screen dir-rtl text-right p-4 sm:p-6">
       <style>{TS_CSS}</style>
+      <TeacherThemeToggle />
       <div className="max-w-3xl mx-auto">
         <div className="flex flex-wrap items-center justify-between gap-3 mb-2">
           <h1 className="font-black text-xl" style={{ color: "var(--duo-green-ink)" }}>

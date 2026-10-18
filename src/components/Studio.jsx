@@ -14,10 +14,55 @@ import { TableRow } from "@tiptap/extension-table-row";
 import { TableCell } from "@tiptap/extension-table-cell";
 import { TableHeader } from "@tiptap/extension-table-header";
 import { ImageUploadField } from "./Viewer";
+import { MindMapGraph } from "./MindMap";
 import { uid } from "../lib/constants";
 import { listCurriculumNodes } from "../lib/db";
 import { Hotword } from "../lib/hotwordExtension";
 import { Extension } from "@tiptap/core";
+
+/* ===== حماية المحرّر من ثيم المنصة (الطالب) =====
+   أي عنصر عليه الكلاس ts-force-light يفضل فاتح دايمًا، حتى لو المنصة في الدارك (ثيم الطالب أو ثيم المعلم).
+   الفكرة: نعيد تعريف متغيّرات duoTheme الفاتحة على العنصر نفسه، فكل اللي جواه بيرجع للألوان الفاتحة. */
+const STUDIO_LIGHT_CSS = `
+html:not([data-teacher-theme="dark"]) .ts-force-light {
+  color-scheme: light;
+  --lp-bg: #FFFFFF; --lp-surface: #FFFFFF; --lp-surface-soft: #FFFFFF; --lp-text: #263B35; --lp-muted: #697A73;
+  --lp-teal: #147A6A; --lp-teal-deep: #0E5348; --lp-line: #DED4BD; --lp-soft-accent: rgba(20, 122, 106, 0.08);
+  --lp-card-shadow: 0 18px 50px -28px rgba(14, 83, 72, 0.25);
+  --duo-green: #147A6A;  --duo-green-d: #0E5348;  --duo-green-s: #E0F1EC;  --duo-green-ink: #0E5348;
+  --duo-blue: #3F7FA3;   --duo-blue-d: #37698A;   --duo-blue-s: #E6EEF3;   --duo-blue-ink: #2F5870;
+  --duo-purple: #7A5CA3; --duo-purple-d: #5A4175; --duo-purple-s: #EFE8F4; --duo-purple-ink: #5A4175;
+  --duo-orange: #B8832A; --duo-orange-d: #86600F; --duo-orange-s: #F8EFD8; --duo-orange-ink: #86600F;
+  --duo-yellow: #B8832A; --duo-yellow-d: #9C742B; --duo-yellow-s: #F8EFD8; --duo-yellow-ink: #7A5A1E;
+  --duo-pink: #A8607A;   --duo-pink-d: #8A4560;   --duo-pink-s: #F5E6EC;   --duo-pink-ink: #8A4560;
+  --duo-red: #C2562F;    --duo-red-d: #A3402F;    --duo-red-s: #FBE7DE;
+  --duo-ink: #263B35; --duo-ink-soft: #3F4E49; --duo-muted: #697A73;
+  --duo-line: #DED4BD; --duo-line-d: #C7BA9C; --duo-snow: #FFFFFF;
+  --duo-font-display: "Segoe UI", "Cairo", "Noto Sans Arabic", system-ui, sans-serif;
+  --duo-font-body: "Segoe UI", "Cairo", "Noto Sans Arabic", system-ui, sans-serif;
+  --duo-spring: cubic-bezier(0.34, 1.56, 0.64, 1);
+  --md-bg: #FFFFFF; --md-surface: #FFFFFF; --md-surface-2: #FFFFFF; --md-surface-3: #FFFFFF;
+  --md-teal: #147A6A; --md-teal-deep: #0E5348; --md-teal-dark: #0A3F36;
+  --md-teal-mid: #3E9A8A; --md-teal-light: #A9D6CB; --md-teal-soft: #E0F1EC;
+  --md-gold: #9C742B; --md-gold-deep: #7A5A1E; --md-gold-light: #E3C08B; --md-gold-soft: #F8EFD8;
+  --md-text: #263B35; --md-text-soft: #3F4E49; --md-muted: #697A73; --md-muted-light: #9DB0A9;
+  --md-border: #DED4BD; --md-border-strong: #C7BA9C;
+  --md-shadow-sm: 0 6px 18px -10px rgba(14, 83, 72, 0.22); --md-shadow-md: 0 14px 34px -16px rgba(14, 83, 72, 0.25); --md-shadow-lg: 0 18px 50px -28px rgba(14, 83, 72, 0.25);
+  --md-radius: 1.15rem; --md-radius-lg: 1.6rem;
+  --md-font: var(--duo-font-body);
+  --md-sienna: #B8832A; --md-blue: #3F7FA3; --md-violet: #7A5CA3; --md-coral: #C2562F; --md-pink: #A8607A; --md-success: #147A6A;
+  --md-rainbow: linear-gradient(90deg, #147A6A 0 20%, #3F7FA3 20% 40%, #7A5CA3 40% 60%, #B8832A 60% 80%, #A8607A 80% 100%);
+  --acc: #147A6A; --acc-deep: #0E5348; --acc-ink: #0E5348; --acc-soft: #E0F1EC; --acc-light: #A9D6CB; --acc-glow: #147A6A40;
+  color: var(--duo-ink);
+}
+html:not([data-teacher-theme="dark"]) .ts-force-light .ts-input { background: var(--duo-snow); color: var(--duo-ink); border-color: var(--duo-line); }
+`;
+if (typeof document !== "undefined" && !document.getElementById("ts-studio-light-lock")) {
+  const el = document.createElement("style");
+  el.id = "ts-studio-light-lock";
+  el.textContent = STUDIO_LIGHT_CSS;
+  document.head.appendChild(el);
+}
 
 // ---------------------------------------------------------------------------
 // Rich Text Editor — Tiptap-based, RTL-first.
@@ -479,7 +524,7 @@ export function RichTextEditor({ value, onChange, uploadFn, onHotwordDetected })
 
   return (
     <div
-      className="border rounded-2xl overflow-hidden bg-white"
+      className="border rounded-2xl overflow-hidden bg-white ts-force-light"
       style={{
         borderColor: "#E3E0EE",
       }}
@@ -1321,7 +1366,7 @@ export function StudioHotwords({ hotwords, onAdd, onRemove, onUpdate, uploadFn }
   };
 
   return (
-    <div className="mb-6 p-4 rounded-2xl bg-white border" style={{ borderColor: "#E3E0EE" }}>
+    <div className="mb-6 p-4 rounded-2xl bg-white border ts-force-light" style={{ borderColor: "#E3E0EE" }}>
       <h3 className="font-bold text-base mb-2" style={{ color: "#4B2FD1" }}>✨ الكلمات التفاعلية (Hotwords)</h3>
       <p className="text-xs mb-3" style={{ color: "#433F66" }}>
         اكتب <b>*الكلمة*</b> داخل محتوى الشرح فتتحول تلقائيًا لكلمة تفاعلية، أو حدد أي نص من المعاينة بالأسفل واضغط الزر هنا لإضافته يدويًا:
@@ -1397,97 +1442,288 @@ export function StudioHotwords({ hotwords, onAdd, onRemove, onUpdate, uploadFn }
   );
 }
 
-export function MindMapStudioBuilder({ mindmap, scenes, onChange }) {
-  const updateNodeRecursive = (node, id, updater) => {
-    if (node.id === id) return updater(node);
-    if (node.children) return { ...node, children: node.children.map((c) => updateNodeRecursive(c, id, updater)) };
-    return node;
+// ---------------------------------------------------------------------------
+// Mind Map Studio Builder — محرر مرئي.
+// بيعرض نفس خريطة الطالب بالظبط (MindMapGraph) ومعاها لوحة لتعديل العقدة المحدّدة.
+// الـ API ثابت: <MindMapStudioBuilder mindmap scenes onChange />  (+ resetKey / rootPlaceholder اختياريين)
+// ---------------------------------------------------------------------------
+const mmFind = (node, id) => {
+  if (node.id === id) return node;
+  for (const c of node.children || []) { const r = mmFind(c, id); if (r) return r; }
+  return null;
+};
+const mmPath = (node, id, trail = []) => {
+  const t = [...trail, node];
+  if (node.id === id) return t;
+  for (const c of node.children || []) { const r = mmPath(c, id, t); if (r) return r; }
+  return null;
+};
+const mmParent = (node, id) => {
+  for (const c of node.children || []) {
+    if (c.id === id) return node;
+    const r = mmParent(c, id);
+    if (r) return r;
+  }
+  return null;
+};
+const mmUpdate = (node, id, fn) =>
+  node.id === id ? fn(node) : { ...node, children: (node.children || []).map((c) => mmUpdate(c, id, fn)) };
+const mmRemove = (node, id) => ({ ...node, children: (node.children || []).filter((c) => c.id !== id).map((c) => mmRemove(c, id)) });
+const mmCount = (node) => 1 + (node.children || []).reduce((s, c) => s + mmCount(c), 0);
+const mmEmpty = (node, isRoot = true) => (!isRoot && !node.label.trim() ? 1 : 0) + (node.children || []).reduce((s, c) => s + mmEmpty(c, false), 0);
+
+/** يضمن id فريد وحقول سليمة لكل عقدة (لخرائط قديمة أو مولّدة بدون ids) — بدون ما نغيّر المحفوظ إلا عند أول تعديل */
+function mmNormalize(node, path = "0", seen = new Set()) {
+  const base = node && typeof node === "object" ? node : {};
+  let id = base.id ? String(base.id) : `mm_${path}`;
+  if (seen.has(id)) id = `${id}_${path}`;
+  seen.add(id);
+  return {
+    ...base,
+    id,
+    label: typeof base.label === "string" ? base.label : "",
+    description: typeof base.description === "string" ? base.description : "",
+    children: (Array.isArray(base.children) ? base.children : []).filter(Boolean).map((c, i) => mmNormalize(c, `${path}_${i}`, seen)),
   };
+}
 
-  const deleteNodeRecursive = (node, id) => {
-    if (!node.children) return node;
-    return { ...node, children: node.children.filter((c) => c.id !== id).map((c) => deleteNodeRecursive(c, id)) };
+/** نص بمسافات/شرطات => شجرة عقد.  "عنوان | وصف" لإضافة وصف. */
+function mmParseOutline(text) {
+  const root = { children: [] };
+  const stack = [{ indent: -1, node: root }];
+  String(text || "").split(/\r?\n/).forEach((raw) => {
+    const line = raw.replace(/\t/g, "  ");
+    if (!line.trim()) return;
+    const m = line.match(/^(\s*)(?:[-–—•*]\s*)?(.*)$/);
+    const indent = m[1].length;
+    const [label, ...rest] = m[2].trim().split(/\s*\|\s*/);
+    if (!label) return;
+    const node = { id: uid("mm"), label: label.trim(), description: rest.join(" | ").trim(), children: [] };
+    while (stack.length > 1 && stack[stack.length - 1].indent >= indent) stack.pop();
+    stack[stack.length - 1].node.children.push(node);
+    stack.push({ indent, node });
+  });
+  return root.children;
+}
+
+function MmBtn({ onClick, disabled, kind = "ghost", title, children }) {
+  const kinds = {
+    primary: { background: "#4B2FD1", color: "#FFFFFF", borderColor: "#4B2FD1" },
+    ghost: { background: "#FFFFFF", color: "#4B2FD1", borderColor: "#E3E0EE" },
+    danger: { background: "#FFFFFF", color: "#D6334B", borderColor: "#F3C9D0" },
   };
-
-  const handleUpdate = (id, updater) => onChange(updateNodeRecursive(mindmap, id, updater));
-
-  const handleAddChild = (parentId) => {
-    const newChild = { id: uid("mm"), label: "عنصر فرعي جديد", description: "", children: [] };
-    handleUpdate(parentId, (node) => ({ ...node, children: [...(node.children || []), newChild] }));
-  };
-
-  const handleDelete = (id) => {
-    if (id === mindmap.id) {
-      // eslint-disable-next-line no-alert
-      alert("لا يمكن حذف العقدة الرئيسية (Root).");
-      return;
-    }
-    onChange(deleteNodeRecursive(mindmap, id));
-  };
-
   return (
-    <div className="mb-6 p-4 rounded-2xl bg-white border" style={{ borderColor: "#E3E0EE" }}>
-      <h3 className="font-bold text-base mb-3" style={{ color: "#4B2FD1" }}>🧠 مصمم الخريطة الذهنية (Mind Map Builder)</h3>
-      <MindMapNodeEditor node={mindmap} scenes={scenes} onAddChild={handleAddChild} onUpdate={handleUpdate} onDelete={handleDelete} />
-    </div>
+    <button
+      type="button"
+      title={title}
+      disabled={disabled}
+      onClick={onClick}
+      className="text-xs px-3 py-1.5 rounded-lg font-bold border"
+      style={{ ...kinds[kind], opacity: disabled ? 0.4 : 1, cursor: disabled ? "not-allowed" : "pointer" }}
+    >
+      {children}
+    </button>
   );
 }
 
-function MindMapNodeEditor({ node, scenes, onAddChild, onUpdate, onDelete }) {
-  const [isExpanded, setIsExpanded] = useState(true);
-  const [isEditing, setIsEditing] = useState(false);
-  const [label, setLabel] = useState(node.label);
-  const [desc, setDesc] = useState(node.description || "");
-  const [sceneId, setSceneId] = useState(node.sceneId || "");
+export function MindMapStudioBuilder({ mindmap, scenes = [], onChange, resetKey, rootPlaceholder }) {
+  // جذر ثابت لو المشهد لسه مفيهوش خريطة (قبل كده كان بيتولّد id جديد مع كل render)
+  const fallbackRef = useRef(null);
+  if (!mindmap && !fallbackRef.current) fallbackRef.current = { id: uid("mm"), label: "", description: "", children: [] };
+  const map = useMemo(() => mmNormalize(mindmap || fallbackRef.current), [mindmap]);
+
+  const [selectedId, setSelectedId] = useState(map.id);
+  const [reveal, setReveal] = useState(null);
+  const [bulk, setBulk] = useState("");
+  const [bulkOpen, setBulkOpen] = useState(false);
+  const labelRef = useRef(null);
+  const revealN = useRef(0);
+
+  const selected = mmFind(map, selectedId) || map;
+  const isRoot = selected.id === map.id;
+  const path = mmPath(map, selected.id) || [map];
+  const parent = isRoot ? null : mmParent(map, selected.id);
+  const siblings = parent ? parent.children : [];
+  const sIdx = siblings.findIndex((c) => c.id === selected.id);
+  const total = mmCount(map);
+  const emptyCount = mmEmpty(map);
+
+  const show = (id) => { revealN.current += 1; setReveal({ id, n: revealN.current }); };
+  const select = (id, focusLabel = false) => {
+    setSelectedId(id);
+    show(id);
+    if (focusLabel) {
+      requestAnimationFrame(() => requestAnimationFrame(() => {
+        if (labelRef.current) { labelRef.current.focus(); if (labelRef.current.select) labelRef.current.select(); }
+      }));
+    }
+  };
+  const commit = (next) => onChange(next);
+  const patchSelected = (patch) => commit(mmUpdate(map, selected.id, (n) => ({ ...n, ...patch })));
+  const newNode = () => ({ id: uid("mm"), label: "عنصر جديد", description: "", children: [] });
+
+  const addChild = () => {
+    const n = newNode();
+    commit(mmUpdate(map, selected.id, (x) => ({ ...x, children: [...(x.children || []), n] })));
+    select(n.id, true);
+  };
+  const addSibling = () => {
+    if (!parent) return addChild();
+    const n = newNode();
+    commit(mmUpdate(map, parent.id, (p) => {
+      const kids = [...p.children];
+      kids.splice(sIdx + 1, 0, n);
+      return { ...p, children: kids };
+    }));
+    select(n.id, true);
+    return undefined;
+  };
+  const move = (dir) => {
+    const to = sIdx + dir;
+    if (!parent || to < 0 || to >= siblings.length) return;
+    commit(mmUpdate(map, parent.id, (p) => {
+      const kids = [...p.children];
+      [kids[sIdx], kids[to]] = [kids[to], kids[sIdx]];
+      return { ...p, children: kids };
+    }));
+    show(selected.id);
+  };
+  const remove = () => {
+    if (isRoot || !parent) return;
+    const sub = mmCount(selected) - 1;
+    // eslint-disable-next-line no-alert
+    if (sub > 0 && !window.confirm(`سيتم حذف «${selected.label || "بدون عنوان"}» مع ${sub} من فروعه. متأكد؟`)) return;
+    commit(mmRemove(map, selected.id));
+    select(parent.id);
+  };
+  const clearAll = () => {
+    // eslint-disable-next-line no-alert
+    if (!window.confirm("مسح كل الفروع والإبقاء على العقدة الرئيسية فقط؟")) return;
+    commit({ ...map, children: [] });
+    select(map.id);
+  };
+  const addBulk = () => {
+    const nodes = mmParseOutline(bulk);
+    if (!nodes.length) return;
+    commit(mmUpdate(map, selected.id, (x) => ({ ...x, children: [...(x.children || []), ...nodes] })));
+    setBulk("");
+    show(nodes[0].id);
+  };
 
   return (
-    <div className="my-2 p-3 rounded-xl border bg-[#F7F5FB]" style={{ borderColor: "#E3E0EE" }}>
-      <div className="flex items-center justify-between flex-wrap gap-2">
-        <div className="flex items-center gap-2">
-          <button type="button" onClick={() => setIsExpanded(!isExpanded)} className="text-xs font-bold px-2 py-0.5 rounded" style={{ background: "#F6E8F1", color: "#7D2E68" }}>
-            {isExpanded ? "▼" : "◀"}
-          </button>
-          {!isEditing ? (
-            <span className="font-bold text-sm" style={{ color: "#171333" }}>{node.label}</span>
-          ) : (
-            <div className="flex flex-col gap-2 w-full sm:w-80">
-              <input className="ts-input text-xs" value={label} onChange={(e) => setLabel(e.target.value)} placeholder="عنوان العقدة" />
-              <input className="ts-input text-xs" value={desc} onChange={(e) => setDesc(e.target.value)} placeholder="وصف تفصيلي" />
-              <select className="ts-input text-xs" value={sceneId} onChange={(e) => setSceneId(e.target.value)}>
-                <option value="">-- ربط بمشهد (اختياري) --</option>
-                {scenes.map((s) => <option key={s.id} value={s.id}>{s.title}</option>)}
-              </select>
+    <div className="mb-6 p-4 rounded-2xl bg-white border ts-force-light" style={{ borderColor: "#E3E0EE" }}>
+      <div className="flex items-center justify-between flex-wrap gap-2 mb-1">
+        <h3 className="font-bold text-base" style={{ color: "#4B2FD1" }}>🧠 مصمم الخريطة الذهنية</h3>
+        <div className="flex items-center gap-1.5">
+          {emptyCount > 0 && (
+            <span className="text-[11px] font-bold px-2 py-0.5 rounded-full" style={{ background: "#FDE8EC", color: "#D6334B" }} title="العقد بدون عنوان لا تظهر للطالب">
+              ⚠️ {emptyCount} بدون عنوان
+            </span>
+          )}
+          <span className="text-[11px] font-bold px-2 py-0.5 rounded-full" style={{ background: "#EFEAFD", color: "#2E1C86" }}>{total} عقدة</span>
+        </div>
+      </div>
+      <p className="text-xs mb-3" style={{ color: "#6E6B85" }}>
+        دي نفس الخريطة اللي هتظهر للطالب. اضغط على أي عقدة لتحديدها، وعدّل عنوانها أو أضف فروعها من اللوحة اللي تحت.
+      </p>
+
+      <MindMapGraph
+        node={map}
+        editing
+        resetKey={resetKey ?? map.id}
+        selectedNodeId={selected.id}
+        onSelectNode={(n) => setSelectedId(n.id)}
+        reveal={reveal}
+        height="clamp(300px, 48vh, 480px)"
+      />
+
+      <div className="mt-3 p-3 rounded-xl border" style={{ background: "#F7F5FB", borderColor: "#E3E0EE" }}>
+        <div className="flex flex-wrap items-center gap-1 text-[11px] mb-2" style={{ color: "#6E6B85" }}>
+          <span className="font-bold" style={{ color: "#171333" }}>المحدّد:</span>
+          {path.map((n, i) => (
+            <span key={n.id} className="flex items-center gap-1">
+              {i > 0 && <span>‹</span>}
               <button
                 type="button"
-                onClick={() => {
-                  onUpdate(node.id, (n) => ({ ...n, label, description: desc, sceneId }));
-                  setIsEditing(false);
-                }}
-                className="px-3 py-1 rounded text-xs text-white font-bold"
-                style={{ background: "#4B2FD1" }}
+                onClick={() => select(n.id)}
+                style={{ color: i === path.length - 1 ? "#4B2FD1" : "#6E6B85", fontWeight: i === path.length - 1 ? 800 : 500 }}
               >
-                حفظ التعديل
+                {n.label || (i === 0 ? "الجذر" : "(بدون عنوان)")}
               </button>
+            </span>
+          ))}
+        </div>
+
+        <label className="block mb-2">
+          <span className="block text-[11px] font-bold mb-1" style={{ color: "#433F66" }}>{isRoot ? "عنوان الخريطة (العقدة الرئيسية)" : "عنوان العقدة"}</span>
+          <input
+            ref={labelRef}
+            className="ts-input text-sm w-full"
+            value={selected.label}
+            placeholder={isRoot ? rootPlaceholder || "مثال: عنوان الدرس" : "اكتب العنوان — Enter لإضافة فرع بجواره"}
+            onChange={(e) => patchSelected({ label: e.target.value })}
+            onKeyDown={(e) => {
+              if (e.key === "Enter" && !e.nativeEvent.isComposing) { e.preventDefault(); addSibling(); }
+            }}
+          />
+          {!isRoot && !selected.label.trim() && (
+            <span className="block text-[11px] mt-1" style={{ color: "#D6334B" }}>العقدة بدون عنوان لن تظهر للطالب.</span>
+          )}
+        </label>
+
+        <label className="block mb-2">
+          <span className="block text-[11px] font-bold mb-1" style={{ color: "#433F66" }}>وصف تفصيلي (اختياري)</span>
+          <textarea
+            className="ts-input text-xs w-full"
+            rows={2}
+            value={selected.description}
+            placeholder="يظهر كتلميح عند الطالب"
+            onChange={(e) => patchSelected({ description: e.target.value })}
+          />
+        </label>
+
+        {scenes.length > 0 && (
+          <label className="block mb-3">
+            <span className="block text-[11px] font-bold mb-1" style={{ color: "#433F66" }}>ربط بمشهد (اختياري)</span>
+            <select className="ts-input text-xs w-full" value={selected.sceneId || ""} onChange={(e) => patchSelected({ sceneId: e.target.value })}>
+              <option value="">-- بدون ربط --</option>
+              {scenes.map((s) => <option key={s.id} value={s.id}>{s.title || "مشهد بدون عنوان"}</option>)}
+            </select>
+          </label>
+        )}
+
+        <div className="flex flex-wrap gap-1.5">
+          <MmBtn kind="primary" onClick={addChild}>+ فرع داخل هذه العقدة</MmBtn>
+          <MmBtn onClick={addSibling} disabled={isRoot} title="يضيف عقدة في نفس المستوى بعد المحدّدة">+ فرع بجواره</MmBtn>
+          <MmBtn onClick={() => move(-1)} disabled={isRoot || sIdx <= 0} title="تحريك لأعلى">↑</MmBtn>
+          <MmBtn onClick={() => move(1)} disabled={isRoot || sIdx < 0 || sIdx >= siblings.length - 1} title="تحريك لأسفل">↓</MmBtn>
+          <MmBtn kind="danger" onClick={remove} disabled={isRoot}>🗑 حذف</MmBtn>
+        </div>
+
+        <div className="mt-3 pt-2 border-t" style={{ borderColor: "#E3E0EE" }}>
+          <button type="button" className="text-xs font-bold" style={{ color: "#4B2FD1" }} onClick={() => setBulkOpen((v) => !v)}>
+            {bulkOpen ? "▼" : "◀"} إضافة سريعة لعدة فروع دفعة واحدة
+          </button>
+          {bulkOpen && (
+            <div className="mt-2">
+              <p className="text-[11px] mb-1" style={{ color: "#6E6B85" }}>
+                اكتب كل عنصر في سطر. المسافة في أول السطر تجعله فرعًا للسطر اللي فوقه. «عنوان | وصف» لإضافة وصف. هتتضاف داخل «{selected.label || "العقدة المحدّدة"}».
+              </p>
+              <textarea
+                className="ts-input text-xs w-full"
+                rows={5}
+                value={bulk}
+                onChange={(e) => setBulk(e.target.value)}
+                placeholder={"أسباب الحرب\n  أسباب اقتصادية\n  أسباب سياسية\nنتائج الحرب | وصف قصير"}
+              />
+              <div className="flex gap-2 mt-2">
+                <MmBtn kind="primary" onClick={addBulk} disabled={!bulk.trim()}>إضافة الفروع</MmBtn>
+                <MmBtn kind="danger" onClick={clearAll} disabled={map.children.length === 0}>مسح كل الفروع</MmBtn>
+              </div>
             </div>
           )}
         </div>
-
-        <div className="flex items-center gap-1">
-          {!isEditing && (
-            <button type="button" onClick={() => setIsEditing(true)} className="text-xs px-2.5 py-1 rounded bg-white border" style={{ color: "#4B2FD1", borderColor: "#E3E0EE" }}>تعديل</button>
-          )}
-          <button type="button" onClick={() => onAddChild(node.id)} className="text-xs px-2.5 py-1 rounded text-white font-bold" style={{ background: "#4B2FD1" }}>+ فرع</button>
-          <button type="button" onClick={() => onDelete(node.id)} className="text-xs px-2 py-1 rounded" style={{ color: "#D6334B" }}>حذف</button>
-        </div>
       </div>
-
-      {isExpanded && node.children && node.children.length > 0 && (
-        <div className="mr-4 mt-2 pr-3 border-r-2" style={{ borderColor: "#E3E0EE" }}>
-          {node.children.map((child) => (
-            <MindMapNodeEditor key={child.id} node={child} scenes={scenes} onAddChild={onAddChild} onUpdate={onUpdate} onDelete={onDelete} />
-          ))}
-        </div>
-      )}
     </div>
   );
 }
@@ -1512,7 +1748,7 @@ export function TimelineStudioEditor({ items, onAdd, onEdit, onDelete, uploadFn 
   };
 
   return (
-    <div className="mb-6 p-4 rounded-2xl bg-white border" style={{ borderColor: "#E3E0EE" }}>
+    <div className="mb-6 p-4 rounded-2xl bg-white border ts-force-light" style={{ borderColor: "#E3E0EE" }}>
       <h3 className="font-bold text-base mb-3" style={{ color: "#4B2FD1" }}>🕒 إدارة الخط الزمني والأحداث</h3>
 
       <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 mb-2">
@@ -1614,7 +1850,7 @@ export function QuestionStudioEditor({ questions, onAdd, onUpdate, onDelete }) {
   };
 
   return (
-    <div className="mb-6 p-4 rounded-2xl bg-white border" style={{ borderColor: "#E3E0EE" }}>
+    <div className="mb-6 p-4 rounded-2xl bg-white border ts-force-light" style={{ borderColor: "#E3E0EE" }}>
       <h3 className="font-bold text-base mb-3" style={{ color: "#4B2FD1" }}>❓ بنك الأسئلة والتقييمات</h3>
 
       <div className="grid grid-cols-2 gap-2 mb-3">
@@ -1750,7 +1986,7 @@ export function CreateLessonModal({ onCreate, onClose }) {
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4 overflow-y-auto" style={{ background: "rgba(23, 19, 51,0.5)" }}>
-      <div className="ts-fade w-full rounded-3xl p-6 shadow-2xl bg-white border max-w-md my-auto" style={{ borderColor: "#E3E0EE", maxHeight: "90vh", overflowY: "auto" }}>
+      <div className="ts-fade w-full rounded-3xl p-6 shadow-2xl bg-white border max-w-md my-auto ts-force-light" style={{ borderColor: "#E3E0EE", maxHeight: "90vh", overflowY: "auto" }}>
         <h2 className="font-black text-xl mb-4" style={{ color: "#4B2FD1" }}>إنشاء درس جديد</h2>
 
         {loadError && (

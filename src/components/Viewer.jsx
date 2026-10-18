@@ -1,6 +1,10 @@
 import React, { useEffect, useRef, useState, useCallback, useMemo } from "react";
 import { extractYouTubeId } from "../lib/db";
 import AuthModal, { RegistrationGate } from "./AuthModal";
+import { MindMapViewerNode } from "./MindMap";
+
+// الخريطة الذهنية في ملف مستقل (MindMap.jsx). نعيد تصديرها من هنا لأن ملفات أخرى (مثل Studio) تستوردها من Viewer.
+export { MindMapViewerNode };
 
 // ---------------------------------------------------------------------------
 // Pill Tag Component
@@ -337,104 +341,6 @@ export function HotwordRenderer({ text, hotwords = [], onJumpToScene }) {
 }
 
 // ---------------------------------------------------------------------------
-// Mind Map Component
-// ---------------------------------------------------------------------------
-export function MindMapViewerNode({
-  node,
-  depth = 0,
-  onSelectNode,
-  selectedNodeId,
-}) {
-  const [open, setOpen] = useState(depth < 2);
-  const hasChildren = Array.isArray(node?.children) && node.children.length > 0;
-  const isSelected = selectedNodeId === node?.id;
-
-  if (!node) return null;
-
-  return (
-    <div style={{ marginInlineStart: depth === 0 ? 0 : 20 }} className="my-1 text-right md-mm">
-      <div
-        onClick={(e) => {
-          e.stopPropagation();
-          if (onSelectNode) onSelectNode(node);
-        }}
-        data-selected={isSelected ? "true" : "false"}
-        className="md-lv-mm-node md-mm-row flex items-center gap-2 py-1.5 px-3 rounded-xl cursor-pointer transition-all border"
-        style={{
-          background: isSelected ? "#F8EFD8" : "#FFFFFF",
-          borderColor: isSelected ? "#B8832A" : "#DED4BD",
-        }}
-      >
-        <span
-          className="md-mm-dot"
-          data-root={depth === 0 ? "true" : "false"}
-          style={{
-            width: depth === 0 ? 12 : 8,
-            height: depth === 0 ? 12 : 8,
-            borderRadius: 999,
-            background: depth === 0 ? "#147A6A" : "#B8832A",
-            display: "inline-block",
-            flexShrink: 0,
-          }}
-        />
-        <span
-          className="md-mm-label"
-          style={{
-            fontWeight: depth === 0 ? 800 : 600,
-            color: "#263B35",
-            fontSize: depth === 0 ? 16 : 14,
-          }}
-        >
-          {node.label}
-        </span>
-        {hasChildren && (
-          <button
-            type="button"
-            onClick={(e) => {
-              e.stopPropagation();
-              setOpen((prev) => !prev);
-            }}
-            aria-label={open ? "طي" : "توسيع"}
-            aria-expanded={open}
-            className="md-mm-toggle mr-auto w-6 h-6 flex items-center justify-center rounded-full flex-shrink-0 cursor-pointer"
-            style={{
-              background: "#E0F1EC",
-              color: "#0E5348",
-              transform: open ? "rotate(90deg)" : "rotate(0deg)",
-              transition: "transform .15s ease",
-              fontSize: 12,
-              lineHeight: 1,
-            }}
-          >
-            ◂
-          </button>
-        )}
-      </div>
-      {hasChildren && open && (
-        <div
-          style={{
-            borderInlineStart: "2px dashed #DED4BD",
-            paddingInlineStart: 12,
-            marginTop: 4,
-          }}
-          className="ts-fade md-mm-kids"
-        >
-          {node.children.map((c, idx) => (
-            <MindMapViewerNode
-              key={c.id || `mindmap-node-${idx}`}
-              node={c}
-              depth={depth + 1}
-              onSelectNode={onSelectNode}
-              selectedNodeId={selectedNodeId}
-            />
-          ))}
-        </div>
-      )}
-    </div>
-  );
-}
-
-// ---------------------------------------------------------------------------
 // Question Item Component
 // ---------------------------------------------------------------------------
 export function QuestionItem({ q }) {
@@ -623,7 +529,7 @@ function YouTubePlayer({ videoId }) {
   );
 }
 
-function buildFullMindMap(scenes) {
+function buildFullMindMap(scenes, lessonTitle) {
   if (!Array.isArray(scenes) || scenes.length === 0) return null;
   const children = [];
   for (const s of scenes) {
@@ -632,7 +538,7 @@ function buildFullMindMap(scenes) {
   }
   if (children.length === 0) return null;
   if (children.length === 1) return children[0];
-  return { id: "full-mm-root", label: "الخريطة الذهنية الكاملة", description: "أهم أفكار جميع أجزاء الدرس", children };
+  return { id: "full-mm-root", label: lessonTitle || "الخريطة الذهنية الكاملة", description: "أهم أفكار جميع أجزاء الدرس", children };
 }
 
 function buildFullTimeline(scenes) {
@@ -1630,7 +1536,7 @@ export function StudentView({
     () => extractYouTubeId(lesson?.youtubeUrl || lesson?.youtube_url || ""),
     [lesson?.youtubeUrl, lesson?.youtube_url]
   );
-  const fullMindMap = useMemo(() => buildFullMindMap(lesson?.scenes), [lesson?.scenes]);
+  const fullMindMap = useMemo(() => buildFullMindMap(lesson?.scenes, lesson?.title), [lesson?.scenes, lesson?.title]);
   const fullTimeline = useMemo(() => buildFullTimeline(lesson?.scenes), [lesson?.scenes]);
   const fullQuestions = useMemo(() => buildFullQuestions(lesson?.scenes), [lesson?.scenes]);
 

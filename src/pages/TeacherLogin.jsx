@@ -1,4 +1,5 @@
 import { useState } from "react";
+import TeacherThemeToggle from "../lib/teacherTheme";
 import { signInTeacher } from "../lib/db";
 
 function mapAuthError(err) {
@@ -68,6 +69,7 @@ export default function TeacherLogin() {
         background: "#F7F5FB",
       }}
     >
+      <TeacherThemeToggle />
       <form
         onSubmit={handleSubmit}
         className="w-full max-w-sm rounded-3xl p-8 bg-white border shadow-sm"
