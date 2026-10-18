@@ -234,8 +234,7 @@ function HeroSection({ theme, onStart, onFeatures }) {
         </div>
         {/* Main headline */}
         <h1 className="hero-headline">
-          لم نطوّر تجربة التعليم…
-          <br />
+          لم نطوّر تجربة التعليم…{" "}
           <span className="hero-headline-accent">أعدنا بناءها.</span>
         </h1>
         {/* Description */}
@@ -264,8 +263,8 @@ function HeroSection({ theme, onStart, onFeatures }) {
           </div>
           <div className="hero-trust-dot" />
           <div className="hero-trust-item">
-            <span className="hero-trust-num">٤</span>
-            <span>أدوات تعلّم</span>
+            <span className="hero-trust-num">٩</span>
+            <span>مميزات تعلّم</span>
           </div>
           <div className="hero-trust-dot" />
           <div className="hero-trust-item">
@@ -292,7 +291,7 @@ const HERO_CSS = `
 .md-hero-core {
   position: relative;
   z-index: 2;
-  max-width: 720px;
+  max-width: 64rem;
   margin: 0 auto;
 }
 /* ---- scatter cards ---- */
@@ -383,8 +382,8 @@ const HERO_CSS = `
 .hero-badge-line {
   display: inline-flex;
   align-items: center;
-  gap: 0.5rem;
-  padding: 0.45rem 0.55rem 0.45rem 1rem;
+  gap: 0.85rem;
+  padding: 0.6rem 0.7rem 0.6rem 1.6rem;
   border-radius: 999px;
   background: var(--duo-green-soft);
   border: 1.5px solid color-mix(in srgb, var(--duo-green) 20%, transparent);
@@ -393,7 +392,7 @@ const HERO_CSS = `
 }
 .hero-badge-text {
   font-family: var(--duo-font-display);
-  font-size: 0.85rem;
+  font-size: 1.2rem;
   font-weight: 800;
   color: var(--duo-green-ink);
 }
@@ -403,8 +402,8 @@ const HERO_CSS = `
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  width: 4.5rem;
-  height: 4.5rem;
+  width: 6.25rem;
+  height: 6.25rem;
   border-radius: 50%;
   background: linear-gradient(135deg, var(--duo-green), var(--duo-green-ink));
   box-shadow: 0 6px 20px -6px var(--duo-green);
@@ -417,7 +416,7 @@ const HERO_CSS = `
 .hero-rotor-word {
   grid-area: 1 / 1;
   font-family: var(--duo-font-display);
-  font-size: 0.78rem;
+  font-size: 1.1rem;
   font-weight: 900;
   color: #fff;
   opacity: 0;
@@ -439,19 +438,25 @@ const HERO_CSS = `
 /* ---- headline ---- */
 .hero-headline {
   font-family: var(--duo-font-display);
-  font-size: clamp(1.8rem, 5.5vw, 3.2rem);
+  font-size: clamp(1rem, 4.4vw, 3rem);
+  white-space: nowrap;
   font-weight: 900;
-  line-height: 1.3;
+  line-height: 1.5;
   color: var(--duo-ink);
   margin: 0 0 1.25rem;
   animation: hero-rise 0.8s 0.1s cubic-bezier(0.22, 1, 0.36, 1) both;
 }
 .hero-headline-accent {
-  background: linear-gradient(135deg, var(--duo-green), var(--duo-amber));
-  -webkit-background-clip: text;
-  background-clip: text;
-  -webkit-text-fill-color: transparent;
-  color: transparent;
+  display: inline-block;
+  padding: 0.05em 0.45em 0.15em;
+  border-radius: 0.55em;
+  background: linear-gradient(145deg, #0E5348 0%, #147A6A 55%, #1A8F7C 100%);
+  color: #fff;
+  -webkit-text-fill-color: #fff;
+  box-shadow: 0 18px 36px -18px rgba(14, 83, 72, 0.55);
+}
+html[data-theme="dark"] .hero-headline-accent {
+  background: linear-gradient(145deg, #0A3F36 0%, #0E5348 50%, #147A6A 100%);
 }
 /* ---- description ---- */
 .hero-desc {
@@ -563,9 +568,10 @@ const HERO_CSS = `
   .hero-rotor-word { transition: none !important; }
 }
 @media (max-width: 640px) {
-  .hero-badge-line { gap: 0.35rem; padding: 0.35rem 0.4rem 0.35rem 0.8rem; }
-  .hero-rotor-badge { width: 3.5rem; height: 3.5rem; }
-  .hero-rotor-word { font-size: 0.68rem; }
+  .hero-badge-line { gap: 0.55rem; padding: 0.45rem 0.5rem 0.45rem 1.1rem; }
+  .hero-badge-text { font-size: 1rem; }
+  .hero-rotor-badge { width: 4.9rem; height: 4.9rem; }
+  .hero-rotor-word { font-size: 0.9rem; }
   .hero-desc { font-size: 0.95rem; }
   .hero-btn { font-size: 0.9rem; padding: 0.75rem 1.4rem; }
 }
@@ -753,17 +759,80 @@ function InternalLandingFooter() {
 }
 
 
-const INK = "#0E5348";
-const TEAL = "#147A6A";
+
+/* ===== رحلة الطالب: كل ميزة في مكانها داخل الصفحة (بديل MadarShowcase) ===== */
 const FEATURES = [
   {
-    id: "visual",
-    title: "شرح مرئي مبسّط",
-    text: "فيديو وصور وشرح واضح يرافق كل فكرة في الدرس.",
-    tag: "افهم",
-    ac: TEAL, soft: "#E2F3EE", ink: INK,
+    id: "progress",
+    title: "تقدّمك أولًا بأول",
+    text: "تعرف كم درسًا أنهيت وكم بقي عليك في الفصل، وتستكمل من حيث توقفت.",
+    tag: "تابع",
+    ac: "#147A6A", darkAc: "#3E9A8A", soft: "rgba(20, 122, 106, 0.12)", ink: "var(--lp-text)",
     fd: "5.4s", dl: "-0.6s", rot: "0.35deg",
-    points: ["صور وفيديو مع كل فكرة", "السبب ثم الحدث ثم النتيجة", "شرح بلغة بسيطة وواضحة"],
+    points: ["نسبة تقدّمك في الفصل وعدد الدروس المكتملة", "تقدّم كل وحدة دراسية على حدة", "تقدّمك محفوظ بحسابك لتكمل من أي جهاز"],
+    icon: (
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+        <path d="M4 19V5" />
+        <path d="M4 19h16" />
+        <path d="M8 15l4-4 3 3 5-6" />
+      </svg>
+    ),
+  },
+  {
+    id: "dyk",
+    title: "هل تعلم؟",
+    text: "معلومة قصيرة في كل زيارة تثبت في ذاكرتك دون مجهود.",
+    tag: "ثبّت",
+    ac: "#C98512", darkAc: "#E6C47A", soft: "rgba(201, 133, 18, 0.12)", ink: "var(--lp-text)",
+    fd: "6.2s", dl: "-2.1s", rot: "-0.3deg",
+    points: ["معلومة جديدة عشوائية من منهجك في كل زيارة", "مخصّصة لمرحلتك وصفّك الدراسي"],
+    icon: (
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+        <path d="M9 18h6M10 21h4" />
+        <path d="M12 3a6 6 0 0 0-3.5 10.9V16h7v-2.1A6 6 0 0 0 12 3z" />
+      </svg>
+    ),
+  },
+  {
+    id: "scenes",
+    title: "درس مقسّم إلى عناوين",
+    text: "كل درس مقسّم إلى عناوين قصيرة، تنهي كل عنوان وتتابع تقدّمك داخل الدرس.",
+    tag: "قسّم",
+    ac: "#2F7FB5", darkAc: "#7CB6DE", soft: "rgba(47, 127, 181, 0.12)", ink: "var(--lp-text)",
+    fd: "5.8s", dl: "-3.4s", rot: "0.25deg",
+    points: ["قائمة بعناوين الدرس إلى جانب المحتوى", "شريط يعرض عدد العناوين المكتملة", "العنوان التالي يُفتح بعد إنهاء السابق"],
+    icon: (
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+        <path d="M9 6h11M9 12h11M9 18h11" />
+        <circle cx="4.5" cy="6" r="1.2" />
+        <circle cx="4.5" cy="12" r="1.2" />
+        <circle cx="4.5" cy="18" r="1.2" />
+      </svg>
+    ),
+  },
+  {
+    id: "words",
+    title: "شرح وكلمات تفاعلية",
+    text: "الكلمات المهمة في الشرح مظلّلة: اضغط عليها ليظهر ما يوضّح معناها.",
+    tag: "افهم",
+    ac: "#7A4FA0", darkAc: "#A981CD", soft: "rgba(122, 79, 160, 0.12)", ink: "var(--lp-text)",
+    fd: "6.6s", dl: "-1.3s", rot: "-0.4deg",
+    points: ["تعريف أو ملاحظة تشرح الكلمة", "صورة توضّح الكلمة إذا لم تكن مفهومة"],
+    icon: (
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+        <path d="M4 6h16M4 18h16M4 12h5" />
+        <rect x="11" y="9.5" width="9" height="5" rx="2.2" />
+      </svg>
+    ),
+  },
+  {
+    id: "video",
+    title: "فيديو شرح الدرس",
+    text: "شاهد شرح الدرس بالفيديو داخل صفحة الدرس نفسها دون مغادرة المنصة.",
+    tag: "شاهد",
+    ac: "#4F8A2E", darkAc: "#9BC76A", soft: "rgba(79, 138, 46, 0.12)", ink: "var(--lp-text)",
+    fd: "5.2s", dl: "-1.8s", rot: "0.4deg",
+    points: ["الفيديو داخل صفحة الدرس دون رابط خارجي", "اضغط تشغيل لتبدأ المشاهدة", "ثم تكمل الشرح والخرائط والأسئلة"],
     icon: (
       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
         <rect x="2.5" y="6" width="13" height="12" rx="3" />
@@ -776,7 +845,7 @@ const FEATURES = [
     title: "خرائط ذهنية",
     text: "تربط الأفكار ببعضها لتتذكّرها وتفهمها بسهولة.",
     tag: "اربط",
-    ac: "#C98512", soft: "#FBF0D6", ink: "#8A5A00",
+    ac: "#C98512", darkAc: "#E6C47A", soft: "rgba(201, 133, 18, 0.12)", ink: "var(--lp-text)",
     fd: "6.2s", dl: "-2.1s", rot: "-0.3deg",
     points: ["فكرة رئيسية تتفرّع منها التفاصيل", "روابط تُظهر علاقة المعلومات", "تذكّر أسهل وأسرع"],
     icon: (
@@ -794,7 +863,7 @@ const FEATURES = [
     title: "خطوط زمنية",
     text: "تتبّع الأحداث بترتيبها الصحيح عبر الزمن.",
     tag: "رتّب",
-    ac: "#C2562F", soft: "#FBE7DE", ink: "#9A3B1A",
+    ac: "#C2562F", darkAc: "#E08769", soft: "rgba(194, 86, 47, 0.12)", ink: "var(--lp-text)",
     fd: "5.8s", dl: "-3.4s", rot: "0.25deg",
     points: ["الأحداث بترتيبها الصحيح", "كل حدث مرتبط بما قبله", "ترى الصورة الكبيرة دفعة واحدة"],
     icon: (
@@ -812,7 +881,7 @@ const FEATURES = [
     title: "أسئلة ومراجعة",
     text: "اختبر فهمك أولًا بأول وراجع قبل أن تنتقل للتالي.",
     tag: "راجع",
-    ac: "#7A4FA0", soft: "#EFE6F7", ink: "#563478",
+    ac: "#7A4FA0", darkAc: "#A981CD", soft: "rgba(122, 79, 160, 0.12)", ink: "var(--lp-text)",
     fd: "6.6s", dl: "-1.3s", rot: "-0.4deg",
     points: ["اختبر فهمك أولًا بأول", "راجع قبل الانتقال للتالي", "ثبّت ما تعلّمته"],
     icon: (
@@ -822,66 +891,225 @@ const FEATURES = [
       </svg>
     ),
   },
+  {
+    id: "recall",
+    title: "تذكّر سريع",
+    text: "قبل أن تبدأ الدرس، استرجع ما سيُبنى عليه.",
+    tag: "تذكّر",
+    ac: "#B5476B", darkAc: "#E08AA8", soft: "rgba(181, 71, 107, 0.12)", ink: "var(--lp-text)",
+    fd: "6.4s", dl: "-2.6s", rot: "-0.3deg",
+    points: ["تعريفات ومفاهيم سابقة يبني عليها الدرس", "معلومات قديمة تحتاج أن تتذكّرها قبل البدء", "فكّر في كل نقطة ثم اضغط لتتأكد"],
+    icon: (
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+        <path d="M3 12a9 9 0 1 0 3-6.7" />
+        <path d="M3 4v5h5" />
+        <path d="M12 8v4l3 2" />
+      </svg>
+    ),
+  },
 ];
-/* ------------------------------ teaching drawings ------------------------------ */
+
 const D = (ms) => ({ "--d": `${ms}ms` });
-// text size inside the drawings (grows a little on phones through --ts)
 const fs = (n) => ({ fontSize: `calc(${n}px * var(--ts, 1))` });
-/* 1) visual explainer: media frame + cause → event → effect chain */
-function VisualArt({ ac }) {
+
+function SampleChip() {
   return (
-    <svg className="msc-art" viewBox="0 0 400 230" role="img" aria-label="شرح مرئي: صورة وفيديو ثم سبب وحدث ونتيجة">
-      <defs>
-        <linearGradient id="msc-v-sky" x1="0" y1="0" x2="0" y2="1">
-          <stop offset="0" stopColor="#F2FAF7" />
-          <stop offset="1" stopColor="#D5EBE4" />
-        </linearGradient>
-      </defs>
+    <g className="msc-rise" style={D(1100)}>
+      <rect x="18" y="212" width="74" height="16" rx="8" fill="var(--lp-surface)" stroke="var(--lp-line)" strokeWidth="1.4" />
+      <text x="55" y="223.5" textAnchor="middle" style={fs(9.5)} fontWeight="800" fill="var(--lp-muted)">شكل توضيحي</text>
+    </g>
+  );
+}
+
+function ProgressArt({ ac }) {
+  const rows = [
+    { y: 40, t: "الوحدة الأولى", w: 120, d: 450 },
+    { y: 78, t: "الوحدة الثانية", w: 72, d: 600 },
+    { y: 116, t: "الوحدة الثالثة", w: 30, d: 750 },
+  ];
+  return (
+    <svg className="msc-art" viewBox="0 0 400 230" role="img" aria-label="لوحة الطالب: حلقة تقدّم، وتقدّم كل وحدة، وزر استكمال من حيث توقفت">
       <g className="msc-pop" style={D(0)}>
-        <rect x="22" y="14" width="230" height="146" rx="18" fill="url(#msc-v-sky)" stroke={ac} strokeWidth="2.5" />
-        <circle cx="62" cy="40" r="9" fill="#FFD27A" />
-        <g className="msc-spin" style={{ transformOrigin: "137px 82px" }}>
-          <ellipse cx="137" cy="82" rx="74" ry="20" fill="none" stroke={ac} strokeWidth="1.6" strokeDasharray="3 6" opacity=".55" transform="rotate(-18 137 82)" />
-          <circle cx="205" cy="64" r="5" fill={ac} />
-        </g>
-        <circle cx="137" cy="82" r="44" fill="#BFE3DA" stroke={ac} strokeWidth="2.2" />
-        <path d="M108 70c8-10 20-9 26-3 5 5 1 12-6 13-6 1-8 8-15 6-7-3-10-10-5-16z" fill={ac} opacity=".85" />
-        <path d="M146 92c8-4 18-1 20 6 3 8-4 14-11 13-8-1-14-12-9-19z" fill={ac} opacity=".7" />
-        <ellipse cx="137" cy="82" rx="19" ry="44" fill="none" stroke="#fff" strokeWidth="1.4" opacity=".6" />
-        <path d="M95 82h84" stroke="#fff" strokeWidth="1.4" opacity=".6" />
-        <circle className="msc-pulse" cx="52" cy="136" r="15" fill="none" stroke={ac} strokeWidth="2" />
-        <circle cx="52" cy="136" r="15" fill={ac} />
-        <path d="M48 129l12 7-12 7z" fill="#fff" />
-        <rect x="78" y="133" width="158" height="7" rx="3.5" fill="#fff" opacity=".9" />
-        <rect className="msc-bar" x="78" y="133" width="158" height="7" rx="3.5" fill={ac} />
+        <rect x="14" y="12" width="372" height="148" rx="18" fill="var(--lp-surface)" stroke={ac} strokeWidth="2.5" />
       </g>
-      <g className="msc-rise" style={D(300)}>
-        <rect x="22" y="176" width="70" height="26" rx="13" fill="#fff" stroke={ac} strokeWidth="1.8" />
-        <text x="57" y="193.5" textAnchor="middle" style={fs(11.5)} fontWeight="800" fill={INK}>فيديو</text>
-        <rect x="100" y="176" width="70" height="26" rx="13" fill="#fff" stroke={ac} strokeWidth="1.8" />
-        <text x="135" y="193.5" textAnchor="middle" style={fs(11.5)} fontWeight="800" fill={INK}>صور</text>
-        <rect x="178" y="176" width="74" height="26" rx="13" fill="#fff" stroke={ac} strokeWidth="1.8" />
-        <text x="215" y="193.5" textAnchor="middle" style={fs(11.5)} fontWeight="800" fill={INK}>شرح</text>
+      <circle cx="84" cy="86" r="40" fill="none" stroke="var(--lp-line)" strokeWidth="11" />
+      <path className="msc-draw" pathLength="1" d="M84 46 A40 40 0 1 1 47.75 102.9" fill="none" stroke={ac} strokeWidth="11" strokeLinecap="round" style={D(250)} />
+      <g className="msc-pop" style={D(500)}>
+        <text x="84" y="84" textAnchor="middle" style={fs(14)} fontWeight="900" fill="var(--lp-text)">تقدّمي</text>
+        <text x="84" y="101" textAnchor="middle" style={fs(10.5)} fontWeight="700" fill="var(--lp-muted)">في الفصل</text>
       </g>
-      {[
-        { y: 12, tag: "السبب", t: "طرق تجارة جديدة", d: 450 },
-        { y: 92, tag: "الحدث", t: "رحلات الاستكشاف", d: 650 },
-        { y: 172, tag: "النتيجة", t: "خرائط جديدة", d: 850 },
-      ].map((n) => (
-        <g key={n.tag} className="msc-pop" style={D(n.d)}>
-          <rect x="268" y={n.y} width="124" height="46" rx="14" fill="#fff" stroke={ac} strokeWidth="2" />
-          <text x="330" y={n.y + 18} textAnchor="middle" style={fs(10.5)} fontWeight="800" fill={ac}>{n.tag}</text>
-          <text x="330" y={n.y + 35} textAnchor="middle" style={fs(11.5)} fontWeight="800" fill={INK}>{n.t}</text>
+      {rows.map((r) => (
+        <g key={r.t} className="msc-rise" style={D(r.d)}>
+          <text x="368" y={r.y} textAnchor="start" style={fs(12)} fontWeight="800" fill="var(--lp-text)">{r.t}</text>
+          <rect x="176" y={r.y + 8} width="192" height="9" rx="4.5" fill="var(--lp-line)" />
+          <rect x={368 - r.w} y={r.y + 8} width={r.w} height="9" rx="4.5" fill={ac} />
         </g>
       ))}
-      <path className="msc-flow" d="M330 58v34" stroke={ac} strokeWidth="2.6" strokeLinecap="round" fill="none" />
-      <path d="M324 86l6 7 6-7" stroke={ac} strokeWidth="2.6" strokeLinecap="round" strokeLinejoin="round" fill="none" />
-      <path className="msc-flow" d="M330 138v34" stroke={ac} strokeWidth="2.6" strokeLinecap="round" fill="none" />
-      <path d="M324 166l6 7 6-7" stroke={ac} strokeWidth="2.6" strokeLinecap="round" strokeLinejoin="round" fill="none" />
+      <g className="msc-pop" style={D(900)}>
+        <rect x="14" y="172" width="372" height="36" rx="18" fill={ac} />
+        <circle cx="362" cy="190" r="12" fill="#fff" />
+        <path d="M358.5 184.5l9 5.5-9 5.5z" fill={ac} />
+        <text x="340" y="195" textAnchor="start" style={fs(13)} fontWeight="800" fill="#fff">استكمل من حيث توقفت</text>
+        <path d="M34 183l-7 7 7 7" fill="none" stroke="#fff" strokeWidth="2.6" strokeLinecap="round" strokeLinejoin="round" />
+      </g>
+      <SampleChip />
     </svg>
   );
 }
-/* 2) mind map: one idea, branches grow out of it */
+
+function DykArt({ ac }) {
+  return (
+    <svg className="msc-art" viewBox="0 0 400 230" role="img" aria-label="بطاقة هل تعلم؟ تعرض معلومة قصيرة جديدة في كل زيارة">
+      <g className="msc-pop" style={D(0)}>
+        <rect x="40" y="20" width="320" height="156" rx="22" fill="var(--lp-surface)" stroke={ac} strokeWidth="2.5" />
+      </g>
+      <circle className="msc-pulse" cx="324" cy="62" r="24" fill="none" stroke={ac} strokeWidth="2" />
+      <g className="msc-pop" style={D(250)}>
+        <circle cx="324" cy="62" r="24" fill={ac} opacity=".16" />
+        <g transform="translate(310 48) scale(1.17)" fill="none" stroke={ac} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+          <path d="M9 18h6M10 21h4" />
+          <path d="M12 3a6 6 0 0 0-3.5 10.9V16h7v-2.1A6 6 0 0 0 12 3z" />
+        </g>
+      </g>
+      <text className="msc-rise" style={{ ...D(350), ...fs(20) }} x="288" y="70" textAnchor="start" fontWeight="900" fill="var(--lp-text)">هل تعلم؟</text>
+      {[{ y: 100, w: 264 }, { y: 120, w: 232 }, { y: 140, w: 160 }].map((l, i) => (
+        <rect key={l.y} className="msc-rise" style={D(550 + i * 140)} x={336 - l.w} y={l.y} width={l.w} height="9" rx="4.5" fill="var(--lp-line)" />
+      ))}
+      <g className="msc-pop" style={D(1000)}>
+        <rect x="104" y="188" width="192" height="30" rx="15" fill={ac} />
+        <text x="200" y="207.5" textAnchor="middle" style={fs(12.5)} fontWeight="800" fill="#fff">معلومة جديدة في كل زيارة</text>
+      </g>
+      <circle className="msc-pop" style={D(1150)} cx="56" cy="40" r="4.5" fill={ac} opacity=".55" />
+      <circle className="msc-pop" style={D(1250)} cx="350" cy="196" r="4" fill={ac} opacity=".45" />
+    </svg>
+  );
+}
+
+function ScenesArt({ ac }) {
+  const rows = [
+    { t: "العنوان 1", s: "done" },
+    { t: "العنوان 2", s: "done" },
+    { t: "العنوان 3", s: "current" },
+    { t: "العنوان 4", s: "locked" },
+    { t: "العنوان 5", s: "locked" },
+  ];
+  return (
+    <svg className="msc-art" viewBox="0 0 400 230" role="img" aria-label="قائمة عناوين الدرس: مكتمل وحالي ومقفل، مع شريط عدد العناوين المكتملة">
+      <g className="msc-pop" style={D(0)}>
+        <rect x="14" y="12" width="216" height="192" rx="16" fill="var(--lp-surface)" stroke="var(--lp-line)" strokeWidth="2" />
+        <rect x="104" y="30" width="110" height="12" rx="6" fill={ac} />
+        {[{ y: 56, w: 176 }, { y: 74, w: 150 }, { y: 92, w: 168 }, { y: 110, w: 118 }].map((l) => (
+          <rect key={l.y} x={214 - l.w} y={l.y} width={l.w} height="8" rx="4" fill="var(--lp-line)" />
+        ))}
+        <rect x="26" y="168" width="76" height="26" rx="13" fill={ac} />
+        <text x="64" y="185" textAnchor="middle" style={fs(11.5)} fontWeight="800" fill="#fff">التالي</text>
+        <rect x="130" y="168" width="84" height="26" rx="13" fill="var(--lp-surface)" stroke={ac} strokeWidth="1.8" />
+        <text x="172" y="185" textAnchor="middle" style={fs(11.5)} fontWeight="800" fill="var(--lp-text)">السابق</text>
+      </g>
+
+      <g className="msc-pop" style={D(150)}>
+        <rect x="240" y="12" width="146" height="192" rx="16" fill="var(--lp-surface)" stroke={ac} strokeWidth="2.5" />
+      </g>
+      <text className="msc-rise" style={{ ...D(250), ...fs(11) }} x="313" y="34" textAnchor="middle" fontWeight="800" fill="var(--lp-muted)">عناوين الدرس</text>
+      {rows.map((r, i) => {
+        const y = 44 + i * 25;
+        const cur = r.s === "current";
+        const done = r.s === "done";
+        return (
+          <g key={r.t} className="msc-rise" style={D(350 + i * 110)}>
+            <rect x="248" y={y} width="130" height="21" rx="10.5" fill={cur ? ac : done ? ac : "var(--lp-surface)"} fillOpacity={cur ? 1 : done ? 0.14 : 1} stroke={r.s === "locked" ? "var(--lp-line)" : "none"} strokeWidth="1.6" strokeDasharray={r.s === "locked" ? "3 3" : undefined} />
+            <text x="368" y={y + 14.5} textAnchor="start" style={fs(11)} fontWeight="800" fill={cur ? "#fff" : "var(--lp-text)"} opacity={r.s === "locked" ? 0.55 : 1}>{r.t}</text>
+            {done && (
+              <g>
+                <circle cx="260" cy={y + 10.5} r="7" fill={ac} />
+                <path d={`M256.6 ${y + 10.6}l2.6 2.6 4.4-4.8`} fill="none" stroke="#fff" strokeWidth="1.9" strokeLinecap="round" strokeLinejoin="round" />
+              </g>
+            )}
+            {cur && (
+              <g>
+                <circle className="msc-pulse" cx="260" cy={y + 10.5} r="7" fill="none" stroke="#fff" strokeWidth="1.6" />
+                <circle cx="260" cy={y + 10.5} r="3.4" fill="#fff" />
+              </g>
+            )}
+            {r.s === "locked" && (
+              <g opacity=".6" fill="none" stroke="var(--lp-text)" strokeWidth="1.7" strokeLinecap="round">
+                <rect x="256" y={y + 9} width="9" height="7" rx="1.8" fill="var(--lp-text)" stroke="none" />
+                <path d={`M258 ${y + 9}v-2a2.5 2.5 0 0 1 5 0v2`} />
+              </g>
+            )}
+          </g>
+        );
+      })}
+      <g className="msc-rise" style={D(1000)}>
+        <text x="378" y="182" textAnchor="start" style={fs(10)} fontWeight="800" fill="var(--lp-muted)">عناوين مكتملة</text>
+        <rect x="248" y="190" width="130" height="7" rx="3.5" fill="var(--lp-line)" />
+        <rect x="318" y="190" width="60" height="7" rx="3.5" fill={ac} />
+      </g>
+      <SampleChip />
+    </svg>
+  );
+}
+
+function WordsArt({ ac }) {
+  return (
+    <svg className="msc-art" viewBox="0 0 400 230" role="img" aria-label="كلمة مظلّلة داخل الشرح تفتح نافذة بتعريف وصورة ورابط إلى المشهد المرتبط">
+      <g className="msc-pop" style={D(0)}>
+        <rect x="14" y="10" width="372" height="116" rx="16" fill="var(--lp-surface)" stroke="var(--lp-line)" strokeWidth="2" />
+      </g>
+      <rect className="msc-rise" style={D(150)} x="70" y="30" width="300" height="8" rx="4" fill="var(--lp-line)" />
+      <rect className="msc-rise" style={D(250)} x="252" y="52" width="118" height="8" rx="4" fill="var(--lp-line)" />
+      <rect className="msc-hl" x="166" y="46" width="80" height="20" rx="6" fill={ac} />
+      <path d="M170 68h72" stroke={ac} strokeWidth="2" strokeLinecap="round" />
+      <rect className="msc-rise" style={D(350)} x="40" y="52" width="118" height="8" rx="4" fill="var(--lp-line)" />
+      <rect className="msc-rise" style={D(450)} x="110" y="76" width="260" height="8" rx="4" fill="var(--lp-line)" />
+      <rect className="msc-rise" style={D(550)} x="180" y="98" width="190" height="8" rx="4" fill="var(--lp-line)" />
+
+      <g className="msc-fadein">
+        <rect x="100" y="88" width="270" height="130" rx="16" fill="var(--lp-surface)" stroke={ac} strokeWidth="2.5" />
+        <rect x="294" y="100" width="64" height="10" rx="5" fill={ac} />
+        <text x="116" y="109" textAnchor="end" style={fs(11)} fontWeight="800" fill="var(--lp-muted)">✕</text>
+        <path d="M114 118H356" stroke="var(--lp-line)" strokeWidth="1.6" />
+        <rect x="274" y="126" width="82" height="50" rx="10" fill="var(--msc-svg-soft)" />
+        <circle cx="338" cy="138" r="5" fill={ac} opacity=".7" />
+        <path d="M280 170l20-22 14 14 9-9 28 17z" fill={ac} opacity=".65" />
+        <rect x="118" y="130" width="140" height="8" rx="4" fill="var(--lp-line)" />
+        <rect x="138" y="148" width="120" height="8" rx="4" fill="var(--lp-line)" />
+        <rect x="128" y="166" width="130" height="8" rx="4" fill="var(--lp-line)" />
+        <rect x="114" y="184" width="242" height="24" rx="12" fill={ac} />
+        <text x="235" y="200" textAnchor="middle" style={fs(11)} fontWeight="800" fill="#fff">الانتقال إلى المشهد المرتبط ↗</text>
+      </g>
+    </svg>
+  );
+}
+
+function VideoArt({ ac }) {
+  return (
+    <svg className="msc-art" viewBox="0 0 400 230" role="img" aria-label="مشغّل فيديو داخل صفحة الدرس، ثم الانتقال إلى الشرح والخرائط والأسئلة">
+      <g className="msc-pop" style={D(0)}>
+        <rect x="40" y="10" width="320" height="170" rx="18" fill="#263B35" stroke={ac} strokeWidth="2.5" />
+      </g>
+      <text className="msc-rise" style={{ ...D(250), ...fs(12) }} x="344" y="36" textAnchor="start" fontWeight="800" fill="#fff">🎥 شاهد فيديو الدرس</text>
+      <circle className="msc-pulse" cx="200" cy="96" r="30" fill="none" stroke={ac} strokeWidth="2.4" />
+      <g className="msc-pop" style={D(400)}>
+        <circle cx="200" cy="96" r="30" fill={ac} />
+        <path d="M192 82l24 14-24 14z" fill="#fff" />
+      </g>
+      <g className="msc-rise" style={D(650)}>
+        <rect x="64" y="154" width="272" height="7" rx="3.5" fill="#fff" opacity=".25" />
+        <rect className="msc-bar" x="64" y="154" width="272" height="7" rx="3.5" fill={ac} />
+      </g>
+      {[{ x: 276, t: "الشرح المكتوب", d: 800 }, { x: 156, t: "الخرائط", d: 950 }, { x: 36, t: "الأسئلة", d: 1100 }].map((c) => (
+        <g key={c.t} className="msc-pop" style={D(c.d)}>
+          <rect x={c.x} y="194" width="88" height="24" rx="12" fill="var(--lp-surface)" stroke={ac} strokeWidth="1.8" />
+          <text x={c.x + 44} y="210" textAnchor="middle" style={fs(11)} fontWeight="800" fill="var(--lp-text)">{c.t}</text>
+        </g>
+      ))}
+      <path className="msc-flow" d="M270 206h-16" stroke={ac} strokeWidth="2.4" strokeLinecap="round" fill="none" />
+      <path className="msc-flow" d="M150 206h-16" stroke={ac} strokeWidth="2.4" strokeLinecap="round" fill="none" />
+    </svg>
+  );
+}
+
 function MindArt({ ac }) {
   const nodes = [
     { x: 39, y: 24, w: 86, t: "الموقع", e: "M170 96 Q140 52 125 41", d: 350 },
@@ -908,8 +1136,8 @@ function MindArt({ ac }) {
       </g>
       {nodes.map((n) => (
         <g key={n.t} className="msc-pop" style={D(n.d)}>
-          <rect x={n.x} y={n.y} width={n.w} height="32" rx="16" fill="#fff" stroke={ac} strokeWidth="2.2" />
-          <text x={n.x + n.w / 2} y={n.y + 20.5} textAnchor="middle" style={fs(12)} fontWeight="800" fill={INK}>{n.t}</text>
+          <rect x={n.x} y={n.y} width={n.w} height="32" rx="16" fill="var(--lp-surface)" stroke={ac} strokeWidth="2.2" />
+          <text x={n.x + n.w / 2} y={n.y + 20.5} textAnchor="middle" style={fs(12)} fontWeight="800" fill="var(--lp-text)">{n.t}</text>
         </g>
       ))}
       <circle className="msc-pop" style={D(1150)} cx="26" cy="64" r="5" fill={ac} opacity=".55" />
@@ -918,7 +1146,7 @@ function MindArt({ ac }) {
     </svg>
   );
 }
-/* 3) timeline: events in order (oldest on the right) with a light marker travelling along */
+
 function TimelineArt({ ac }) {
   const ev = [
     { x: 330, up: true, y: "1492", t: "وصول كولومبس", d: 300 },
@@ -941,13 +1169,13 @@ function TimelineArt({ ac }) {
           <g key={e.y}>
             <path d={e.up ? `M${e.x} 109V84` : `M${e.x} 127V152`} stroke={ac} strokeWidth="2" strokeDasharray="3 4" opacity=".7" />
             <g className="msc-pop" style={D(e.d)}>
-              <circle cx={e.x} cy="118" r="11" fill="#fff" stroke={ac} strokeWidth="3.2" />
+              <circle cx={e.x} cy="118" r="11" fill="var(--lp-surface)" stroke={ac} strokeWidth="3.2" />
               <circle cx={e.x} cy="118" r="4.2" fill={ac} />
             </g>
             <g className="msc-pop" style={D(e.d + 120)}>
-              <rect x={e.x - 56} y={cy} width="112" height="54" rx="14" fill="#fff" stroke={ac} strokeWidth="2" />
+              <rect x={e.x - 56} y={cy} width="112" height="54" rx="14" fill="var(--lp-surface)" stroke={ac} strokeWidth="2" />
               <text x={e.x} y={cy + 24} textAnchor="middle" style={fs(16)} fontWeight="900" fill={ac}>{e.y}</text>
-              <text x={e.x} y={cy + 42} textAnchor="middle" style={fs(11)} fontWeight="800" fill={INK}>{e.t}</text>
+              <text x={e.x} y={cy + 42} textAnchor="middle" style={fs(11)} fontWeight="800" fill="var(--lp-text)">{e.t}</text>
             </g>
           </g>
         );
@@ -955,7 +1183,7 @@ function TimelineArt({ ac }) {
     </svg>
   );
 }
-/* 4) quiz: ask, try, correct answer lights up, progress fills */
+
 function QuizArt({ ac }) {
   const rows = [
     { y: 84, t: "المحيط الأطلسي", cls: "msc-q-wrong" },
@@ -971,421 +1199,134 @@ function QuizArt({ ac }) {
       </g>
       {rows.map((r, i) => (
         <g key={r.t} className="msc-rise" style={D(250 + i * 140)}>
-          <rect className={r.cls} x="24" y={r.y} width="352" height="36" rx="12" fill="#fff" stroke="#DCCFE9" strokeWidth="2" />
-          <circle cx="352" cy={r.y + 18} r="9" fill="#fff" stroke="#BBA6D1" strokeWidth="2" />
-          <text x="332" y={r.y + 23} textAnchor="start" style={fs(13)} fontWeight="800" fill={INK}>{r.t}</text>
+          <rect className={r.cls} x="24" y={r.y} width="352" height="36" rx="12" fill="var(--lp-surface)" stroke="var(--lp-line)" strokeWidth="2" />
+          <circle cx="352" cy={r.y + 18} r="9" fill="var(--lp-surface)" stroke={ac} strokeWidth="2" />
+          <text x="332" y={r.y + 23} textAnchor="start" style={fs(13)} fontWeight="800" fill="var(--lp-text)">{r.t}</text>
           {r.cls === "msc-q-right" && (
             <g className="msc-q-check">
-              <circle cx="352" cy={r.y + 18} r="9" fill="#147A6A" />
+              <circle cx="352" cy={r.y + 18} r="9" fill={ac} />
               <path d={`M347.5 ${r.y + 18.5}l3.6 3.6 6-6.6`} stroke="#fff" strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round" fill="none" />
             </g>
           )}
           {r.cls === "msc-q-right" && (
             <g className="msc-q-chip">
-              <rect x="30" y={r.y + 6} width="64" height="24" rx="12" fill="#147A6A" />
+              <rect x="30" y={r.y + 6} width="64" height="24" rx="12" fill={ac} />
               <text x="62" y={r.y + 22.5} textAnchor="middle" style={fs(11.5)} fontWeight="800" fill="#fff">أحسنت!</text>
             </g>
           )}
         </g>
       ))}
       <g className="msc-rise" style={D(900)}>
-        <rect x="24" y="214" width="352" height="8" rx="4" fill="#E7DDF1" />
+        <rect x="24" y="214" width="352" height="8" rx="4" fill="var(--lp-line)" />
         <rect className="msc-q-fill" x="24" y="214" width="352" height="8" rx="4" fill={ac} />
       </g>
     </svg>
   );
 }
-const ARTS = { visual: VisualArt, mind: MindArt, timeline: TimelineArt, quiz: QuizArt };
-/* ------------------------------ background decoration ------------------------------ */
-function Decor() {
+
+function RecallArt({ ac }) {
+  const rows = [
+    { y: 46, t: "تعريف من درس سابق", s: "shown", d: 250 },
+    { y: 82, t: "معلومة سبق أن درستها", s: "shown", d: 380 },
+    { y: 118, t: "فكرة يبني عليها الدرس", s: "reveal", d: 510 },
+    { y: 154, t: "", s: "hidden", d: 640 },
+  ];
   return (
-    <div className="msc-decor" aria-hidden="true">
-      <div className="msc-gridbg" />
-      <div className="msc-glow msc-glow-a" />
-      <div className="msc-glow msc-glow-b" />
-      <div className="msc-topline" />
-      <svg className="msc-orbit" viewBox="0 0 220 220">
-        <g className="msc-spin-slow" style={{ transformOrigin: "110px 110px" }}>
-          <circle cx="110" cy="110" r="96" fill="none" stroke={TEAL} strokeWidth="1.4" strokeDasharray="3 9" opacity=".35" />
-          <circle cx="206" cy="110" r="6" fill={TEAL} opacity=".5" />
+    <svg className="msc-art" viewBox="0 0 400 230" role="img" aria-label="تذكّر سريع قبل الدرس: نقاط من دروس سابقة، بعضها ظاهر وبعضها يظهر عند الضغط بعد التفكير">
+      <g className="msc-pop" style={D(0)}>
+        <rect x="14" y="10" width="372" height="188" rx="16" fill="var(--lp-surface)" stroke={ac} strokeWidth="2.4" />
+        <text x="372" y="33" textAnchor="start" style={fs(13)} fontWeight="900" fill={ac}>تذكّر سريع</text>
+        <rect x="28" y="19" width="84" height="20" rx="10" fill={ac} />
+        <text x="70" y="33" textAnchor="middle" style={fs(10.5)} fontWeight="800" fill="#fff">قبل الدرس</text>
+      </g>
+      {rows.map((r, i) => (
+        <g key={i} className="msc-rise" style={D(r.d)}>
+          {r.s !== "hidden" && <rect x="28" y={r.y} width="344" height="28" rx="14" fill={ac} opacity=".1" />}
+          {r.s !== "hidden" && <text x="358" y={r.y + 18} textAnchor="start" style={fs(11.5)} fontWeight="800" fill="var(--lp-text)">{r.t}</text>}
+          {r.s === "reveal" && (
+            <g className="msc-cover">
+              <rect x="28" y={r.y} width="344" height="28" rx="14" fill="var(--lp-surface)" stroke={ac} strokeWidth="1.4" strokeDasharray="3 3" />
+              <text x="200" y={r.y + 18} textAnchor="middle" style={fs(10)} fontWeight="800" fill="var(--lp-muted)">نقطة 3 — اضغط لإظهارها بعد ما تفكّر</text>
+            </g>
+          )}
+          {r.s === "hidden" && (
+            <g>
+              <rect x="28" y={r.y} width="344" height="28" rx="14" fill="var(--lp-surface)" stroke={ac} strokeWidth="1.4" strokeDasharray="3 3" />
+              <text x="200" y={r.y + 18} textAnchor="middle" style={fs(10)} fontWeight="800" fill="var(--lp-muted)">نقطة 4 — اضغط لإظهارها بعد ما تفكّر</text>
+            </g>
+          )}
         </g>
-        <g className="msc-spin-rev" style={{ transformOrigin: "110px 110px" }}>
-          <circle cx="110" cy="110" r="64" fill="none" stroke="#C98512" strokeWidth="1.4" strokeDasharray="2 8" opacity=".4" />
-          <circle cx="110" cy="46" r="4.5" fill="#C98512" opacity=".6" />
-        </g>
-        <circle cx="110" cy="110" r="10" fill={TEAL} opacity=".18" />
-      </svg>
-      <svg className="msc-compass" viewBox="0 0 120 120">
-        <circle cx="60" cy="60" r="50" fill="none" stroke="#C98512" strokeWidth="1.6" opacity=".35" />
-        <circle cx="60" cy="60" r="38" fill="none" stroke="#C98512" strokeWidth="1" strokeDasharray="2 5" opacity=".35" />
-        <path d="M60 14v10M60 96v10M14 60h10M96 60h10" stroke="#C98512" strokeWidth="2" strokeLinecap="round" opacity=".45" />
-        <g className="msc-sway" style={{ transformOrigin: "60px 60px" }}>
-          <path d="M60 28l7 32H53z" fill="#C2562F" opacity=".5" />
-          <path d="M60 92l7-32H53z" fill={INK} opacity=".25" />
-        </g>
-      </svg>
-      <span className="msc-spark msc-spark-1" />
-      <span className="msc-spark msc-spark-2" />
-      <span className="msc-spark msc-spark-3" />
-      <span className="msc-spark msc-spark-4" />
-    </div>
+      ))}
+      <SampleChip />
+    </svg>
   );
 }
-/* ------------------------------ main component ------------------------------ */
-function usePrefersReducedMotion() {
-  const [reduced, setReduced] = useState(() =>
-    typeof window !== "undefined" && !!window.matchMedia && window.matchMedia("(prefers-reduced-motion: reduce)").matches
-  );
+
+const ARTS = { progress: ProgressArt, dyk: DykArt, scenes: ScenesArt, words: WordsArt, video: VideoArt, mind: MindArt, timeline: TimelineArt, quiz: QuizArt, recall: RecallArt };
+
+const PHASES = [
+  { id: "dash", title: "من لوحتك", sub: "أول ما تفتح المنصة", ids: ["progress", "dyk"] },
+  { id: "before", title: "قبل الدرس", sub: "استرجع ما سيُبنى عليه الدرس", ids: ["recall"] },
+  { id: "lesson", title: "داخل الدرس", sub: "من الفيديو إلى الأسئلة والمراجعة", ids: ["video", "scenes", "words", "mind", "timeline", "quiz"] },
+];
+
+function useSeen(ref) {
+  const [seen, setSeen] = useState(false);
+  const [live, setLive] = useState(false);
   useEffect(() => {
-    if (!window.matchMedia) return undefined;
-    const mq = window.matchMedia("(prefers-reduced-motion: reduce)");
-    const on = () => setReduced(mq.matches);
-    if (mq.addEventListener) mq.addEventListener("change", on);
-    else mq.addListener(on);
-    return () => {
-      if (mq.removeEventListener) mq.removeEventListener("change", on);
-      else mq.removeListener(on);
-    };
-  }, []);
-  return reduced;
-}
-function InternalMadarShowcase() {
-  const [active, setActive] = useState(0);
-  const [auto, setAuto] = useState(true);
-  const [hover, setHover] = useState(false);
-  const [shown, setShown] = useState(false);
-  const [inView, setInView] = useState(false);
-  const [geo, setGeo] = useState(null);
-  const reduced = usePrefersReducedMotion();
-  const rootRef = useRef(null);
-  const wrapRef = useRef(null);
-  const mainRef = useRef(null);
-  const slotRefs = useRef([]);
-  const f = FEATURES[active];
-  const Art = ARTS[f.id];
-  // reveal on scroll + know when it is on screen (auto-rotate only while visible)
-  useEffect(() => {
-    const el = rootRef.current;
+    const el = ref.current;
     if (!el) return undefined;
-    if (typeof IntersectionObserver === "undefined") {
-      setShown(true);
-      setInView(true);
-      return undefined;
-    }
-    const io = new IntersectionObserver(
-      (entries) => {
-        for (const e of entries) {
-          setInView(e.isIntersecting);
-          if (e.isIntersecting) setShown(true);
-        }
-      },
-      { threshold: 0.18 }
-    );
+    if (typeof IntersectionObserver === "undefined") { setSeen(true); setLive(true); return undefined; }
+    const io = new IntersectionObserver((es) => es.forEach((e) => { setLive(e.isIntersecting); if (e.isIntersecting) setSeen(true); }), { threshold: 0.25 });
     io.observe(el);
     return () => io.disconnect();
-  }, []);
-  // gentle auto-rotation until the visitor picks something (timer restarts after every change)
-  useEffect(() => {
-    if (!auto || reduced || !inView || hover) return undefined;
-    const t = window.setTimeout(() => setActive((a) => (a + 1) % FEATURES.length), 7000);
-    return () => window.clearTimeout(t);
-  }, [auto, reduced, inView, hover, active]);
-  // desktop wires: measured from layout (offset* ignores the floating transforms)
-  useLayoutEffect(() => {
-    const measure = () => {
-      const wrap = wrapRef.current;
-      const main = mainRef.current;
-      if (!wrap || !main || window.innerWidth < 1024) {
-        setGeo(null);
-        return;
-      }
-      const x1 = main.offsetLeft;
-      const y1 = main.offsetTop + main.offsetHeight / 2;
-      const paths = slotRefs.current.map((el) => {
-        if (!el) return null;
-        const x2 = el.offsetLeft + el.offsetWidth;
-        const y2 = el.offsetTop + el.offsetHeight / 2;
-        const mx = (x1 + x2) / 2;
-        return { d: `M ${x1} ${y1} C ${mx} ${y1}, ${mx} ${y2}, ${x2} ${y2}`, x2, y2 };
-      });
-      setGeo({ w: wrap.offsetWidth, h: wrap.offsetHeight, x1, y1, paths });
-    };
-    measure();
-    let ro;
-    if (typeof ResizeObserver !== "undefined") {
-      ro = new ResizeObserver(measure);
-      if (wrapRef.current) ro.observe(wrapRef.current);
-      if (mainRef.current) ro.observe(mainRef.current);
-    }
-    window.addEventListener("resize", measure);
-    return () => {
-      if (ro) ro.disconnect();
-      window.removeEventListener("resize", measure);
-    };
-  }, []);
-  function pick(i) {
-    setAuto(false);
-    setActive(i);
-  }
-  const vars = { "--ac": f.ac, "--soft": f.soft, "--ink": f.ink };
+  }, [ref]);
+  return [seen, live];
+}
+
+function JourneyStep({ f, n, isDark }) {
+  const ref = useRef(null);
+  const [seen, live] = useSeen(ref);
+  const ac = isDark ? f.darkAc : f.ac;
+  const Art = ARTS[f.id];
   return (
-    <section ref={rootRef} className={`msc${shown ? " is-in" : ""}`} style={vars} aria-label="أدوات التعلّم في مَدَار">
-      <style>{SHOWCASE_CSS}</style>
-      <Decor />
-      <div className="msc-wrap">
-        <header className="msc-head">
-          <span className="msc-badge msc-rv" style={{ "--i": 0 }}>
-            <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
-              <path d="M16 18a2 2 0 0 1 2 2a2 2 0 0 1 2 -2a2 2 0 0 1 -2 -2a2 2 0 0 1 -2 2m0 -12a2 2 0 0 1 2 2a2 2 0 0 1 2 -2a2 2 0 0 1 -2 -2a2 2 0 0 1 -2 2m-7 12a6 6 0 0 1 6 -6a6 6 0 0 1 -6 -6a6 6 0 0 1 -6 6a6 6 0 0 1 6 6" />
-            </svg>
-            تعلّم بطريقة تفاعلية
-          </span>
-          <h2 className="msc-rv" style={{ "--i": 1 }}>أربع أدوات تعمل معًا لتصل إلى الفهم</h2>
-          <p className="msc-rv" style={{ "--i": 2 }}>اختر أداة لترى كيف تساعدك داخل الدرس، من الشرح إلى المراجعة.</p>
-        </header>
-        <div
-          ref={wrapRef}
-          className="msc-stage"
-          onMouseEnter={() => setHover(true)}
-          onMouseLeave={() => setHover(false)}
-        >
-          {geo && (
-            <svg className="msc-wires" width={geo.w} height={geo.h} viewBox={`0 0 ${geo.w} ${geo.h}`} aria-hidden="true">
-              {geo.paths.map((p, i) => {
-                if (!p) return null;
-                const on = i === active;
-                const c = FEATURES[i].ac;
-                return (
-                  <g key={FEATURES[i].id}>
-                    <path d={p.d} fill="none" stroke={on ? c : INK} strokeOpacity={on ? 0.35 : 0.14} strokeWidth={on ? 3 : 2} strokeDasharray={on ? undefined : "4 7"} className="msc-wire" />
-                    {on && <path d={p.d} fill="none" stroke={c} strokeWidth="3.4" strokeLinecap="round" className="msc-flow-wire" style={{ filter: `drop-shadow(0 0 6px ${c}99)` }} />}
-                    <circle cx={p.x2} cy={p.y2} r={on ? 6 : 4} fill="#fff" stroke={on ? c : "#B9CBC6"} strokeWidth="2.4" className="msc-wire-node" />
-                  </g>
-                );
-              })}
-              <circle cx={geo.x1} cy={geo.y1} r="7" fill="#fff" stroke={f.ac} strokeWidth="3" className="msc-wire-node" />
-            </svg>
-          )}
-          <article ref={mainRef} id="msc-panel" className="msc-main msc-rv" style={{ "--i": 3 }} aria-live="polite">
-            <div className="msc-sheen" aria-hidden="true" />
-            <div className="msc-main-top">
-              <span className="msc-live"><i aria-hidden="true" />معاينة تفاعلية</span>
-              <span className="msc-count">{active + 1} من {FEATURES.length}</span>
-            </div>
-            <div key={f.id} className="msc-copy">
-              <span className="msc-tag">{f.tag}</span>
-              <h3>{f.title}</h3>
-              <p>{f.text}</p>
-              <ul className="msc-points">
-                {f.points.map((p, i) => (
-                  <li key={p} style={{ "--k": i }}><i aria-hidden="true" />{p}</li>
-                ))}
-              </ul>
-            </div>
-            <div className="msc-canvas">
-              <div key={f.id} className="msc-canvas-in">
-                <Art ac={f.ac} />
-              </div>
-            </div>
-          </article>
-          <div className="msc-vline" aria-hidden="true"><i /></div>
-          <div className="msc-cards" role="group" aria-label="اختر أداة">
-            {FEATURES.map((x, i) => {
-              const on = i === active;
-              return (
-                <div key={x.id} ref={(el) => { slotRefs.current[i] = el; }} className="msc-slot msc-rv" style={{ "--i": 4 + i }}>
-                  <button
-                    type="button"
-                    className={`msc-card${on ? " is-on" : ""}`}
-                    style={{ "--ac": x.ac, "--soft": x.soft, "--ink": x.ink, "--fd": x.fd, "--dl": x.dl, "--rot": x.rot }}
-                    aria-pressed={on}
-                    aria-controls="msc-panel"
-                    onClick={() => pick(i)}
-                  >
-                    <span className="msc-card-bar" aria-hidden="true" />
-                    <span className="msc-card-icon" aria-hidden="true">{x.icon}</span>
-                    <span className="msc-card-body">
-                      <b>{x.title}</b>
-                      <small>{x.text}</small>
-                    </span>
-                    <span className="msc-card-tag">{x.tag}</span>
-                  </button>
-                </div>
-              );
-            })}
-          </div>
-        </div>
-        <p className="msc-foot msc-rv" style={{ "--i": 9 }}>افهم · اربط · رتّب · راجع — خطوات تمرّ بها مع كل درس</p>
+    <li ref={ref} className={`lp-step${live ? " is-live" : ""}`} style={{ "--ac": ac, "--soft": f.soft }}>
+      <span className="lp-step-node" aria-hidden="true">{n}</span>
+      <div className="lp-step-copy">
+        <h4 className="msc-card is-on" style={{ "--ac": ac, "--soft": f.soft, "--ink": f.ink, "--fd": f.fd, "--dl": f.dl, "--rot": f.rot }}>
+          <span className="msc-card-bar" aria-hidden="true" />
+          <span className="msc-card-icon" aria-hidden="true">{f.icon}</span>
+          <span className="msc-card-body"><b>{f.title}</b><small>{f.text}</small></span>
+          <span className="msc-card-tag">{f.tag}</span>
+        </h4>
+        <ul>{f.points.map((p) => <li key={p}><i aria-hidden="true">✓</i>{p}</li>)}</ul>
       </div>
+      <div className="lp-step-canvas">{seen && <Art ac={ac} />}</div>
+    </li>
+  );
+}
+
+function MadarJourney({ isDark }) {
+  const byId = Object.fromEntries(FEATURES.map((f) => [f.id, f]));
+  let n = 0;
+  return (
+    <section id="features" className="lp-journey" aria-labelledby="lp-journey-title">
+      <div className="lp-journey-head">
+        <span className="lp-badge"><span className="lp-badge-dot" />تعلّم بطريقة تفاعلية</span>
+        <h2 id="lp-journey-title">رحلتك على مَدَار خطوة بخطوة</h2>
+        <p>هذه هي المنصة نفسها: كل خطوة هنا ترسم عنصرًا موجودًا فعلًا في واجهة الطالب، بالترتيب الذي ستمر به.</p>
+      </div>
+      {PHASES.map((ph) => (
+        <div key={ph.id} className="lp-phase">
+          <div className="lp-phase-head"><h3>{ph.title}</h3><span>{ph.sub}</span></div>
+          <ol className="lp-steps">
+            {ph.ids.map((id) => <JourneyStep key={id} f={byId[id]} n={++n} isDark={isDark} />)}
+          </ol>
+        </div>
+      ))}
     </section>
   );
 }
-/* ------------------------------ styles ------------------------------ */
-const SHOWCASE_CSS = `
-.msc { --ac: ${TEAL}; --soft: #E2F3EE; --ink: ${INK};
-  position: relative; isolation: isolate; overflow: hidden; margin: 56px 0 8px; padding: 54px 0 46px;
-  border-radius: 36px; border: 2px solid #EFE3C8; color: ${INK};
-  background: linear-gradient(180deg, #FFFCF4 0%, #FFF6E3 100%); text-align: start; }
-.msc *, .msc *::before, .msc *::after { box-sizing: border-box; }
-.msc-wrap { position: relative; z-index: 2; width: 100%; max-width: 1120px; margin: 0 auto; padding: 0 20px; }
-/* ---- decoration ---- */
-.msc-decor { position: absolute; inset: 0; z-index: 0; pointer-events: none; overflow: hidden; }
-.msc-gridbg { position: absolute; inset: 0; opacity: .9;
-  background-image: linear-gradient(rgba(20,122,106,.09) 1px, transparent 1px), linear-gradient(90deg, rgba(20,122,106,.09) 1px, transparent 1px);
-  background-size: 38px 38px;
-  -webkit-mask-image: radial-gradient(ellipse 75% 70% at 50% 45%, #000 20%, transparent 78%);
-  mask-image: radial-gradient(ellipse 75% 70% at 50% 45%, #000 20%, transparent 78%); }
-.msc-glow { position: absolute; border-radius: 50%; filter: blur(60px); transition: background .8s ease; }
-.msc-glow-a { width: 340px; height: 340px; top: -90px; inset-inline-start: -60px; background: rgba(20,122,106,.14); }
-.msc-glow-b { width: 360px; height: 360px; bottom: -120px; inset-inline-end: -70px; background: var(--ac); opacity: .2; }
-.msc-topline { position: absolute; top: 0; left: 0; right: 0; height: 2px; background: linear-gradient(90deg, transparent, rgba(20,122,106,.45), transparent); }
-.msc-orbit { position: absolute; width: 220px; height: 220px; top: 18px; inset-inline-end: 22px; opacity: .8; }
-.msc-compass { position: absolute; width: 120px; height: 120px; bottom: 22px; inset-inline-end: 26px; }
-.msc-spark { position: absolute; width: 9px; height: 9px; border-radius: 3px; background: #C98512; opacity: .5; transform: rotate(45deg); animation: msc-twinkle 4.8s ease-in-out infinite; }
-.msc-spark-1 { top: 120px; inset-inline-start: 7%; }
-.msc-spark-2 { top: 64px; inset-inline-start: 38%; background: ${TEAL}; animation-delay: -1.6s; }
-.msc-spark-3 { bottom: 90px; inset-inline-end: 9%; background: #C2562F; animation-delay: -3s; }
-.msc-spark-4 { bottom: 40px; inset-inline-end: 40%; animation-delay: -2.2s; }
-/* ---- heading ---- */
-.msc-head { text-align: center; max-width: 720px; margin: 0 auto 40px; }
-.msc-badge { display: inline-flex; align-items: center; gap: 8px; padding: 7px 16px; border-radius: 999px; font-size: .8rem; font-weight: 800;
-  color: ${TEAL}; background: rgba(20,122,106,.08); border: 1.5px solid rgba(20,122,106,.22); }
-.msc-badge svg { animation: msc-pulse-soft 2.4s ease-in-out infinite; }
-.msc .msc-head h2 { margin: 16px 0 10px; font-family: var(--duo-font-display, inherit); font-size: clamp(1.6rem, 4.4vw, 2.5rem); font-weight: 900; line-height: 1.25; color: ${INK}; }
-.msc .msc-head p { margin: 0; font-size: 1rem; line-height: 1.9; color: #5C6B66; }
-/* ---- stage layout ---- */
-.msc-stage { position: relative; display: grid; grid-template-columns: minmax(0, 1fr); gap: 18px; }
-.msc-wires { position: absolute; left: 0; top: 0; z-index: 6; pointer-events: none; overflow: visible; display: none; }
-.msc-vline { display: flex; justify-content: center; order: 2; height: 26px; }
-.msc-vline i { width: 4px; height: 100%; border-radius: 4px; background: linear-gradient(180deg, transparent, var(--ac), transparent); background-size: 100% 220%; animation: msc-vflow 1.8s linear infinite; transition: background .5s; }
-.msc-cards { order: 1; display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px; }
-.msc-main { order: 3; }
-@media (min-width: 1024px) {
-  .msc-stage { grid-template-columns: minmax(0, 7fr) minmax(0, 5fr); column-gap: 84px; align-items: stretch; }
-  .msc-wires { display: block; }
-  .msc-vline { display: none; }
-  .msc-main { order: 1; }
-  .msc-cards { order: 2; grid-template-columns: minmax(0, 1fr); gap: 16px; align-content: center; }
-}
-/* ---- main card ---- */
-.msc-main { position: relative; z-index: 3; overflow: hidden; padding: 22px 20px 20px; border-radius: 30px; background: rgba(255,255,255,.92);
-  border: 2px solid #E3D8BE; box-shadow: 0 18px 44px -18px rgba(14,83,72,.35), 0 5px 0 #EFE3C8;
-  border-color: color-mix(in srgb, var(--ac) 32%, #EFE3C8); box-shadow: 0 18px 44px -18px color-mix(in srgb, var(--ac) 45%, transparent), 0 5px 0 color-mix(in srgb, var(--ac) 22%, #EFE3C8);
-  transition: border-color .5s ease, box-shadow .5s ease; }
-.msc-sheen { position: absolute; inset: 0; pointer-events: none; opacity: .55;
-  background: radial-gradient(520px 220px at 85% -10%, rgba(20,122,106,.14), transparent 70%);
-  background: radial-gradient(520px 220px at 85% -10%, color-mix(in srgb, var(--ac) 16%, transparent), transparent 70%); transition: background .6s ease; }
-.msc-main-top { position: relative; display: flex; align-items: center; justify-content: space-between; padding-bottom: 12px; margin-bottom: 14px; border-bottom: 1.5px solid #F0E7D3; }
-.msc-live { display: inline-flex; align-items: center; gap: 9px; font-size: .86rem; font-weight: 800; color: #5C6B66; }
-.msc-live i { position: relative; width: 10px; height: 10px; border-radius: 50%; background: var(--ac); transition: background .5s; }
-.msc-live i::after { content: ""; position: absolute; inset: 0; border-radius: 50%; background: var(--ac); animation: msc-ping 1.9s ease-out infinite; }
-.msc-count { padding: 3px 11px; border-radius: 999px; font-size: .78rem; font-weight: 800; color: var(--ink); background: var(--soft); transition: background .5s, color .5s; }
-.msc-copy { position: relative; animation: msc-swap .5s ease both; }
-.msc-tag { display: inline-block; padding: 3px 12px; border-radius: 999px; font-size: .76rem; font-weight: 900; color: #fff; background: var(--ac); transition: background .5s; }
-.msc .msc-copy h3 { margin: 10px 0 6px; font-family: var(--duo-font-display, inherit); font-size: clamp(1.35rem, 3vw, 1.8rem); font-weight: 900; line-height: 1.3; color: var(--ink); transition: color .5s; }
-.msc .msc-copy p { margin: 0; font-size: 1rem; line-height: 1.85; color: #4F5E59; }
-.msc-points { list-style: none; margin: 14px 0 0; padding: 0; display: flex; flex-wrap: wrap; gap: 8px; }
-.msc-points li { display: inline-flex; align-items: center; gap: 8px; padding: 6px 13px; border-radius: 999px; font-size: .84rem; font-weight: 700; color: var(--ink); background: var(--soft);
-  animation: msc-rise-in .5s ease both; animation-delay: calc(var(--k) * 90ms + 120ms); transition: background .5s, color .5s; }
-.msc-points li i { width: 7px; height: 7px; border-radius: 50%; background: var(--ac); flex: none; }
-.msc-canvas { position: relative; margin-top: 18px; border-radius: 22px; padding: 10px; background: var(--soft); border: 1.5px solid rgba(20,122,106,.2); transition: background .5s, border-color .5s;
-  background-image: radial-gradient(circle at 1px 1px, rgba(20,122,106,.2) 1px, transparent 1.4px); background-size: 18px 18px;
-  border-color: color-mix(in srgb, var(--ac) 22%, transparent);
-  background-image: radial-gradient(circle at 1px 1px, color-mix(in srgb, var(--ac) 22%, transparent) 1px, transparent 1.4px); }
-.msc-canvas-in { animation: msc-swap .55s ease both; }
-.msc-canvas { --ts: 1; }
-.msc-art { display: block; width: 100%; height: auto; font-family: inherit; direction: rtl; overflow: visible; }
-/* ---- tool cards ---- */
-.msc-slot { position: relative; }
-.msc-card { position: relative; display: flex; align-items: center; gap: 14px; width: 100%; padding: 16px 18px; border-radius: 24px; text-align: start; cursor: pointer; font: inherit; color: inherit;
-  background: rgba(255,255,255,.94); border: 2px solid #EDE3CB; box-shadow: 0 4px 0 #EDE3CB, 0 12px 26px -16px rgba(14,83,72,.35);
-  animation: msc-float var(--fd, 6s) ease-in-out var(--dl, 0s) infinite; will-change: transform;
-  transition: border-color .35s, box-shadow .35s, background .35s; }
-.msc-card:hover { border-color: var(--ac); }
-.msc-card:focus-visible { outline: 3px solid rgba(20,122,106,.5); outline: 3px solid color-mix(in srgb, var(--ac) 55%, transparent); outline-offset: 3px; }
-.msc-card.is-on { background: #fff; border-color: var(--ac); box-shadow: 0 5px 0 var(--ac), 0 18px 34px -16px rgba(14,83,72,.45); box-shadow: 0 5px 0 var(--ac), 0 18px 34px -16px color-mix(in srgb, var(--ac) 60%, transparent); }
-.msc-card-bar { position: absolute; inset-block: 14px; inset-inline-start: 0; width: 5px; border-radius: 5px 0 0 5px; background: var(--ac); transform: scaleY(0); transition: transform .4s ease; }
-.msc-card.is-on .msc-card-bar { transform: scaleY(1); }
-.msc-card-icon { flex: none; display: inline-flex; align-items: center; justify-content: center; width: 50px; height: 50px; border-radius: 16px; color: var(--ink); background: var(--soft); transition: background .35s, color .35s, transform .35s; }
-.msc-card-icon svg { width: 25px; height: 25px; }
-.msc-card.is-on .msc-card-icon { color: #fff; background: var(--ac); transform: rotate(-4deg) scale(1.05); }
-.msc-card-body { display: flex; flex-direction: column; gap: 3px; min-width: 0; flex: 1 1 auto; }
-.msc-card-body b { font-family: var(--duo-font-display, inherit); font-size: 1.02rem; font-weight: 900; color: var(--ink); line-height: 1.3; }
-.msc-card-body small { font-size: .8rem; line-height: 1.65; color: #5C6B66; }
-.msc-card-tag { position: absolute; top: 12px; inset-inline-end: 14px; font-size: .68rem; font-weight: 800; color: var(--ac); opacity: .85; }
-.msc-card-body { padding-inline-end: 34px; }
-@media (max-width: 1023px) {
-  .msc { margin-top: 40px; padding: 40px 0 34px; border-radius: 28px; }
-  .msc-card { flex-direction: column; align-items: flex-start; gap: 10px; padding: 14px 14px 13px; border-radius: 20px; animation-duration: calc(var(--fd, 6s) * 1.2); }
-  .msc-card-icon { width: 42px; height: 42px; border-radius: 14px; }
-  .msc-card-icon svg { width: 22px; height: 22px; }
-  .msc-card-body { padding-inline-end: 0; }
-  .msc-card-body small { display: none; }
-  .msc-card-body b { font-size: .95rem; }
-  .msc-card-bar { display: none; }
-  .msc-orbit { width: 150px; height: 150px; top: 8px; opacity: .6; }
-  .msc-compass { display: none; }
-}
-@media (max-width: 520px) {
-  .msc-canvas { --ts: 1.2; }
-  .msc-wrap { padding: 0 14px; }
-  .msc-main { padding: 18px 14px 14px; border-radius: 24px; }
-  .msc-canvas { padding: 6px; border-radius: 18px; }
-  .msc-points li { font-size: .8rem; }
-}
-.msc-foot { margin: 34px 0 0; text-align: center; font-size: .92rem; font-weight: 800; color: #5C6B66; }
-/* ---- reveal on scroll ---- */
-.msc .msc-rv { opacity: 0; transform: translateY(18px); }
-.msc.is-in .msc-rv { animation: msc-rise-in .65s cubic-bezier(.22,1,.36,1) both; animation-delay: calc(var(--i, 0) * 90ms); }
-/* ---- wires ---- */
-.msc-flow-wire { stroke-dasharray: 12 16; animation: msc-dash 1.1s linear infinite; }
-.msc-wire, .msc-wire-node { transition: stroke .5s, stroke-opacity .5s; }
-/* ---- drawing animations (everything is visible by default; keyframes only animate from hidden) ---- */
-.msc-art .msc-pop { transform-box: fill-box; transform-origin: center; animation: msc-pop .55s cubic-bezier(.34,1.56,.64,1) both; animation-delay: var(--d, 0ms); }
-.msc-art .msc-rise { animation: msc-rise-in .6s ease both; animation-delay: var(--d, 0ms); }
-.msc-art .msc-draw { animation: msc-draw .8s ease both; animation-delay: var(--d, 0ms); }
-.msc-art .msc-flow { stroke-dasharray: 5 7; animation: msc-dash 1.2s linear infinite; }
-.msc-art .msc-pulse { transform-box: fill-box; transform-origin: center; animation: msc-ring 2.2s ease-out infinite; }
-.msc-art .msc-bar { transform-box: fill-box; transform-origin: 100% 50%; animation: msc-fill 5.5s ease-in-out infinite; }
-.msc-art .msc-spin { animation: msc-rot 22s linear infinite; }
-.msc-art .msc-spin-slow, .msc-orbit .msc-spin-slow { animation: msc-rot 38s linear infinite; }
-.msc-orbit .msc-spin-rev { animation: msc-rot 26s linear infinite reverse; }
-.msc-compass .msc-sway { animation: msc-sway 7s ease-in-out infinite; }
-.msc-art .msc-march { animation: msc-march 6s cubic-bezier(.45,.05,.55,.95) 1.2s infinite; }
-.msc-art .msc-q-wrong { animation: msc-q-wrong 9s ease-in-out infinite; }
-.msc-art .msc-q-right { animation: msc-q-right 9s ease-in-out infinite; }
-.msc-art .msc-q-check { transform-box: fill-box; transform-origin: center; animation: msc-q-pop 9s ease-in-out infinite; }
-.msc-art .msc-q-chip { transform-box: fill-box; transform-origin: center; animation: msc-q-pop 9s ease-in-out infinite; }
-.msc-art .msc-q-fill { transform-box: fill-box; transform-origin: 100% 50%; animation: msc-q-fill 9s ease-in-out infinite; }
-@keyframes msc-rise-in { from { opacity: 0; transform: translateY(18px); } to { opacity: 1; transform: none; } }
-@keyframes msc-swap { from { opacity: 0; transform: translateY(10px) scale(.985); } to { opacity: 1; transform: none; } }
-@keyframes msc-pop { from { opacity: 0; transform: scale(.6); } to { opacity: 1; transform: scale(1); } }
-@keyframes msc-draw { from { stroke-dasharray: 1; stroke-dashoffset: 1; } to { stroke-dasharray: 1; stroke-dashoffset: 0; } }
-@keyframes msc-float { 0%, 100% { transform: translateY(0) rotate(0deg); } 50% { transform: translateY(-7px) rotate(var(--rot, .3deg)); } }
-@keyframes msc-dash { to { stroke-dashoffset: -56; } }
-@keyframes msc-vflow { from { background-position: 0 220%; } to { background-position: 0 -120%; } }
-@keyframes msc-ping { 0% { transform: scale(1); opacity: .7; } 80%, 100% { transform: scale(2.7); opacity: 0; } }
-@keyframes msc-ring { 0% { transform: scale(1); opacity: .8; } 100% { transform: scale(1.9); opacity: 0; } }
-@keyframes msc-fill { 0% { transform: scaleX(.05); } 80%, 100% { transform: scaleX(1); } }
-@keyframes msc-rot { to { transform: rotate(360deg); } }
-@keyframes msc-sway { 0%, 100% { transform: rotate(-14deg); } 50% { transform: rotate(18deg); } }
-@keyframes msc-twinkle { 0%, 100% { opacity: .15; transform: rotate(45deg) scale(.7); } 50% { opacity: .65; transform: rotate(45deg) scale(1.15); } }
-@keyframes msc-pulse-soft { 0%, 100% { transform: scale(1); } 50% { transform: scale(1.2); } }
-@keyframes msc-march { 0% { transform: translateX(0); } 100% { transform: translateX(-340px); } }
-@keyframes msc-q-wrong { 0%, 14% { fill: #fff; stroke: #DCCFE9; } 20%, 34% { fill: #FBE7DE; stroke: #C2562F; } 42%, 100% { fill: #fff; stroke: #DCCFE9; } }
-@keyframes msc-q-right { 0%, 40% { fill: #fff; stroke: #DCCFE9; } 46%, 92% { fill: #E1F2EC; stroke: #147A6A; } 100% { fill: #fff; stroke: #DCCFE9; } }
-@keyframes msc-q-pop { 0%, 42% { opacity: 0; transform: scale(.4); } 50%, 92% { opacity: 1; transform: scale(1); } 100% { opacity: 0; transform: scale(.4); } }
-@keyframes msc-q-fill { 0%, 40% { transform: scaleX(.34); } 50%, 92% { transform: scaleX(.67); } 100% { transform: scaleX(.34); } }
-/* ---- reduced motion: nothing moves, nothing is hidden ---- */
-@media (prefers-reduced-motion: reduce) {
-  .msc *, .msc *::before, .msc *::after { animation: none !important; transition: none !important; }
-  .msc .msc-rv { opacity: 1; transform: none; }
-  .msc-art .msc-q-right { fill: #E1F2EC; stroke: #147A6A; }
-  .msc-art .msc-q-fill { transform: scaleX(.67); }
-  .msc-art .msc-bar { transform: scaleX(.6); }
-}
-`;
-
 
 export default function LandingPage() {
   const navigate = useNavigate();
@@ -1576,28 +1517,28 @@ export default function LandingPage() {
                   onMouseLeave={handleMouseLeave}
                 >
                   <div className="lp-demo-header">
-                    <span className="lp-demo-logo">🌐</span>
+                    <span className="lp-demo-logo">📚</span>
                     <div>
-                      <h3>توضيح جغرافي وتاريخي</h3>
-                      <p>دراسات اجتماعية إعدادية · ربط الموقع والتجارة</p>
+                      <h3>رحلة الدرس على مَدَار</h3>
+                      <p>عناوين · شرح · خرائط · أسئلة · مراجعة</p>
                     </div>
                   </div>
 
                   <div className="lp-demo-body">
                     <div className="lp-chat-row">
-                      <span className="lp-chat-icon lp-question-icon">❓</span>
-                      <p className="lp-question-bubble">ليه قناة بنما مهمة للتجارة العالمية؟</p>
+                      <span className="lp-chat-icon lp-question-icon">📍</span>
+                      <p className="lp-question-bubble">شرح الدرس بكلمات تفاعلية توضّح معناها بتعريف أو صورة.</p>
                     </div>
 
                     <div className="lp-chat-row lp-answer-row">
-                      <span className="lp-chat-icon lp-answer-icon">💡</span>
-                      <p className="lp-answer-bubble">لأنها تربط بين المحيط الأطلنطي والمحيط الهادي.</p>
+                      <span className="lp-chat-icon lp-answer-icon">🧠</span>
+                      <p className="lp-answer-bubble">خريطة ذهنية وخط زمني يربطان الأفكار ببعضها.</p>
                     </div>
 
                     <div className="lp-result-card">
-                      <strong>🚢 النتيجة الملاحية</strong>
-                      <p>بتساعد على اختصار مسافات الرحلات البحرية.</p>
-                      <small>✨ فهم العلاقة بين الموقع والملاحة والتجارة.</small>
+                      <strong>🏁 المراجعة النهائية</strong>
+                      <p>ملخّص من كل عناوين الدرس: خريطة ذهنية وخط زمني وأسئلة.</p>
+                      <small>✨ تقدّمك يُحفظ لتستكمل من حيث توقفت.</small>
                     </div>
                   </div>
                 </article>
@@ -1606,145 +1547,8 @@ export default function LandingPage() {
           </div>
         </section>
 
-        <section className="lp-video-section" aria-labelledby="lp-video-title">
-          <div className="lp-video-card">
-            <div className="lp-video-copy">
-              <span className="lp-video-badge">
-                <span className="lp-video-badge-dot" aria-hidden="true" />
-                شرح بالفيديو
-              </span>
-              <h2 id="lp-video-title" className="lp-video-title">
-                ابدأ الدرس بمشاهدة الشرح
-              </h2>
-              <p className="lp-video-desc">
-                شاهد فيديو الشرح الموجود داخل الدرس، وافهم الأفكار الأساسية بطريقة
-                مبسّطة قبل أن تبدأ باستكشاف المحتوى وربط المعلومات ببعضها.
-              </p>
-              <ul className="lp-video-points">
-                <li>
-                  <span className="lp-video-check" aria-hidden="true">✓</span>
-                  <span>الفيديو جزء من صفحة الدرس نفسها، وليس رابطًا خارجيًا منفصلًا.</span>
-                </li>
-                <li>
-                  <span className="lp-video-check" aria-hidden="true">✓</span>
-                  <span>بعد المشاهدة تنتقل بسلاسة إلى الشرح المكتوب والخرائط والأسئلة.</span>
-                </li>
-              </ul>
-            </div>
+        <MadarJourney isDark={dark} />
 
-            <div className="lp-video-visual" aria-hidden="true">
-              <div className="lp-video-frame">
-                <div className="lp-video-screen">
-                  <div className="lp-video-play-wrap">
-                    <div className="lp-video-play-pulse" />
-                    <div className="lp-video-play">
-                      <svg viewBox="0 0 24 24" width="28" height="28" fill="currentColor">
-                        <path d="M8 5.14v14l11-7-11-7z" />
-                      </svg>
-                    </div>
-                  </div>
-                  <div className="lp-video-bars">
-                    <i /><i /><i /><i /><i />
-                  </div>
-                </div>
-                <div className="lp-video-caption">
-                  <span className="lp-video-caption-title">فيديو الشرح</span>
-                  <span className="lp-video-caption-sub">داخل صفحة الدرس · مَدَار</span>
-                </div>
-              </div>
-              <div className="lp-video-chip lp-video-chip--a">▶ ابدأ المشاهدة</div>
-              <div className="lp-video-chip lp-video-chip--b">ثم استكشف المحتوى</div>
-            </div>
-          </div>
-        </section>
-
-        <section className="lp-diff-section" aria-labelledby="lp-diff-title">
-          <div className="lp-diff-head">
-            <h2 id="lp-diff-title" className="lp-diff-title">
-              إيه اللي بيميّز تجربة التعلّم في مَدَار؟
-            </h2>
-            <p className="lp-diff-lead">
-              مش مجرد منصة لعرض الدروس؛ تجربة تعليمية تساعدك تفهم المعلومات،
-              وتربطها ببعضها، وتراجعها بطريقة أوضح.
-            </p>
-          </div>
-
-          <div className="lp-diff-grid">
-            <article className="lp-diff-card lp-diff-card--a">
-              <div className="lp-diff-icon" aria-hidden="true">
-                <svg viewBox="0 0 24 24" width="22" height="22" fill="currentColor">
-                  <path d="M12 3a9 9 0 1 0 9 9h-2a7 7 0 1 1-7-7V3zm1 4v5.4l3.3 2-1 1.6L11 13V7h2z" />
-                </svg>
-              </div>
-              <span className="lp-diff-num" aria-hidden="true">01</span>
-              <div className="lp-diff-body">
-                <span className="lp-diff-tag">فهم</span>
-                <h3 className="lp-diff-card-title">افهم الدرس قبل ما تحفظه</h3>
-                <p className="lp-diff-card-text">
-                  نساعدك تفهم أسباب الأحداث ونتائجها، وتربط المعلومات ببعضها
-                  حتى تستوعب الدرس بصورة أوضح.
-                </p>
-              </div>
-            </article>
-
-            <article className="lp-diff-card lp-diff-card--b">
-              <div className="lp-diff-icon" aria-hidden="true">
-                <svg viewBox="0 0 24 24" width="22" height="22" fill="currentColor">
-                  <path d="M12 2a3 3 0 0 1 3 3c0 .9-.4 1.7-1 2.2V9h2a3 3 0 1 1 0 6h-2v1.8c.6.5 1 1.3 1 2.2a3 3 0 1 1-6 0c0-.9.4-1.7 1-2.2V15H8a3 3 0 1 1 0-6h2V7.2C9.4 6.7 9 5.9 9 5a3 3 0 0 1 3-3z" />
-                </svg>
-              </div>
-              <span className="lp-diff-num" aria-hidden="true">02</span>
-              <div className="lp-diff-body">
-                <span className="lp-diff-tag">مرئي</span>
-                <h3 className="lp-diff-card-title">حوّل المعلومات لصورة واضحة</h3>
-                <p className="lp-diff-card-text">
-                  استخدم الشرح المرئي المبسّط والخرائط الذهنية والخطوط الزمنية
-                  لتنظيم المعلومات وفهم العلاقات بينها.
-                </p>
-              </div>
-            </article>
-
-            <article className="lp-diff-card lp-diff-card--c">
-              <div className="lp-diff-icon" aria-hidden="true">
-                <svg viewBox="0 0 24 24" width="22" height="22" fill="currentColor">
-                  <path d="M9 21h6v-1.5H9V21zM12 2a7 7 0 0 1 4 12.7V17a1 1 0 0 1-1 1H9a1 1 0 0 1-1-1v-2.3A7 7 0 0 1 12 2zm0 2a5 5 0 0 0-2.7 9.2l.7.5V16h4v-2.3l.7-.5A5 5 0 0 0 12 4z" />
-                </svg>
-              </div>
-              <span className="lp-diff-num" aria-hidden="true">03</span>
-              <div className="lp-diff-body">
-                <span className="lp-diff-tag">تفاعلي</span>
-                <h3 className="lp-diff-card-title">مرّر، اكتشف، وافهم أكتر</h3>
-                <p className="lp-diff-card-text">
-                  مرّر على الكلمات التفاعلية داخل الدرس لاكتشاف شروحات مرتبطة،
-                  ومعلومات إضافية، وخرائط وصور توضّح المعنى وتساعدك على ربط
-                  المعلومات ببعضها.
-                </p>
-              </div>
-            </article>
-
-            <article className="lp-diff-card lp-diff-card--d">
-              <div className="lp-diff-icon" aria-hidden="true">
-                <svg viewBox="0 0 24 24" width="22" height="22" fill="currentColor">
-                  <path d="M11 18h2v-2h-2v2zm1-16A10 10 0 0 0 2 12a10 10 0 0 0 10 10 10 10 0 0 0 10-10A10 10 0 0 0 12 2zm0 18c-4.41 0-8-3.59-8-8s3.59-8 8-8 8 3.59 8 8-3.59 8-8 8zm0-14a4 4 0 0 0-4 4h2a2 2 0 0 1 2-2 2 2 0 0 1 2 2c0 2-3 1.75-3 5h2c0-2.25 3-2.5 3-5a4 4 0 0 0-4-4z" />
-                </svg>
-              </div>
-              <span className="lp-diff-num" aria-hidden="true">04</span>
-              <div className="lp-diff-body">
-                <span className="lp-diff-tag">مراجعة</span>
-                <h3 className="lp-diff-card-title">اختبر فهمك وراجع معلوماتك</h3>
-                <p className="lp-diff-card-text">
-                  استفد من الأسئلة والمراجعة المتاحة داخل الدروس لتقيّم فهمك
-                  وتعرف ما الذي يحتاج إلى مراجعة.
-                </p>
-              </div>
-            </article>
-          </div>
-        </section>
-
-        <section id="features" className="lp-showcase-wrap" aria-label="مميزات مَدَار">
-          <InternalMadarShowcase />
-        </section>
-      </main>
 
         <section className="lp-final-cta" aria-labelledby="lp-final-cta-title">
           <div className="lp-final-cta-card">
@@ -1759,7 +1563,8 @@ export default function LandingPage() {
               ادخل إلى واجهة الطالب واختر صفك الدراسي لتبدأ مسارك التعليمي المنظم.
             </p>
             <button type="button" className="lp-final-cta-btn" onClick={startLearning}>
-              ابدأ التعلّم الآن
+              <span>ابدأ التعلّم الآن</span>
+              <ArrowLeft size={20} aria-hidden="true" />
             </button>
             <div className="lp-final-cta-pills" aria-hidden="true">
               <span><svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" strokeWidth="2"><path d="M9 18h6"/><path d="M10 22h4"/><path d="M12 2a7 7 0 0 0-4 12.7V17h8v-2.3A7 7 0 0 0 12 2z"/></svg> فهم لا حفظ</span>
@@ -1769,12 +1574,13 @@ export default function LandingPage() {
           </div>
         </section>
 
+      </main>
+
       <Footer />
 
       <AuthModal open={authOpen} onClose={() => setAuthOpen(false)} />
 
       <style>{HERO_CSS}</style>
-      <style>{SHOWCASE_CSS}</style>
       <style>{LP_CSS}</style>
     </div>
   );
@@ -1783,16 +1589,6 @@ export default function LandingPage() {
 const LP_CSS = `
   .lp-root { --duo-green: #147A6A; --duo-green-ink: #0E5348; --duo-green-soft: #E2F3EE; --duo-line: #DED4BD; --duo-surface: #FFFFFF; --duo-bg: #FFFCF4; --duo-bg-alt: #FFF6E3; --duo-ink: #263B35; --duo-ink-soft: #40544D; --duo-muted: #5C6B66; --duo-font-display: inherit; }
   .lp-root.is-dark { --duo-green: #55B9A7; --duo-green-ink: #A3E0D3; --duo-green-soft: #183A34; --duo-line: #344943; --duo-surface: #192723; --duo-bg: #111B18; --duo-bg-alt: #17231F; --duo-ink: #E9F2EF; --duo-ink-soft: #D1E0DB; --duo-muted: #A4B8B0; }
-  .lp-root.is-dark .msc { background: linear-gradient(180deg, #182823 0%, #14211D 100%); border-color: #344943; color: #E9F2EF; }
-  .lp-root.is-dark .msc .msc-head h2 { color: #E9F2EF; }
-  .lp-root.is-dark .msc .msc-head p, .lp-root.is-dark .msc-foot { color: #A4B8B0; }
-  .lp-root.is-dark .msc-main { background: rgba(25,39,35,.96); border-color: color-mix(in srgb, var(--ac) 40%, #344943); }
-  .lp-root.is-dark .msc-card { background: #1B2D27; border-color: #344943; box-shadow: 0 4px 0 #263B33, 0 12px 26px -16px rgba(0,0,0,.4); }
-  .lp-root.is-dark .msc-card.is-on { background: #20372F; }
-  .lp-root.is-dark .msc-card-body b, .lp-root.is-dark .msc-copy h3 { color: #E9F2EF; }
-  .lp-root.is-dark .msc-card-body small, .lp-root.is-dark .msc-copy p { color: #B3C4BD; }
-  .lp-root.is-dark .msc-main-top { border-color: #344943; }
-  .lp-root.is-dark .msc-canvas { background-color: #20372F; }
 
   .hero-btn { font: inherit; cursor: pointer; }
   .hero-btn-primary, .hero-btn-secondary { border: 0; }
@@ -2568,367 +2364,126 @@ const LP_CSS = `
   .lp-icon-mind { background: #8D639F; }
 
   /* Video Explainer Section */
-  .lp-video-section {
-    max-width: 1140px;
-    margin: 0 auto;
-    padding: 0.5rem 1.25rem 3rem;
-  }
 
-  .lp-video-card {
-    display: grid;
-    grid-template-columns: 1fr;
-    gap: 2.5rem;
-    align-items: center;
-    padding: clamp(1.6rem, 4vw, 2.75rem);
-    border-radius: 2rem;
-    border: 1px solid var(--lp-line-strong);
-    background:
-      radial-gradient(circle at 100% 0%, color-mix(in srgb, var(--lp-teal) 12%, transparent), transparent 45%),
-      var(--lp-surface);
-    box-shadow: var(--lp-card-shadow);
-  }
-
+  /* ---- رحلة الطالب ---- */
+  .lp-journey { scroll-margin-top: 5rem; max-width: 1140px; margin: 0 auto; padding: .5rem 1.25rem 3.5rem; color: var(--lp-text); }
+  .lp-journey-head { text-align: center; max-width: 44rem; margin: 0 auto 2.5rem; }
+  .lp-journey-head h2 { margin: 1.1rem 0 .8rem; font-size: clamp(1.6rem, 3.8vw, 2.3rem); font-weight: 900; line-height: 1.45; text-wrap: balance; }
+  .lp-journey-head p { margin: 0; font-size: 1.02rem; line-height: 1.9; color: var(--lp-muted); text-wrap: balance; }
+  .lp-phase + .lp-phase { margin-top: 3rem; }
+  .lp-phase-head { display: flex; align-items: baseline; gap: .8rem; flex-wrap: wrap; margin: 0 0 1.4rem; padding-bottom: .8rem; border-bottom: 1px solid var(--lp-line-strong); }
+  .lp-phase-head h3 { margin: 0; font-size: 1.25rem; font-weight: 900; color: var(--lp-teal-deep); }
+  .lp-phase-head span { font-size: .9rem; font-weight: 700; color: var(--lp-muted); }
+  .lp-steps { list-style: none; margin: 0; padding: 0 3.3rem 0 0; display: grid; gap: 1.6rem; position: relative; }
+  .lp-steps::before { content: ""; position: absolute; inset-block: 1.2rem; inset-inline-start: 1.05rem; width: 2px; border-radius: 2px; background: repeating-linear-gradient(180deg, var(--lp-line-strong) 0 6px, transparent 6px 12px); }
+  .lp-step { position: relative; display: grid; grid-template-columns: minmax(0, 1fr); gap: 1.4rem; align-items: center; padding: clamp(1.2rem, 3vw, 2rem); border-radius: 1.75rem; border: 1px solid var(--lp-line-strong); background: radial-gradient(circle at 100% 0%, var(--soft), transparent 55%), var(--lp-surface); box-shadow: var(--lp-card-shadow); --msc-svg-soft: var(--soft); }
+  .lp-step-node { position: absolute; inset-inline-start: calc(-3.3rem + 0rem); top: 1.2rem; width: 2.1rem; height: 2.1rem; display: grid; place-items: center; border-radius: 50%; background: var(--ac); color: #fff; font-weight: 900; font-size: .95rem; box-shadow: 0 0 0 5px var(--lp-bg); }
+  .lp-step-copy { min-width: 0; }
+  .lp-step h4.msc-card { margin: 0; cursor: default; }
+  .lp-step-copy ul { list-style: none; margin: 1.25rem 0 0; padding: 0; display: grid; gap: .55rem; }
+  .lp-step-copy li { display: flex; gap: .6rem; align-items: flex-start; font-size: .93rem; font-weight: 700; line-height: 1.7; }
+  .lp-step-copy li i { flex: none; display: grid; place-items: center; width: 1.3rem; height: 1.3rem; margin-top: .15rem; border-radius: 50%; background: var(--ac); color: #fff; font-size: .72rem; font-style: normal; }
+  .lp-step-canvas { --ts: 1; min-height: 12rem; padding: .6rem; border-radius: 1.25rem; border: 1px solid var(--lp-line-strong); background-color: color-mix(in srgb, var(--lp-surface) 92%, var(--lp-bg)); background-image: radial-gradient(circle at 1px 1px, color-mix(in srgb, var(--ac) 22%, transparent) 1px, transparent 1.4px); background-size: 18px 18px; }
+  .msc-art { display: block; width: 100%; height: auto; font-family: inherit; direction: rtl; overflow: visible; }
+  .lp-step:not(.is-live) .msc-card, .lp-step:not(.is-live) .msc-art * { animation-play-state: paused !important; }
   @media (min-width: 900px) {
-    .lp-video-card { grid-template-columns: minmax(0, 1.05fr) minmax(0, 0.95fr); }
+    .lp-step { grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: 2.5rem; }
+    .lp-steps > .lp-step:nth-child(even) .lp-step-canvas { order: -1; }
+  }
+  @media (max-width: 520px) {
+    .lp-journey { padding-inline: .85rem; }
+    .lp-steps { padding-inline-end: 2.6rem; }
+    .lp-step-node { inset-inline-start: -2.6rem; width: 1.9rem; height: 1.9rem; }
+    .lp-steps::before { inset-inline-start: .9rem; }
+    .lp-step-canvas { --ts: 1.2; padding: .4rem; }
   }
 
-  .lp-video-badge {
-    display: inline-flex;
-    align-items: center;
-    gap: 0.5rem;
-    padding: 0.45rem 0.9rem;
-    border-radius: 999px;
-    background: var(--lp-soft-accent);
-    border: 1px solid var(--lp-line-strong);
-    color: var(--lp-teal-deep);
-    font-size: 0.78rem;
-    font-weight: 800;
+  /* حركة الرسومات التوضيحية (منقولة من MadarShowcase) */
+
+  /* بطاقة العنوان: نفس شكل بطاقات MadarShowcase */
+  .msc-card { 
+    position: relative; display: flex; align-items: center; gap: 14px; width: 100%; padding: 14px 16px; border-radius: 20px; text-align: start; cursor: pointer; font: inherit; color: var(--lp-text);
+    background: var(--lp-surface); border: 1px solid var(--lp-line); box-shadow: var(--lp-shadow);
+    animation: msc-float var(--fd, 6s) ease-in-out var(--dl, 0s) infinite; will-change: transform;
+    transition: border-color .35s, box-shadow .35s, background .35s; 
   }
-
-  .lp-video-badge-dot {
-    width: 0.45rem;
-    height: 0.45rem;
-    border-radius: 50%;
-    background: var(--lp-teal);
+  .msc-card:hover { border-color: var(--ac); }
+  .msc-card:focus-visible { outline: 2px solid var(--ac); outline-offset: 2px; }
+  .msc-card.is-on { background: var(--lp-surface); border-color: var(--ac); box-shadow: 0 4px 20px -8px color-mix(in srgb, var(--ac) 40%, transparent); }
+  .msc-card-bar { position: absolute; inset-block: 12px; inset-inline-start: 0; width: 4px; border-radius: 0 4px 4px 0; background: var(--ac); transform: scaleY(0); transition: transform .4s ease; }
+  .msc-card.is-on .msc-card-bar { transform: scaleY(1); }
+  .msc-card-icon { flex: none; display: inline-flex; align-items: center; justify-content: center; width: 46px; height: 46px; border-radius: 14px; color: var(--lp-text); background: rgba(20, 122, 106, 0.08); border: 1px solid var(--lp-line); transition: background .35s, color .35s, transform .35s; }
+  .msc-card-icon svg { width: 22px; height: 22px; }
+  .msc-card.is-on .msc-card-icon { color: #fff; background: var(--ac); border-color: var(--ac); transform: rotate(-4deg) scale(1.05); }
+  .msc-card-body { display: flex; flex-direction: column; gap: 3px; min-width: 0; flex: 1 1 auto; }
+  .msc-card-body b { font-size: 0.98rem; font-weight: 900; color: var(--lp-text); line-height: 1.3; }
+  .msc-card-body small { font-size: .8rem; line-height: 1.6; color: var(--lp-muted); }
+  .msc-card-tag { position: absolute; top: 12px; inset-inline-end: 14px; font-size: .68rem; font-weight: 800; color: var(--ac); opacity: .9; }
+  .msc-card-body { padding-inline-end: 34px; }
+/* ---- drawing animations ---- */
+  .msc-art .msc-pop { transform-box: fill-box; transform-origin: center; animation: msc-pop .55s cubic-bezier(.34,1.56,.64,1) both; animation-delay: var(--d, 0ms); }
+  .msc-art .msc-rise { animation: msc-rise-in .6s ease both; animation-delay: var(--d, 0ms); }
+  .msc-art .msc-draw { animation: msc-draw .8s ease both; animation-delay: var(--d, 0ms); }
+  .msc-art .msc-flow { stroke-dasharray: 5 7; animation: msc-dash 1.2s linear infinite; }
+  .msc-art .msc-pulse { transform-box: fill-box; transform-origin: center; animation: msc-ring 2.2s ease-out infinite; }
+  .msc-art .msc-bar { transform-box: fill-box; transform-origin: 100% 50%; animation: msc-fill 5.5s ease-in-out infinite; }
+  .msc-art .msc-spin { animation: msc-rot 22s linear infinite; }
+  .msc-art .msc-spin-slow, .msc-orbit .msc-spin-slow { animation: msc-rot 38s linear infinite; }
+  .msc-orbit .msc-spin-rev { animation: msc-rot 26s linear infinite reverse; }
+  .msc-compass .msc-sway { animation: msc-sway 7s ease-in-out infinite; }
+  .msc-art .msc-march { animation: msc-march 6s cubic-bezier(.45,.05,.55,.95) 1.2s infinite; }
+  .msc-art .msc-q-wrong { animation: msc-q-wrong 9s ease-in-out infinite; }
+  .msc-art .msc-q-right { animation: msc-q-right 9s ease-in-out infinite; }
+  .msc-art .msc-q-check { transform-box: fill-box; transform-origin: center; animation: msc-q-pop 9s ease-in-out infinite; }
+  .msc-art .msc-q-chip { transform-box: fill-box; transform-origin: center; animation: msc-q-pop 9s ease-in-out infinite; }
+  .msc-art .msc-q-fill { transform-box: fill-box; transform-origin: 100% 50%; animation: msc-q-fill 9s ease-in-out infinite; }
+  
+  @keyframes msc-rise-in { from { opacity: 0; transform: translateY(18px); } to { opacity: 1; transform: none; } }
+  @keyframes msc-swap { from { opacity: 0; transform: translateY(10px) scale(.985); } to { opacity: 1; transform: none; } }
+  @keyframes msc-pop { from { opacity: 0; transform: scale(.6); } to { opacity: 1; transform: scale(1); } }
+  @keyframes msc-draw { from { stroke-dasharray: 1; stroke-dashoffset: 1; } to { stroke-dasharray: 1; stroke-dashoffset: 0; } }
+  @keyframes msc-float { 0%, 100% { transform: translateY(0) rotate(0deg); } 50% { transform: translateY(-7px) rotate(var(--rot, .3deg)); } }
+  @keyframes msc-dash { to { stroke-dashoffset: -56; } }
+  @keyframes msc-vflow { from { background-position: 0 220%; } to { background-position: 0 -120%; } }
+  @keyframes msc-ping { 0% { transform: scale(1); opacity: .7; } 80%, 100% { transform: scale(2.7); opacity: 0; } }
+  @keyframes msc-ring { 0% { transform: scale(1); opacity: .8; } 100% { transform: scale(1.9); opacity: 0; } }
+  @keyframes msc-fill { 0% { transform: scaleX(.05); } 80%, 100% { transform: scaleX(1); } }
+  @keyframes msc-rot { to { transform: rotate(360deg); } }
+  @keyframes msc-sway { 0%, 100% { transform: rotate(-14deg); } 50% { transform: rotate(18deg); } }
+  @keyframes msc-twinkle { 0%, 100% { opacity: .15; transform: rotate(45deg) scale(.7); } 50% { opacity: .65; transform: rotate(45deg) scale(1.15); } }
+  @keyframes msc-pulse-soft { 0%, 100% { transform: scale(1); } 50% { transform: scale(1.2); } }
+  @keyframes msc-march { 0% { transform: translateX(0); } 100% { transform: translateX(-340px); } }
+  @keyframes msc-q-wrong { 0%, 14% { fill: var(--lp-surface); stroke: var(--lp-line); } 20%, 34% { fill: rgba(194, 86, 47, 0.15); stroke: #C2562F; } 42%, 100% { fill: var(--lp-surface); stroke: var(--lp-line); } }
+  @keyframes msc-q-right { 0%, 40% { fill: var(--lp-surface); stroke: var(--lp-line); } 46%, 92% { fill: rgba(20, 122, 106, 0.15); stroke: var(--lp-teal); } 100% { fill: var(--lp-surface); stroke: var(--lp-line); } }
+  @keyframes msc-q-pop { 0%, 42% { opacity: 0; transform: scale(.4); } 50%, 92% { opacity: 1; transform: scale(1); } 100% { opacity: 0; transform: scale(.4); } }
+  @keyframes msc-q-fill { 0%, 40% { transform: scaleX(.34); } 50%, 92% { transform: scaleX(.67); } 100% { transform: scaleX(.34); } }
+  
+  @media (prefers-reduced-motion: reduce) {
+    .lp-step .msc-art * { animation: none !important; transition: none !important; }
+    .msc-art .msc-q-right { fill: rgba(20, 122, 106, 0.15); stroke: var(--lp-teal); }
+    .msc-art .msc-q-fill { transform: scaleX(.67); }
+    .msc-art .msc-bar { transform: scaleX(.6); }
   }
-
-  .lp-video-title {
-    margin: 1.15rem 0 0.85rem;
-    font-size: clamp(1.45rem, 3.2vw, 2rem);
-    font-weight: 900;
-    line-height: 1.5;
-    color: var(--lp-text);
+  
+  /* ===== إضافات الرسومات الجديدة ===== */
+  .msc-art .msc-hl { animation: msc-hl 2.6s ease-in-out infinite; }
+  .msc-art .msc-fadein { animation: msc-fadein 9s ease-in-out infinite; }
+  .msc-art .msc-cover { animation: msc-cover 9s ease-in-out infinite; }
+  .msc-art .msc-ph-a { animation: msc-ph-a 10s ease-in-out infinite; }
+  .msc-art .msc-ph-b { animation: msc-ph-b 10s ease-in-out infinite; }
+  @keyframes msc-hl { 0%, 100% { opacity: .28; } 50% { opacity: .6; } }
+  @keyframes msc-fadein { 0%, 10% { opacity: 0; transform: translateY(10px); } 22%, 86% { opacity: 1; transform: none; } 96%, 100% { opacity: 0; transform: translateY(10px); } }
+  @keyframes msc-cover { 0%, 28% { opacity: 1; } 40%, 86% { opacity: 0; } 96%, 100% { opacity: 1; } }
+  @keyframes msc-ph-a { 0%, 44% { opacity: 1; } 50%, 94% { opacity: 0; } 100% { opacity: 1; } }
+  @keyframes msc-ph-b { 0%, 44% { opacity: 0; } 50%, 94% { opacity: 1; } 100% { opacity: 0; } }
+  @media (prefers-reduced-motion: reduce) {
+    .msc-art .msc-hl { opacity: .5; }
+    .msc-art .msc-fadein { opacity: 1; transform: none; }
+    .msc-art .msc-cover { opacity: 0; }
+    .msc-art .msc-ph-a { opacity: 1; }
+    .msc-art .msc-ph-b { opacity: 0; }
   }
-
-  .lp-video-desc {
-    margin: 0;
-    font-size: 1.02rem;
-    line-height: 1.9;
-    color: var(--lp-muted);
-  }
-
-  .lp-video-points {
-    list-style: none;
-    margin: 1.25rem 0 0;
-    padding: 0;
-    display: flex;
-    flex-direction: column;
-    gap: 0.75rem;
-  }
-
-  .lp-video-points li {
-    display: flex;
-    align-items: flex-start;
-    gap: 0.75rem;
-    font-size: 0.92rem;
-    line-height: 1.75;
-    color: var(--lp-text);
-    font-weight: 700;
-  }
-
-  .lp-video-check {
-    flex: none;
-    width: 1.45rem;
-    height: 1.45rem;
-    margin-top: 0.1rem;
-    display: inline-flex;
-    align-items: center;
-    justify-content: center;
-    border-radius: 50%;
-    background: var(--lp-soft-accent);
-    color: var(--lp-teal);
-    font-size: 0.8rem;
-    font-weight: 900;
-    border: 1px solid var(--lp-line);
-  }
-
-  .lp-video-visual {
-    position: relative;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    min-height: 15rem;
-    padding: 1.25rem 0.5rem;
-  }
-
-  .lp-video-frame {
-    width: 100%;
-    max-width: 23rem;
-    border-radius: 1.5rem;
-    border: 1px solid var(--lp-line-strong);
-    background: var(--lp-surface);
-    box-shadow: 0 20px 45px -18px rgba(14, 83, 72, 0.25);
-    overflow: hidden;
-    transition: transform .3s ease;
-  }
-
-  .lp-video-frame:hover { transform: scale(1.02); }
-
-  .lp-video-screen {
-    position: relative;
-    aspect-ratio: 16 / 10;
-    background: linear-gradient(160deg, #0E5348 0%, #147A6A 55%, #1E8C7A 100%);
-    display: flex;
-    align-items: center;
-    justify-content: center;
-  }
-
-  .lp-video-play-wrap { position: relative; display: flex; align-items: center; justify-content: center; }
-
-  .lp-video-play-pulse {
-    position: absolute;
-    inset: -12px;
-    border-radius: 50%;
-    background: rgba(255, 255, 255, 0.4);
-    animation: lpVideoPulse 2s ease-out infinite;
-  }
-
-  .lp-video-play {
-    position: relative;
-    z-index: 2;
-    width: 3.6rem;
-    height: 3.6rem;
-    border-radius: 50%;
-    background: #FFFFFF;
-    color: #0E5348;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    box-shadow: 0 14px 32px -8px rgba(0, 0, 0, 0.4);
-    padding-inline-start: 3px;
-    transition: transform .25s ease;
-  }
-
-  .lp-video-frame:hover .lp-video-play { transform: scale(1.1); }
-
-  .lp-video-bars {
-    position: absolute;
-    inset-inline: 12%;
-    bottom: 14%;
-    display: flex;
-    align-items: flex-end;
-    gap: 6px;
-    height: 1.2rem;
-    opacity: 0.65;
-  }
-
-  .lp-video-bars i {
-    display: block;
-    width: 5px;
-    border-radius: 3px;
-    background: #FFFFFF;
-    animation: lp-video-eq 1.2s ease-in-out infinite alternate;
-  }
-
-  .lp-video-bars i:nth-child(1) { height: 35%; animation-delay: 0s; }
-  .lp-video-bars i:nth-child(2) { height: 75%; animation-delay: 0.15s; }
-  .lp-video-bars i:nth-child(3) { height: 100%; animation-delay: 0.3s; }
-  .lp-video-bars i:nth-child(4) { height: 60%; animation-delay: 0.1s; }
-  .lp-video-bars i:nth-child(5) { height: 40%; animation-delay: 0.25s; }
-
-  @keyframes lp-video-eq {
-    from { transform: scaleY(0.5); }
-    to { transform: scaleY(1); }
-  }
-
-  .lp-video-caption {
-    display: flex;
-    flex-direction: column;
-    gap: 0.2rem;
-    padding: 0.95rem 1.15rem;
-    border-top: 1px solid var(--lp-line);
-    background: var(--lp-surface-soft);
-  }
-
-  .lp-video-caption-title { font-size: 0.9rem; font-weight: 850; color: var(--lp-teal-deep); }
-  .lp-video-caption-sub { font-size: 0.75rem; color: var(--lp-muted); font-weight: 600; }
-
-  .lp-video-chip {
-    position: absolute;
-    z-index: 3;
-    display: inline-flex;
-    align-items: center;
-    padding: 0.5rem 0.8rem;
-    border-radius: 0.85rem;
-    border: 1px solid var(--lp-line-strong);
-    background: var(--lp-surface);
-    color: var(--lp-text);
-    font-size: 0.72rem;
-    font-weight: 800;
-    box-shadow: 0 12px 28px -10px rgba(0,0,0,0.18);
-    pointer-events: none;
-  }
-
-  .lp-video-chip--a { top: 0.2rem; inset-inline-end: 0.1rem; }
-  .lp-video-chip--b { bottom: 0.3rem; inset-inline-start: 0rem; }
-
-  /* Differentiation Feature Grid */
-  .lp-diff-section {
-    max-width: 1140px;
-    margin: 0 auto;
-    padding: 0.5rem 1.25rem 3.25rem;
-  }
-
-  .lp-diff-head { text-align: center; max-width: 42rem; margin: 0 auto 2.25rem; }
-
-  .lp-diff-title {
-    margin: 0 0 0.9rem;
-    font-size: clamp(1.45rem, 3.4vw, 2rem);
-    font-weight: 900;
-    line-height: 1.5;
-    color: var(--lp-text);
-    text-wrap: balance;
-  }
-
-  .lp-diff-lead {
-    margin: 0;
-    font-size: 1.02rem;
-    line-height: 1.9;
-    color: var(--lp-muted);
-    text-wrap: balance;
-  }
-
-  .lp-diff-grid {
-    display: grid;
-    grid-template-columns: 1fr;
-    gap: 1.5rem;
-  }
-
-  @media (min-width: 640px) { .lp-diff-grid { grid-template-columns: 1fr 1fr; gap: 1.35rem; } }
-  @media (min-width: 1024px) { .lp-diff-grid { grid-template-columns: repeat(4, 1fr); gap: 1.25rem; } }
-
-  .lp-diff-card {
-    position: relative;
-    isolation: isolate;
-    padding: 2.75rem 1.45rem 1.6rem;
-    border-radius: 1.85rem;
-    border: 1px solid color-mix(in srgb, var(--lp-teal) 25%, var(--lp-line-strong));
-    background:
-      linear-gradient(
-        160deg,
-        color-mix(in srgb, var(--lp-teal) 7%, var(--lp-surface)) 0%,
-        var(--lp-surface) 50%,
-        color-mix(in srgb, var(--lp-teal) 9%, var(--lp-surface)) 100%
-      );
-    box-shadow: var(--lp-card-shadow);
-    transition: all 0.3s cubic-bezier(0.16, 1, 0.3, 1);
-  }
-
-  .lp-diff-card:hover {
-    transform: translateY(-6px);
-    border-color: color-mix(in srgb, var(--lp-teal) 55%, var(--lp-line-strong));
-    box-shadow: var(--lp-card-shadow-hover);
-  }
-
-  .lp-diff-card--b {
-    border-color: color-mix(in srgb, #3F7FA3 30%, var(--lp-line-strong));
-    background: linear-gradient(160deg, color-mix(in srgb, #3F7FA3 8%, var(--lp-surface)) 0%, var(--lp-surface) 50%, color-mix(in srgb, #3F7FA3 10%, var(--lp-surface)) 100%);
-  }
-
-  .lp-diff-card--c {
-    border-color: color-mix(in srgb, #B8832A 30%, var(--lp-line-strong));
-    background: linear-gradient(160deg, color-mix(in srgb, #B8832A 9%, var(--lp-surface)) 0%, var(--lp-surface) 50%, color-mix(in srgb, #B8832A 11%, var(--lp-surface)) 100%);
-  }
-
-  .lp-diff-card--d {
-    border-color: color-mix(in srgb, #7A5CA3 28%, var(--lp-line-strong));
-    background: linear-gradient(160deg, color-mix(in srgb, #7A5CA3 8%, var(--lp-surface)) 0%, var(--lp-surface) 50%, color-mix(in srgb, #7A5CA3 10%, var(--lp-surface)) 100%);
-  }
-
-  .lp-diff-icon {
-    position: absolute;
-    top: -1.15rem;
-    inset-inline-start: 1.25rem;
-    z-index: 2;
-    width: 3rem;
-    height: 3rem;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    border-radius: 1rem;
-    background: var(--lp-teal);
-    color: #fff;
-    box-shadow: 0 10px 22px -8px rgba(20, 122, 106, 0.6), 0 0 0 5px var(--lp-surface);
-    transition: transform 0.3s ease;
-  }
-
-  .lp-diff-card:hover .lp-diff-icon { transform: scale(1.1) rotate(-3deg); }
-  .lp-diff-card--b .lp-diff-icon { background: #3F7FA3; box-shadow: 0 10px 22px -8px rgba(63, 127, 163, 0.55), 0 0 0 5px var(--lp-surface); }
-  .lp-diff-card--c .lp-diff-icon { background: #B8832A; box-shadow: 0 10px 22px -8px rgba(184, 131, 42, 0.55), 0 0 0 5px var(--lp-surface); }
-  .lp-diff-card--d .lp-diff-icon { background: #5A4175; box-shadow: 0 10px 22px -8px rgba(90, 65, 117, 0.55), 0 0 0 5px var(--lp-surface); }
-
-  .lp-diff-num {
-    position: absolute;
-    top: 0.6rem;
-    inset-inline-end: 0.95rem;
-    z-index: 0;
-    font-size: clamp(2.6rem, 6.5vw, 3.4rem);
-    font-weight: 900;
-    line-height: 1;
-    letter-spacing: -0.04em;
-    color: color-mix(in srgb, var(--lp-teal) 22%, transparent);
-    pointer-events: none;
-    user-select: none;
-    transition: color 0.3s ease;
-  }
-
-  .lp-diff-body { position: relative; z-index: 1; }
-
-  .lp-diff-tag {
-    display: inline-flex;
-    align-items: center;
-    padding: 0.22rem 0.75rem;
-    border-radius: 999px;
-    background: var(--lp-soft-accent);
-    color: var(--lp-teal-deep);
-    font-size: 0.72rem;
-    font-weight: 800;
-  }
-
-  .lp-diff-card-title {
-    margin: 0.8rem 0 0;
-    padding-inline-end: 2rem;
-    font-size: 1.08rem;
-    font-weight: 850;
-    line-height: 1.45;
-    color: var(--lp-text);
-  }
-
-  .lp-diff-card-text {
-    margin: 0.6rem 0 0;
-    font-size: 0.88rem;
-    line-height: 1.85;
-    color: var(--lp-muted);
-  }
-
-  /* Showcase Section */
-  .lp-showcase-wrap {
-    scroll-margin-top: 5rem;
-    max-width: 1140px;
-    margin: 0 auto;
-    padding: .5rem 1.25rem 3rem;
-    color: var(--lp-text);
-  }
+  
 
   .lp-feat-cta {
     display: flex;
@@ -3134,83 +2689,124 @@ html[data-theme="dark"] .lp-trust-num { color: #B5DDD2; }
 
 /* Final CTA card */
 .lp-final-cta {
-  max-width: 960px;
-  margin: 0 auto 2.5rem;
+  max-width: 1140px;
+  margin: 0 auto 3rem;
   padding: 0 1.25rem;
 }
 .lp-final-cta-card {
   position: relative;
   isolation: isolate;
   overflow: hidden;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
   text-align: center;
-  padding: clamp(2.2rem, 5vw, 3.25rem) clamp(1.25rem, 4vw, 2.5rem);
-  border-radius: 1.75rem;
+  padding: clamp(2.5rem, 6vw, 4.25rem) clamp(1.25rem, 5vw, 3rem);
+  border-radius: 2.25rem;
   background: linear-gradient(145deg, #0E5348 0%, #147A6A 55%, #1A8F7C 100%);
   color: #fff;
-  box-shadow: 0 24px 48px -20px rgba(14, 83, 72, 0.45);
+  box-shadow: 0 28px 56px -24px rgba(14, 83, 72, 0.55);
+}
+.lp-final-cta-card::before {
+  content: "";
+  position: absolute;
+  z-index: -1;
+  width: 22rem;
+  height: 22rem;
+  top: -10rem;
+  inset-inline-end: -6rem;
+  border-radius: 50%;
+  background: rgba(227, 192, 139, 0.28);
+  filter: blur(70px);
+}
+.lp-final-cta-card::after {
+  content: "";
+  position: absolute;
+  z-index: -1;
+  inset: 0;
+  background-image: radial-gradient(rgba(255, 255, 255, 0.16) 1px, transparent 1.4px);
+  background-size: 22px 22px;
+  -webkit-mask-image: radial-gradient(ellipse 70% 80% at 50% 0%, #000 0%, transparent 75%);
+  mask-image: radial-gradient(ellipse 70% 80% at 50% 0%, #000 0%, transparent 75%);
 }
 .lp-final-cta-cap {
-  position: absolute;
-  top: 1.25rem;
-  inset-inline-end: 1.35rem;
-  color: rgba(227, 192, 139, 0.9);
-  opacity: 0.85;
+  display: inline-grid;
+  place-items: center;
+  width: 3.75rem;
+  height: 3.75rem;
+  margin-bottom: 1.25rem;
+  border-radius: 50%;
+  background: rgba(255, 255, 255, 0.12);
+  border: 1px solid rgba(255, 255, 255, 0.26);
+  color: #E3C08B;
 }
 .lp-final-cta-title {
-  margin: 0 0 0.75rem;
-  font-size: clamp(1.45rem, 3.5vw, 2rem);
+  margin: 0 0 0.9rem;
+  font-size: clamp(1.7rem, 4.2vw, 2.6rem);
   font-weight: 900;
-  line-height: 1.45;
+  line-height: 1.4;
   color: #fff;
+  text-wrap: balance;
 }
 .lp-final-cta-lead {
-  margin: 0 auto 1.5rem;
-  max-width: 28rem;
-  font-size: 0.98rem;
-  line-height: 1.85;
-  color: rgba(255, 255, 255, 0.88);
+  margin: 0 auto 2rem;
+  max-width: 32rem;
+  font-size: 1.05rem;
+  line-height: 1.9;
+  color: rgba(255, 255, 255, 0.9);
+  text-wrap: balance;
 }
 .lp-final-cta-btn {
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  min-height: 3rem;
-  padding: 0.75rem 1.85rem;
+  gap: 0.6rem;
+  min-height: 3.4rem;
+  padding: 0.8rem 2.3rem;
   border: 0;
   border-radius: 999px;
   background: #FFFFFF;
   color: #0E5348;
-  font-size: 1rem;
-  font-weight: 850;
+  font-size: 1.1rem;
+  font-weight: 900;
   cursor: pointer;
-  box-shadow: 0 12px 28px -12px rgba(0, 0, 0, 0.35);
+  box-shadow: 0 14px 30px -12px rgba(0, 0, 0, 0.4);
   transition: transform 0.15s ease, box-shadow 0.15s ease;
 }
 .lp-final-cta-btn:hover {
   transform: translateY(-2px);
-  box-shadow: 0 16px 32px -12px rgba(0, 0, 0, 0.4);
+  box-shadow: 0 18px 34px -12px rgba(0, 0, 0, 0.45);
 }
 .lp-final-cta-btn:active { transform: translateY(1px); }
 .lp-final-cta-btn:focus-visible {
-  outline: 3px solid rgba(227, 192, 139, 0.7);
+  outline: 3px solid rgba(227, 192, 139, 0.75);
   outline-offset: 3px;
 }
 .lp-final-cta-pills {
   display: flex;
   flex-wrap: wrap;
   justify-content: center;
-  gap: 0.85rem 1.25rem;
-  margin-top: 1.5rem;
-  font-size: 0.82rem;
-  font-weight: 700;
-  color: rgba(255, 255, 255, 0.88);
+  gap: 0.6rem;
+  margin-top: 2rem;
 }
 .lp-final-cta-pills span {
   display: inline-flex;
   align-items: center;
-  gap: 0.35rem;
+  gap: 0.45rem;
+  padding: 0.45rem 1rem;
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.12);
+  border: 1px solid rgba(255, 255, 255, 0.22);
+  font-size: 0.88rem;
+  font-weight: 800;
+  color: #fff;
 }
-.lp-final-cta-pills svg { opacity: 0.9; }
+.lp-final-cta-pills svg { color: #E3C08B; flex: none; }
+@media (max-width: 640px) {
+  .lp-final-cta { padding-inline: 0.85rem; }
+  .lp-final-cta-card { border-radius: 1.75rem; }
+  .lp-final-cta-btn { width: 100%; }
+}
 html[data-theme="dark"] .lp-final-cta-card {
   background: linear-gradient(145deg, #0A3F36 0%, #0E5348 50%, #147A6A 100%);
 }
