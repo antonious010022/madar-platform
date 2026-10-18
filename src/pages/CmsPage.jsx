@@ -1,3 +1,4 @@
+import { PageLoader } from "../components/DuoFx";
 import { useEffect, useState } from "react";
 import { Link, useParams } from "react-router-dom";
 import Footer from "../components/Footer";
@@ -18,7 +19,7 @@ export default function CmsPage() {
   }, [slug]);
 
   if (page === null) {
-    return <div className="p-10 text-center" style={{ color: "#6E6B85" }}>جاري التحميل...</div>;
+    return <PageLoader />;
   }
   if (!page || page.is_visible === false) {
     return (

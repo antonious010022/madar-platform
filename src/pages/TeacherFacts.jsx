@@ -1,3 +1,4 @@
+import { PageLoader } from "../components/DuoFx";
 import { useEffect, useMemo, useState } from "react";
 import { Link } from "react-router-dom";
 import { listAllFacts, saveFact, deleteFact } from "../lib/didYouKnow";
@@ -175,7 +176,7 @@ export default function TeacherFacts() {
           {facts ? <span className="duo-saved-count">{facts.length} · مفعّلة {activeCount}</span> : null}
         </div>
 
-        {facts === null ? <p className="duo-tf-empty">جاري التحميل...</p> : facts.length === 0 ? (
+        {facts === null ? <PageLoader compact /> : facts.length === 0 ? (
           <p className="duo-tf-empty">لا توجد معلومات بعد. أضف أول معلومة من النموذج أعلاه.</p>
         ) : (
           <ul className="duo-tf-list">

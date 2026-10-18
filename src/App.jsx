@@ -35,6 +35,8 @@ import {
   LoadSplash,
   RouteProgress,
   SwipeBackBubble,
+  PageLoader,
+  RouteVeil,
 } from "./components/DuoFx";
 
 function AccessDenied() {
@@ -99,15 +101,7 @@ function TeacherGate() {
 
   if (session === undefined || (session && staff === undefined)) {
     return (
-      <div
-        className="p-10 text-center dir-rtl"
-        style={{
-          color: "var(--duo-muted)",
-          fontFamily: "var(--duo-font-display)",
-        }}
-      >
-        جاري التحقق من الصلاحيات...
-      </div>
+      <PageLoader label="جاري التحقق من الصلاحيات…" />
     );
   }
 
@@ -389,6 +383,7 @@ function AppRoutes() {
   return (
     <>
       <RouteProgress />
+      <RouteVeil />
       <SwipeBackBubble bubbleRef={bubbleRef} />
 
       <PageTransition>

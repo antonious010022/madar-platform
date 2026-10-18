@@ -3,7 +3,7 @@ import { isLessonSaved, setLessonSaved } from "../lib/savedLessons";
 
 /* "حفظ الدرس" + "مشاركة الدرس" — shown side by side under the lesson description in the hero.
    - Share: native share sheet when available, otherwise copies the link.
-   - Save: stored per account in Supabase (student_saved_lessons). Guests are asked to sign in. */
+   - Save: signed-in → account (Supabase student_saved_lessons). Guest → this browser (localStorage via savedLessons.js). */
 
 const CSS = `
   .md-lv-actions { display: flex; justify-content: center; align-items: stretch; gap: 10px; flex-wrap: wrap; margin-top: 18px; }
@@ -59,10 +59,10 @@ export default function LessonActions({ lesson, session, onRequireLogin, shareOr
   }
   useEffect(() => () => window.clearTimeout(noteTimer.current), []);
 
-  // Saved state belongs to the signed-in account only: reset instantly on sign-out / account switch.
+  // Saved state follows the active identity (account, or this browser for guests): reset on sign-in / sign-out.
   useEffect(() => {
     setSaved(false);
-    if (!userId || !lesson?.id) return undefined;
+    if (!lesson?.id) return undefined;
     let cancelled = false;
     isLessonSaved(lesson.id)
       .then((v) => {
@@ -75,18 +75,13 @@ export default function LessonActions({ lesson, session, onRequireLogin, shareOr
   }, [userId, lesson?.id]);
 
   async function toggleSave() {
-    if (!userId) {
-      flash("سجّل دخولك لحفظ الدرس");
-      onRequireLogin?.();
-      return;
-    }
     if (busy) return;
     const next = !saved;
     setBusy(true);
     setSaved(next); // optimistic
     try {
       await setLessonSaved(lesson.id, next);
-      flash(next ? "تم حفظ الدرس ✓" : "تم إلغاء الحفظ");
+      flash(next ? (userId ? "تم حفظ الدرس ✓" : "تم حفظ الدرس على هذا الجهاز ✓") : "تم إلغاء الحفظ");
     } catch (err) {
       setSaved(!next);
       flash("تعذر الحفظ، حاول مرة أخرى");

@@ -174,9 +174,10 @@ export function HotwordRenderer({ text, hotwords = [], onJumpToScene }) {
         const rect = targetEl.getBoundingClientRect();
         const parentRect = containerRef.current.getBoundingClientRect();
 
+        const popW = Math.min(384, parentRect.width); // = max-w-sm
         setPopPos({
           top: rect.bottom - parentRect.top + 8,
-          right: Math.max(0, parentRect.right - rect.right),
+          right: Math.min(Math.max(0, parentRect.right - rect.right), Math.max(0, parentRect.width - popW)),
         });
         setActiveHot(found);
       }
@@ -272,7 +273,7 @@ export function HotwordRenderer({ text, hotwords = [], onJumpToScene }) {
       {/* النافذة المنبثقة للتفاعل مع الكلمات المفتاحية */}
       {activeHot && (
         <div
-          className="ts-fade absolute z-50 rounded-2xl p-4 shadow-2xl max-w-sm w-full text-right"
+          className="ts-fade md-hw-pop absolute z-50 rounded-2xl p-4 shadow-2xl max-w-sm w-full text-right"
           style={{
             background: "#FAF6ED",
             border: "2px solid #147A6A",
@@ -284,16 +285,17 @@ export function HotwordRenderer({ text, hotwords = [], onJumpToScene }) {
           onMouseLeave={() => setActiveHot(null)}
         >
           <div
-            className="flex justify-between items-center mb-2 border-b pb-1"
+            className="md-hw-head flex justify-between items-center mb-2 border-b pb-1"
             style={{ borderColor: "#DED4BD" }}
           >
-            <span className="font-bold text-base" style={{ color: "#147A6A" }}>
+            <span className="md-hw-name font-bold text-base" style={{ color: "#147A6A" }}>
               {activeHot.text}
             </span>
             <button
               type="button"
               onClick={() => setActiveHot(null)}
-              className="font-bold px-2 py-0.5 rounded cursor-pointer"
+              aria-label="إغلاق"
+              className="md-hw-close font-bold px-2 py-0.5 rounded cursor-pointer"
               style={{ color: "#697A73" }}
             >
               ✕
@@ -304,13 +306,13 @@ export function HotwordRenderer({ text, hotwords = [], onJumpToScene }) {
             <img
               src={activeHot.image}
               alt={activeHot.text}
-              className="rounded-xl mb-2 w-full object-contain block border"
+              className="md-hw-img rounded-xl mb-2 w-full object-contain block border"
               style={{ maxHeight: "280px", borderColor: "#DED4BD" }}
             />
           )}
 
           {activeHot.note && (
-            <p className="text-sm mb-2" style={{ color: "#263B35" }}>
+            <p className="md-hw-note text-sm mb-2" style={{ color: "#263B35" }}>
               {activeHot.note}
             </p>
           )}
@@ -322,7 +324,7 @@ export function HotwordRenderer({ text, hotwords = [], onJumpToScene }) {
                 onJumpToScene(activeHot.linkSceneId);
                 setActiveHot(null);
               }}
-              className="text-xs px-3 py-1.5 rounded-xl text-white font-bold w-full cursor-pointer mt-1"
+              className="md-hw-jump text-xs px-3 py-1.5 rounded-xl text-white font-bold w-full cursor-pointer mt-1"
               style={{ background: "#147A6A" }}
             >
               الانتقال إلى المشهد المرتبط ↗
@@ -350,19 +352,22 @@ export function MindMapViewerNode({
   if (!node) return null;
 
   return (
-    <div style={{ marginInlineStart: depth === 0 ? 0 : 20 }} className="my-1 text-right">
+    <div style={{ marginInlineStart: depth === 0 ? 0 : 20 }} className="my-1 text-right md-mm">
       <div
         onClick={(e) => {
           e.stopPropagation();
           if (onSelectNode) onSelectNode(node);
         }}
-        className="md-lv-mm-node flex items-center gap-2 py-1.5 px-3 rounded-xl cursor-pointer transition-all border"
+        data-selected={isSelected ? "true" : "false"}
+        className="md-lv-mm-node md-mm-row flex items-center gap-2 py-1.5 px-3 rounded-xl cursor-pointer transition-all border"
         style={{
           background: isSelected ? "#F8EFD8" : "#FFFFFF",
           borderColor: isSelected ? "#B8832A" : "#DED4BD",
         }}
       >
         <span
+          className="md-mm-dot"
+          data-root={depth === 0 ? "true" : "false"}
           style={{
             width: depth === 0 ? 12 : 8,
             height: depth === 0 ? 12 : 8,
@@ -373,6 +378,7 @@ export function MindMapViewerNode({
           }}
         />
         <span
+          className="md-mm-label"
           style={{
             fontWeight: depth === 0 ? 800 : 600,
             color: "#263B35",
@@ -389,7 +395,8 @@ export function MindMapViewerNode({
               setOpen((prev) => !prev);
             }}
             aria-label={open ? "طي" : "توسيع"}
-            className="mr-auto w-6 h-6 flex items-center justify-center rounded-full flex-shrink-0 cursor-pointer"
+            aria-expanded={open}
+            className="md-mm-toggle mr-auto w-6 h-6 flex items-center justify-center rounded-full flex-shrink-0 cursor-pointer"
             style={{
               background: "#E0F1EC",
               color: "#0E5348",
@@ -410,7 +417,7 @@ export function MindMapViewerNode({
             paddingInlineStart: 12,
             marginTop: 4,
           }}
-          className="ts-fade"
+          className="ts-fade md-mm-kids"
         >
           {node.children.map((c, idx) => (
             <MindMapViewerNode
@@ -742,6 +749,835 @@ function buildFullQuestions(scenes) {
 }
 
 // ---------------------------------------------------------------------------
+// Journey layout (student lesson page only — يتفعّل فقط عند وجود journey)
+// معاينة المعلم ووضع التصوير لا يمرّان من هنا إطلاقًا.
+// ---------------------------------------------------------------------------
+const JR_CSS = `
+.md-jr {
+  --jr-bg: #FAF6ED; --jr-surface: #FFFFFF; --jr-soft: #F4EFE2; --jr-text: #1C2D28; --jr-muted: #596D66;
+  --jr-teal: #147A6A; --jr-teal-deep: #0E5348; --jr-teal-soft: rgba(20, 122, 106, 0.09);
+  --jr-btn: #147A6A; --jr-btn-deep: #0E5348;
+  --jr-line: #DED4BD; --jr-gold: #B8832A; --jr-gold-soft: #F8EFD8; --jr-ok-soft: #E0F1EC; --jr-bad: #C2562F; --jr-bad-soft: #FBE7DE;
+  --jr-shadow: 0 16px 36px -26px rgba(14, 83, 72, 0.38), 0 1px 3px rgba(0, 0, 0, 0.04);
+  --jr-font: "Cairo", "Segoe UI", "Noto Sans Arabic", system-ui, sans-serif;
+  --jr-pad: clamp(0.9rem, 3vw, 1.5rem);
+  --jr-top: 0px;
+  direction: rtl; text-align: right; flex: 1 0 auto;
+  background: var(--jr-bg); color: var(--jr-text); font-family: var(--jr-font);
+}
+html[data-theme="dark"] .md-jr {
+  --jr-bg: #0C1412; --jr-surface: #14211D; --jr-soft: #1A2C27; --jr-text: #ECF4F0; --jr-muted: #9BB0A7;
+  --jr-teal: #3A9C89; --jr-teal-deep: #8CE0CE; --jr-teal-soft: rgba(58, 156, 137, 0.14);
+  --jr-btn: #2A7A6B; --jr-btn-deep: #1F6A5C;
+  --jr-line: #2C3E37; --jr-gold: #D69336; --jr-gold-soft: #2B2418; --jr-ok-soft: #1B2E28; --jr-bad: #E58A67; --jr-bad-soft: #2E1F1A;
+  --jr-shadow: 0 18px 40px -26px rgba(0, 0, 0, 0.7);
+}
+.md-jr *, .md-jr *::before, .md-jr *::after { box-sizing: border-box; }
+.md-jr button { font-family: var(--jr-font); cursor: pointer; }
+.md-jr .md-jr-wrap { max-width: 1120px; margin: 0 auto; padding: clamp(0.8rem, 3vw, 1.5rem) var(--jr-pad) 2rem; }
+
+/* ---- hero ---- */
+.md-jr .md-jr-hero {
+  position: relative; text-align: center; color: #fff; border-radius: 1.5rem; padding: clamp(1.2rem, 3.5vw, 1.9rem);
+  background: linear-gradient(125deg, #0A3F36 0%, #0E5348 40%, #147A6A 100%); box-shadow: var(--jr-shadow);
+}
+html[data-theme="dark"] .md-jr .md-jr-hero { background: linear-gradient(125deg, #062A24 0%, #0A3F36 45%, #0E5348 100%); }
+.md-jr .md-jr-pill { display: inline-block; padding: 0.3rem 0.85rem; border-radius: 999px; font-size: 0.8rem; font-weight: 800; background: rgba(255, 255, 255, 0.14); border: 1px solid rgba(255, 255, 255, 0.28); color: #F3DDB6; }
+.md-jr .md-jr-h1 { margin: 0.7rem 0 0; font-family: var(--jr-font); font-size: clamp(1.45rem, 4.4vw, 2.1rem); font-weight: 900; line-height: 1.5; color: #fff; }
+.md-jr .md-jr-desc { margin: 0.45rem auto 0; max-width: 40rem; font-size: 0.95rem; line-height: 1.9; font-weight: 600; color: rgba(255, 255, 255, 0.92); }
+.md-jr .md-jr-hero-actions { margin-top: 0.9rem; display: flex; justify-content: center; }
+
+/* ---- lesson video (intro) ---- */
+.md-jr .md-jr-video { margin-top: 1rem; background: var(--jr-surface); border: 1px solid var(--jr-line); border-radius: 1.3rem; box-shadow: var(--jr-shadow); }
+.md-jr .md-jr-video-head { display: flex; align-items: center; justify-content: space-between; gap: 0.75rem; padding: 0.7rem 1rem; }
+.md-jr .md-jr-video-title { margin: 0; font-size: 0.98rem; font-weight: 900; color: var(--jr-teal-deep); }
+.md-jr .md-jr-video-note { margin: 0.15rem 0 0; font-size: 0.82rem; line-height: 1.85; font-weight: 600; color: var(--jr-muted); }
+.md-jr .md-jr-video-body { padding: 0 1rem 1rem; }
+.md-jr .md-jr-frame { position: relative; aspect-ratio: 16 / 9; border-radius: 1rem; overflow: hidden; background: #0E1F1B; border: 1px solid var(--jr-line); }
+.md-jr .md-jr-frame iframe, .md-jr .md-jr-frame img { position: absolute; inset: 0; width: 100%; height: 100%; border: 0; }
+.md-jr .md-jr-frame img { object-fit: cover; opacity: 0.72; }
+.md-jr .md-jr-playbtn { position: absolute; inset: 0; display: flex; align-items: center; justify-content: center; border: 0; background: transparent; }
+.md-jr .md-jr-playbtn span { display: inline-flex; align-items: center; justify-content: center; width: 4rem; height: 4rem; border-radius: 999px; background: var(--jr-btn); color: #fff; box-shadow: 0 10px 24px -10px rgba(0, 0, 0, 0.6); }
+.md-jr .md-jr-playbtn svg { width: 1.6rem; height: 1.6rem; margin-inline-end: -0.15rem; }
+
+/* ---- sticky navigation ---- */
+.md-jr .md-jr-nav {
+  position: sticky; top: var(--jr-top, 0px); z-index: 30; margin-top: 1rem; padding: 0.6rem 0 0.55rem;
+  background: color-mix(in srgb, var(--jr-bg) 93%, transparent); -webkit-backdrop-filter: blur(12px); backdrop-filter: blur(12px);
+  border-bottom: 1px solid var(--jr-line);
+}
+.md-jr .md-jr-navrow { display: flex; align-items: center; justify-content: space-between; gap: 0.75rem; font-size: 0.82rem; font-weight: 800; color: var(--jr-teal-deep); }
+.md-jr .md-jr-navrow small { font-size: 0.78rem; font-weight: 700; color: var(--jr-muted); }
+.md-jr .md-jr-track { height: 6px; margin-top: 0.45rem; border-radius: 999px; background: var(--jr-line); overflow: hidden; }
+.md-jr .md-jr-fill { height: 100%; border-radius: 999px; background: var(--jr-teal); transition: width 0.4s ease; }
+.md-jr .md-jr-chips { display: flex; gap: 0.5rem; margin: 0.35rem 0 0; padding: 0.3rem 0.1rem; list-style: none; overflow-x: auto; scroll-snap-type: x proximity; -webkit-overflow-scrolling: touch; }
+.md-jr .md-jr-chips li { flex: none; scroll-snap-align: center; }
+.md-jr .md-jr-chip {
+  display: inline-flex; align-items: center; justify-content: center; min-width: 44px; height: 44px; padding: 0 0.6rem; border-radius: 999px;
+  font-size: 0.95rem; font-weight: 900; color: var(--jr-text); background: var(--jr-surface); border: 1.5px solid var(--jr-line);
+  transition: border-color 0.15s ease, background-color 0.15s ease;
+}
+.md-jr .md-jr-chip--wide { padding: 0 0.95rem; font-size: 0.85rem; }
+.md-jr .md-jr-chip[data-state="current"] { background: var(--jr-btn); border-color: var(--jr-btn); color: #fff; }
+.md-jr .md-jr-chip[data-state="done"] { background: var(--jr-ok-soft); border-color: var(--jr-teal); color: var(--jr-teal-deep); }
+.md-jr .md-jr-chip[data-state="access"] { background: var(--jr-gold-soft); border-color: var(--jr-gold); }
+.md-jr .md-jr-chip[data-state="sequence"] { background: var(--jr-soft); border-style: dashed; color: var(--jr-muted); }
+.md-jr .md-jr-chip[aria-disabled="true"] { cursor: not-allowed; }
+.md-jr .md-jr-chip:hover:not([aria-disabled="true"]):not([data-state="current"]) { border-color: var(--jr-teal); }
+.md-jr .md-jr-curtitle { margin: 0.2rem 0 0; font-size: 0.9rem; font-weight: 800; color: var(--jr-text); }
+
+/* ---- layout ---- */
+.md-jr .md-jr-grid { display: block; margin-top: 1rem; }
+.md-jr .md-jr-side { display: none; }
+.md-jr .md-jr-main { min-width: 0; }
+.md-jr .md-jr-main > *:not(.md-jr-bar) { max-width: 46rem; margin-inline: auto; }
+@media (min-width: 1024px) {
+  .md-jr .md-jr-grid { display: grid; grid-template-columns: 17.5rem minmax(0, 1fr); gap: 1.6rem; align-items: start; }
+  .md-jr .md-jr-side { display: block; position: sticky; top: calc(var(--jr-top, 0px) + 4.6rem); }
+  .md-jr .md-jr-chips, .md-jr .md-jr-curtitle { display: none; }
+}
+.md-jr .md-jr-sidecard { background: var(--jr-surface); border: 1px solid var(--jr-line); border-radius: 1.3rem; box-shadow: var(--jr-shadow); padding: 0.9rem; }
+.md-jr .md-jr-sidehead { margin: 0 0 0.6rem; padding-inline: 0.35rem; font-size: 0.82rem; font-weight: 900; color: var(--jr-muted); }
+.md-jr .md-jr-list { margin: 0; padding: 0; list-style: none; display: flex; flex-direction: column; gap: 0.3rem; max-height: calc(100vh - var(--jr-top, 0px) - 10rem); overflow-y: auto; }
+.md-jr .md-jr-item {
+  width: 100%; min-height: 44px; display: flex; align-items: center; gap: 0.6rem; padding: 0.45rem 0.6rem; border-radius: 0.9rem; text-align: right;
+  background: transparent; border: 1px solid transparent; color: var(--jr-text); font-size: 0.9rem; font-weight: 700; line-height: 1.5;
+  transition: background-color 0.15s ease, border-color 0.15s ease;
+}
+.md-jr .md-jr-item:hover:not([aria-disabled="true"]) { background: var(--jr-teal-soft); }
+.md-jr .md-jr-item[data-state="current"] { background: var(--jr-teal-soft); border-color: var(--jr-teal); color: var(--jr-teal-deep); font-weight: 900; }
+.md-jr .md-jr-item[data-state="sequence"] { color: var(--jr-muted); }
+.md-jr .md-jr-item[aria-disabled="true"] { cursor: not-allowed; }
+.md-jr .md-jr-dot {
+  flex: none; display: inline-flex; align-items: center; justify-content: center; width: 1.9rem; height: 1.9rem; border-radius: 999px;
+  font-size: 0.8rem; font-weight: 900; background: var(--jr-surface); border: 1.5px solid var(--jr-line); color: var(--jr-text);
+}
+.md-jr .md-jr-item[data-state="current"] .md-jr-dot { background: var(--jr-btn); border-color: var(--jr-btn); color: #fff; }
+.md-jr .md-jr-item[data-state="done"] .md-jr-dot { background: var(--jr-ok-soft); border-color: var(--jr-teal); color: var(--jr-teal-deep); }
+.md-jr .md-jr-item[data-state="sequence"] .md-jr-dot { border-style: dashed; }
+.md-jr .md-jr-legend { margin: 0.7rem 0 0; padding-inline: 0.35rem; font-size: 0.72rem; line-height: 1.9; font-weight: 600; color: var(--jr-muted); }
+
+/* ---- cards & sections ---- */
+.md-jr .md-jr-card { background: var(--jr-surface); border: 1px solid var(--jr-line); border-radius: 1.3rem; box-shadow: var(--jr-shadow); padding: clamp(1rem, 3.4vw, 1.7rem); margin-bottom: 1rem; overflow: visible; }
+.md-jr .md-jr-head { margin-bottom: 1rem; }
+.md-jr .md-jr-scene-no { margin: 0; font-size: 0.8rem; font-weight: 800; color: var(--jr-muted); display: flex; align-items: center; gap: 0.5rem; flex-wrap: wrap; }
+.md-jr .md-jr-badge { display: inline-flex; align-items: center; gap: 0.3rem; padding: 0.12rem 0.6rem; border-radius: 999px; font-size: 0.74rem; font-weight: 800; background: var(--jr-ok-soft); color: var(--jr-teal-deep); border: 1px solid var(--jr-teal); }
+.md-jr .md-jr-title { margin: 0.25rem 0 0; font-size: clamp(1.35rem, 4.2vw, 1.8rem); font-weight: 900; line-height: 1.6; color: var(--jr-text); }
+.md-jr .md-jr-eyebrow { display: flex; align-items: center; gap: 0.5rem; margin: 0 0 0.7rem; font-family: var(--jr-font); font-size: 0.8rem; font-weight: 900; color: var(--jr-teal-deep); }
+.md-jr .md-jr-eyebrow::before { content: ""; width: 0.5rem; height: 0.5rem; border-radius: 999px; background: var(--jr-gold); }
+.md-jr .md-jr-card .ts-richtext-content { font-size: 1.14rem; line-height: 2.05; color: var(--jr-text); }
+.md-jr .md-jr-card .ts-richtext-content p { margin: 0 0 0.9em; }
+html[data-theme="dark"] .md-jr .md-jr-card .ts-richtext-content { color: var(--jr-text); }
+.md-jr .md-jr-notice { text-align: center; }
+.md-jr .md-jr-notice h3 { margin: 0.2rem 0 0.4rem; font-size: 1.15rem; font-weight: 900; color: var(--jr-teal-deep); }
+.md-jr .md-jr-notice p { margin: 0 0 1rem; font-size: 0.92rem; line-height: 1.9; color: var(--jr-muted); font-weight: 600; }
+.md-jr .md-jr-notice .md-jr-emoji { font-size: 2rem; display: block; margin-bottom: 0.3rem; }
+.md-jr .md-jr-lock { border-style: dashed; border-color: var(--jr-gold); background: var(--jr-gold-soft); }
+.md-jr .md-jr-muted { color: var(--jr-muted); font-size: 0.85rem; font-weight: 600; line-height: 1.9; }
+
+/* ---- recall (phase A: basic list; upgraded in phase B) ---- */
+.md-jr .md-jr-recall ol { margin: 0; padding-inline-start: 1.3rem; font-size: 0.98rem; line-height: 2; }
+
+/* ---- tools ---- */
+.md-jr .md-jr-tools { display: flex; flex-wrap: wrap; gap: 0.6rem; }
+.md-jr .md-jr-tool {
+  min-height: 44px; display: inline-flex; align-items: center; gap: 0.5rem; padding: 0.5rem 1.1rem; border-radius: 999px;
+  font-size: 0.92rem; font-weight: 800; color: var(--jr-teal-deep); background: var(--jr-surface); border: 1.5px solid var(--jr-line);
+  transition: background-color 0.15s ease, border-color 0.15s ease;
+}
+.md-jr .md-jr-tool:hover { border-color: var(--jr-teal); }
+.md-jr .md-jr-tool[aria-expanded="true"] { background: var(--jr-teal-soft); border-color: var(--jr-teal); }
+.md-jr .md-jr-tool svg { width: 1rem; height: 1rem; transition: transform 0.2s ease; }
+.md-jr .md-jr-tool[aria-expanded="true"] svg { transform: rotate(180deg); }
+.md-jr .md-jr-panel { margin-top: 0.9rem; padding-top: 0.9rem; border-top: 1px solid var(--jr-line); }
+.md-jr .md-jr-detail { margin-top: 0.9rem; padding: 0.9rem 1rem; border-radius: 1rem; background: var(--jr-gold-soft); border: 1px solid var(--jr-gold); }
+.md-jr .md-jr-detail p { margin: 0; font-size: 0.9rem; line-height: 1.9; color: var(--jr-text); }
+.md-jr .md-jr-detail p + p { margin-top: 0.3rem; }
+.md-jr .md-jr-tl { display: flex; flex-direction: column; gap: 0.7rem; margin: 0; padding: 0; list-style: none; }
+.md-jr .md-jr-tl li { display: flex; gap: 0.8rem; padding: 0.8rem; border-radius: 1rem; background: var(--jr-bg); border: 1px solid var(--jr-line); }
+.md-jr .md-jr-tl-date { align-self: flex-start; padding: 0.3rem 0.7rem; border-radius: 0.7rem; font-size: 0.82rem; font-weight: 900; white-space: nowrap; background: var(--jr-btn); color: #fff; }
+.md-jr .md-jr-tl h4 { margin: 0 0 0.2rem; font-size: 1rem; font-weight: 800; }
+.md-jr .md-jr-tl p { margin: 0; font-size: 0.9rem; line-height: 1.85; color: var(--jr-muted); font-weight: 600; }
+.md-jr .md-jr-tl img { margin-top: 0.5rem; width: 100%; max-height: 10rem; object-fit: cover; border-radius: 0.8rem; }
+@media (max-width: 520px) { .md-jr .md-jr-tl li { flex-direction: column; } }
+
+/* ---- LessonActions (من ملف خارجي): تباين ثابت في الفاتح والداكن ---- */
+.md-jr .md-lv-act { color: #0E5348; box-shadow: 0 3px 0 rgba(0, 0, 0, 0.22); }
+.md-jr .md-lv-act.is-saved { background: #F3DDB6; color: #3F2E08; }
+
+/* ---- recall ---- */
+.md-jr .md-jr-recall-head { width: 100%; min-height: 44px; display: flex; align-items: center; justify-content: space-between; gap: 0.75rem; padding: 0; background: transparent; border: 0; color: var(--jr-text); text-align: right; }
+.md-jr .md-jr-recall-head strong { display: block; font-size: 0.98rem; font-weight: 900; color: var(--jr-teal-deep); }
+.md-jr .md-jr-recall-head span.md-jr-hint { display: block; font-size: 0.8rem; font-weight: 600; color: var(--jr-muted); line-height: 1.8; }
+.md-jr .md-jr-recall-head svg { width: 1.1rem; height: 1.1rem; flex: none; color: var(--jr-teal-deep); transition: transform 0.2s ease; }
+.md-jr .md-jr-recall-head[aria-expanded="true"] svg { transform: rotate(180deg); }
+.md-jr .md-jr-recall-list { margin: 0.8rem 0 0; padding: 0; list-style: none; display: flex; flex-direction: column; gap: 0.5rem; }
+.md-jr .md-jr-recall-item { width: 100%; min-height: 48px; display: flex; align-items: center; gap: 0.7rem; padding: 0.6rem 0.8rem; border-radius: 1rem; text-align: right; font-size: 1rem; line-height: 1.9; font-weight: 600; color: var(--jr-text); background: var(--jr-bg); border: 1.5px dashed var(--jr-line); }
+.md-jr .md-jr-recall-item:hover { border-color: var(--jr-teal); }
+.md-jr .md-jr-recall-item[aria-expanded="true"] { background: var(--jr-ok-soft); border: 1px solid var(--jr-teal); cursor: default; }
+.md-jr .md-jr-recall-item .md-jr-n { flex: none; width: 1.8rem; height: 1.8rem; display: inline-flex; align-items: center; justify-content: center; border-radius: 999px; font-size: 0.8rem; font-weight: 900; background: var(--jr-surface); border: 1.5px solid var(--jr-line); }
+.md-jr .md-jr-recall-item .md-jr-cover { color: var(--jr-muted); font-weight: 700; font-size: 0.9rem; }
+.md-jr .md-jr-linkbtn { margin-top: 0.6rem; min-height: 44px; padding: 0 0.4rem; background: transparent; border: 0; font-size: 0.85rem; font-weight: 800; color: var(--jr-teal-deep); text-decoration: underline; text-underline-offset: 3px; }
+
+/* ---- quiz ---- */
+.md-jr .md-jr-quizhead { display: flex; align-items: center; justify-content: space-between; gap: 0.6rem; margin-bottom: 0.7rem; }
+.md-jr .md-jr-quizhead .md-jr-eyebrow { margin: 0; }
+.md-jr .md-jr-count { font-size: 0.8rem; font-weight: 800; color: var(--jr-muted); }
+.md-jr .md-jr-q { padding: 1rem; border-radius: 1.1rem; background: var(--jr-bg); border: 1px solid var(--jr-line); }
+.md-jr .md-jr-q + .md-jr-q { margin-top: 0.9rem; }
+.md-jr .md-jr-qtop { display: flex; align-items: flex-start; justify-content: space-between; gap: 0.7rem; margin-bottom: 0.7rem; }
+.md-jr .md-jr-qprompt { margin: 0; font-size: 1.02rem; font-weight: 800; line-height: 1.9; color: var(--jr-text); }
+.md-jr .md-jr-qtag { flex: none; padding: 0.15rem 0.65rem; border-radius: 999px; font-size: 0.72rem; font-weight: 800; white-space: nowrap; background: var(--jr-gold-soft); color: var(--jr-gold); border: 1px solid var(--jr-gold); }
+.md-jr .md-jr-qtag[data-done="true"] { background: var(--jr-ok-soft); color: var(--jr-teal-deep); border-color: var(--jr-teal); }
+.md-jr .md-jr-opts { display: flex; flex-direction: column; gap: 0.5rem; }
+.md-jr .md-jr-opt { width: 100%; min-height: 48px; padding: 0.6rem 0.9rem; border-radius: 0.95rem; text-align: right; font-size: 0.96rem; font-weight: 700; line-height: 1.8; color: var(--jr-text); background: var(--jr-surface); border: 1.5px solid var(--jr-line); transition: border-color 0.15s ease, background-color 0.15s ease; }
+.md-jr .md-jr-opt:hover:not(:disabled) { border-color: var(--jr-teal); background: var(--jr-teal-soft); }
+.md-jr .md-jr-opt:disabled { cursor: default; }
+.md-jr .md-jr-opt[data-res="correct"] { background: var(--jr-ok-soft); border-color: var(--jr-teal); }
+.md-jr .md-jr-opt[data-res="wrong"] { background: var(--jr-bad-soft); border-color: var(--jr-bad); }
+.md-jr .md-jr-feedback { margin: 0.8rem 0 0; font-size: 0.9rem; line-height: 1.9; font-weight: 700; }
+.md-jr .md-jr-feedback[data-ok="true"] { color: var(--jr-teal-deep); }
+.md-jr .md-jr-feedback[data-ok="false"] { color: var(--jr-bad); }
+.md-jr .md-jr-feedback small { display: block; font-size: 0.84rem; font-weight: 600; color: var(--jr-muted); margin-top: 0.2rem; }
+.md-jr .md-jr-essay { width: 100%; padding: 0.7rem 0.8rem; border-radius: 0.95rem; border: 1.5px solid var(--jr-line); background: var(--jr-surface); color: var(--jr-text); font-family: var(--jr-font); font-size: 0.95rem; line-height: 1.8; resize: vertical; }
+.md-jr .md-jr-model { margin-top: 0.7rem; padding: 0.8rem 0.9rem; border-radius: 0.95rem; background: var(--jr-ok-soft); border: 1px solid var(--jr-teal); font-size: 0.92rem; line-height: 1.9; }
+.md-jr .md-jr-model strong { color: var(--jr-teal-deep); }
+
+/* ---- الخريطة الذهنية (ألوانها inline في المكوّن، فنفرض ألوان الثيم هنا) ---- */
+.md-lesson-page .md-jr .md-mm-row { min-height: 44px; padding-block: 0.3rem; background: var(--jr-surface) !important; border-color: var(--jr-line) !important; border-radius: 0.9rem !important; box-shadow: none; transform: none !important; }
+.md-lesson-page .md-jr .md-mm-row:hover { background: var(--jr-teal-soft) !important; border-color: var(--jr-teal) !important; transform: none !important; box-shadow: none; }
+.md-lesson-page .md-jr .md-mm-row[data-selected="true"] { background: var(--jr-gold-soft) !important; border-color: var(--jr-gold) !important; }
+.md-jr .md-mm-label { color: var(--jr-text) !important; line-height: 1.7; }
+.md-jr .md-mm-dot[data-root="true"] { background: var(--jr-teal) !important; }
+.md-jr .md-mm-dot[data-root="false"] { background: var(--jr-gold) !important; }
+.md-jr .md-mm-toggle { width: 44px !important; height: 44px !important; margin-block: -0.3rem; background: transparent !important; color: var(--jr-teal-deep) !important; font-size: 16px !important; border-radius: 999px !important; }
+.md-jr .md-mm-toggle:hover { background: var(--jr-teal-soft) !important; }
+.md-jr .md-mm-toggle[aria-expanded="true"] { transform: rotate(-90deg) !important; } /* ◂ مفتوحة = تشير لأسفل في RTL */
+.md-jr .md-mm-kids { border-color: var(--jr-line) !important; }
+
+/* ---- نافذة الكلمة التفاعلية ---- */
+.md-jr .md-hw-pop { background: var(--jr-surface) !important; border: 1.5px solid var(--jr-teal) !important; color: var(--jr-text); box-shadow: 0 18px 40px -18px rgba(0, 0, 0, 0.5) !important; }
+.md-jr .md-hw-head { border-color: var(--jr-line) !important; }
+.md-jr .md-hw-name { color: var(--jr-teal-deep) !important; }
+.md-jr .md-hw-close { color: var(--jr-muted) !important; min-width: 44px; min-height: 44px; font-size: 1rem; }
+.md-jr .md-hw-img { border-color: var(--jr-line) !important; background: var(--jr-bg); }
+.md-jr .md-hw-note { color: var(--jr-text) !important; line-height: 1.9; font-size: 0.92rem; }
+.md-jr .md-hw-jump { background: var(--jr-btn) !important; min-height: 44px; font-size: 0.88rem; }
+
+/* ---- نص الشرح: ألوان المحرّر الافتراضية (بنفسجي/غامق) تتبع ثيم المنصة ---- */
+.md-jr .ts-richtext h1, .md-jr .ts-richtext h2, .md-jr .ts-richtext h3 { color: var(--jr-text); }
+.md-jr .ts-richtext blockquote { border-right-color: var(--jr-teal); color: var(--jr-muted); }
+.md-jr .ts-richtext a { color: var(--jr-teal); }
+.md-jr .ts-richtext th { background: var(--jr-btn); color: #fff; }
+.md-jr .ts-richtext tr:nth-child(even) td { background: var(--jr-soft); }
+.md-jr .ts-richtext td, .md-jr .ts-richtext th { border-color: var(--jr-line); }
+html[data-theme="dark"] .md-jr .ts-richtext-content .ts-hotword-highlight { background-image: linear-gradient(100deg, #8CE0CE 0%, #7CCFBD 45%, #8FC3E0 100%) !important; }
+html[data-theme="dark"] .md-jr .ts-richtext-content .ts-hotword-highlight::after { color: #8FC3E0; -webkit-text-fill-color: #8FC3E0; }
+
+/* ---- action bar ---- */
+.md-jr .md-jr-bar { display: flex; align-items: stretch; gap: 0.6rem; margin-top: 1rem; max-width: 46rem; margin-inline: auto; }
+@media (max-width: 1023.98px) {
+  .md-jr .md-jr-bar {
+    position: sticky; bottom: 0; z-index: 25; max-width: none; margin-inline: calc(-1 * var(--jr-pad));
+    padding: 0.65rem var(--jr-pad) calc(0.65rem + env(safe-area-inset-bottom, 0px));
+    background: color-mix(in srgb, var(--jr-bg) 95%, transparent); -webkit-backdrop-filter: blur(12px); backdrop-filter: blur(12px);
+    border-top: 1px solid var(--jr-line);
+  }
+}
+.md-jr .md-jr-btn {
+  min-height: 48px; min-width: 44px; padding: 0.55rem 1.1rem; border-radius: 1rem; font-size: 0.98rem; font-weight: 800;
+  display: inline-flex; align-items: center; justify-content: center; gap: 0.45rem; border: 1px solid var(--jr-line);
+  background: var(--jr-surface); color: var(--jr-teal-deep); transition: transform 0.12s ease, background-color 0.15s ease, border-color 0.15s ease;
+}
+.md-jr .md-jr-btn svg { width: 1.05rem; height: 1.05rem; flex: none; }
+.md-jr .md-jr-btn--ghost { flex: 1 1 0; }
+.md-jr .md-jr-btn--ghost:hover:not(:disabled) { border-color: var(--jr-teal); background: var(--jr-teal-soft); }
+.md-jr .md-jr-btn--primary { flex: 2 1 0; min-height: 52px; font-size: 1.05rem; background: var(--jr-btn); border-color: var(--jr-btn); color: #fff; }
+.md-jr .md-jr-btn--primary:hover:not(:disabled) { background: var(--jr-btn-deep); }
+.md-jr .md-jr-btn--done { background: var(--jr-btn-deep); border-color: var(--jr-btn-deep); }
+.md-jr .md-jr-btn:active:not(:disabled) { transform: translateY(1px); }
+.md-jr .md-jr-btn:disabled { opacity: 0.5; cursor: not-allowed; }
+.md-jr .md-jr-btn--block { width: 100%; flex: none; }
+.md-jr button:focus-visible, .md-jr a:focus-visible, .md-jr [tabindex="-1"]:focus-visible { outline: 2px solid var(--jr-gold); outline-offset: 3px; }
+.md-jr .md-jr-main:focus { outline: none; }
+@media (prefers-reduced-motion: reduce) {
+  .md-jr *, .md-jr *::before, .md-jr *::after { transition: none !important; animation: none !important; scroll-behavior: auto !important; }
+}
+`;
+
+function JrIcon({ name }) {
+  const common = { viewBox: "0 0 24 24", fill: "none", stroke: "currentColor", strokeWidth: 2.4, strokeLinecap: "round", strokeLinejoin: "round", "aria-hidden": "true", focusable: "false" };
+  if (name === "prev") return <svg {...common}><path d="M9 6l6 6-6 6" /></svg>; // يمين = السابق في RTL
+  if (name === "next") return <svg {...common}><path d="M15 6l-6 6 6 6" /></svg>; // يسار = التالي في RTL
+  if (name === "check") return <svg {...common}><path d="M5 12.5l4.5 4.5L19 7.5" /></svg>;
+  if (name === "down") return <svg {...common}><path d="M6 9l6 6 6-6" /></svg>;
+  if (name === "play") return <svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true" focusable="false"><path d="M8 5.5v13a1 1 0 001.5.86l10.5-6.5a1 1 0 000-1.72L9.5 4.64A1 1 0 008 5.5z" /></svg>;
+  return null;
+}
+
+function JrVideo({ videoId, lessonId }) {
+  const storageKey = `madar_lesson_video_seen_v1:${lessonId || ""}`;
+  const [seen, setSeen] = useState(() => {
+    try { return localStorage.getItem(storageKey) === "1"; } catch { return false; }
+  });
+  const [open, setOpen] = useState(!seen); // مفتوح أول مرة، مطوي بعد المشاهدة
+  const [playing, setPlaying] = useState(false);
+  if (!videoId) return null;
+  const bodyId = `md-jr-video-body-${videoId}`;
+  const start = () => {
+    setPlaying(true);
+    setSeen(true);
+    try { localStorage.setItem(storageKey, "1"); } catch { /* التخزين غير متاح */ }
+  };
+  return (
+    <section className="md-jr-video" aria-label="فيديو الشرح العام">
+      <div className="md-jr-video-head">
+        <div>
+          <h2 className="md-jr-video-title">🎥 شاهد فيديو الدرس</h2>
+          {open ? (
+            <p className="md-jr-video-note">
+              تابع الشرح خطوة بخطوة وركّز في ترتيب الأفكار والأمثلة. خُد وقتك في الفهم قبل الانتقال للجزء التالي، لأن الفيديو هو بداية رحلتك لفهم الدرس بشكل كامل.
+            </p>
+          ) : null}
+        </div>
+        <button
+          type="button"
+          className="md-jr-tool"
+          aria-expanded={open}
+          aria-controls={bodyId}
+          onClick={() => { setOpen((v) => !v); if (open) setPlaying(false); }}
+        >
+          {open ? "طيّ الفيديو" : seen ? "إعادة المشاهدة" : "عرض الفيديو"}
+          <JrIcon name="down" />
+        </button>
+      </div>
+      {open ? (
+        <div className="md-jr-video-body" id={bodyId}>
+          <div className="md-jr-frame">
+            {!playing ? (
+              <>
+                <img src={`https://i.ytimg.com/vi/${videoId}/hqdefault.jpg`} alt="" loading="lazy" />
+                <button type="button" className="md-jr-playbtn" onClick={start} aria-label="تشغيل فيديو الدرس">
+                  <span><JrIcon name="play" /></span>
+                </button>
+              </>
+            ) : (
+              <iframe
+                title="فيديو الدرس"
+                src={`https://www.youtube-nocookie.com/embed/${videoId}?rel=0&modestbranding=1`}
+                allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+                allowFullScreen
+                loading="lazy"
+              />
+            )}
+          </div>
+        </div>
+      ) : null}
+    </section>
+  );
+}
+
+/** تذكّر سريع: بطاقة مطوية، كل نقطة تنكشف بالضغط بعد ما الطالب يفكّر. */
+function JrRecall({ items }) {
+  const [open, setOpen] = useState(false);
+  const [shown, setShown] = useState({});
+  const allShown = items.length > 0 && items.every((_, i) => shown[i]);
+  return (
+    <section className="md-jr-card md-jr-recall quick-recall-hidden" aria-label="تذكّر سريع">
+      <button type="button" className="md-jr-recall-head" aria-expanded={open} aria-controls="md-jr-recall-body" onClick={() => setOpen((v) => !v)}>
+        <span>
+          <strong>🧠 تذكّر سريع ({items.length})</strong>
+          <span className="md-jr-hint">فكّر الأول في كل نقطة، وبعدها اضغط عليها عشان تتأكد.</span>
+        </span>
+        <JrIcon name="down" />
+      </button>
+      {open && (
+        <div id="md-jr-recall-body">
+          <ol className="md-jr-recall-list">
+            {items.map((item, i) => (
+              <li key={`jr-recall-${i}`}>
+                <button type="button" className="md-jr-recall-item" aria-expanded={!!shown[i]} onClick={() => setShown((m) => ({ ...m, [i]: true }))}>
+                  <span className="md-jr-n" aria-hidden="true">{i + 1}</span>
+                  {shown[i] ? <span>{item}</span> : <span className="md-jr-cover">نقطة {i + 1} — اضغط لإظهارها بعد ما تفكّر</span>}
+                </button>
+              </li>
+            ))}
+          </ol>
+          {!allShown && (
+            <button type="button" className="md-jr-linkbtn" onClick={() => setShown(Object.fromEntries(items.map((_, i) => [i, true])))}>
+              إظهار الكل
+            </button>
+          )}
+        </div>
+      )}
+    </section>
+  );
+}
+
+/** سؤال داخل العنوان: تغذية راجعة فورية عند اختيار الإجابة + إبلاغ الأب بأنه أُجيب. */
+function JrQuestion({ q, onAnswered }) {
+  const [picked, setPicked] = useState(null);
+  const [revealed, setRevealed] = useState(false);
+  const [essay, setEssay] = useState("");
+  const isMcq = q.type === "mcq";
+  const answered = isMcq ? picked !== null : revealed;
+  const pick = (i) => { if (picked !== null) return; setPicked(i); onAnswered?.(); };
+  const reveal = () => { setRevealed(true); onAnswered?.(); };
+  return (
+    <div className="md-jr-q">
+      <div className="md-jr-qtop">
+        <p className="md-jr-qprompt">{q.prompt}</p>
+        <span className="md-jr-qtag" data-done={answered ? "true" : "false"}>{answered ? "تمت الإجابة" : "لم تُجب بعد"}</span>
+      </div>
+      {isMcq ? (
+        <>
+          <div className="md-jr-opts" role="group" aria-label="الاختيارات">
+            {q.options?.map((opt, i) => {
+              const res = picked === null ? undefined : i === q.correctIndex ? "correct" : i === picked ? "wrong" : undefined;
+              return (
+                <button type="button" key={`jr-opt-${i}`} className="md-jr-opt" data-res={res} disabled={picked !== null} aria-pressed={picked === i} onClick={() => pick(i)}>
+                  {opt}{res === "correct" ? " ✓" : ""}
+                </button>
+              );
+            })}
+          </div>
+          <div aria-live="polite">
+            {picked !== null && (
+              <p className="md-jr-feedback" data-ok={picked === q.correctIndex ? "true" : "false"}>
+                {picked === q.correctIndex ? "إجابة صحيحة بارك الله فيك!" : `إجابة غير دقيقة. الإجابة الصحيحة هي: ${q.options?.[q.correctIndex] ?? ""}`}
+                {q.explanation ? <small>💡 {q.explanation}</small> : null}
+              </p>
+            )}
+          </div>
+        </>
+      ) : (
+        <>
+          <textarea className="md-jr-essay" rows={3} value={essay} onChange={(e) => setEssay(e.target.value)} placeholder="اكتب إجابتك هنا..." aria-label="إجابتك" />
+          {!revealed ? (
+            <button type="button" className="md-jr-btn md-jr-btn--primary" style={{ flex: "none", minHeight: 44, marginTop: "0.6rem", fontSize: "0.9rem" }} onClick={reveal}>
+              عرض الإجابة النموذجية
+            </button>
+          ) : (
+            <div className="md-jr-model" aria-live="polite"><strong>الإجابة النموذجية:</strong><div>{q.modelAnswer}</div></div>
+          )}
+        </>
+      )}
+    </div>
+  );
+}
+
+/** المراجعة النهائية المجمّعة — نفس المحتوى القديم (خريطة + خط زمني + أسئلة) بشكل متسق. */
+function JrAggregatedReview({ fullMindMap, fullTimeline, fullQuestions, selectedMindNode, setSelectedMindNode }) {
+  const hasMap = !!(fullMindMap && fullMindMap.label);
+  const hasTl = Array.isArray(fullTimeline) && fullTimeline.length > 0;
+  const hasQs = Array.isArray(fullQuestions) && fullQuestions.length > 0;
+  return (
+    <div data-kind="review" className="md-jr-card">
+      <h3 className="md-jr-eyebrow">المراجعة النهائية</h3>
+      <p className="md-jr-muted" style={{ margin: "0 0 1rem" }}>ملخص من كل مشاهد الدرس: خريطة ذهنية وخط زمني وأسئلة.</p>
+      {hasMap && (
+        <div style={{ marginBottom: "1.4rem" }}>
+          <p className="md-jr-eyebrow">🗺️ الخريطة الذهنية الكاملة</p>
+          <MindMapViewerNode node={fullMindMap} onSelectNode={(node) => setSelectedMindNode(node)} selectedNodeId={selectedMindNode?.id} />
+        </div>
+      )}
+      {hasTl && (
+        <div style={{ marginBottom: "1.4rem" }}>
+          <p className="md-jr-eyebrow">🕒 الخط الزمني الكامل</p>
+          <ol className="md-jr-tl">
+            {fullTimeline.map((item, idx) => (
+              <li key={item.id || `jr-ft-${idx}`} style={{ flexDirection: "column", gap: "0.2rem" }}>
+                <span style={{ fontSize: "0.82rem", fontWeight: 900, color: "var(--jr-teal)" }}>{item.date}</span>
+                <h4>{item.title}</h4>
+                {item.description ? <p>{item.description}</p> : null}
+              </li>
+            ))}
+          </ol>
+        </div>
+      )}
+      {hasQs && (
+        <div>
+          <p className="md-jr-eyebrow">❓ أسئلة المراجعة</p>
+          <div style={{ display: "flex", flexDirection: "column", gap: "0.8rem" }}>
+            {fullQuestions.map((q, idx) => (
+              <QuestionItem key={q.id || `jr-fq-${idx}`} q={q} />
+            ))}
+          </div>
+        </div>
+      )}
+      {!hasMap && !hasTl && !hasQs && (
+        <p className="md-jr-muted">لا توجد عناصر مراجعة مجمّعة بعد — أضف محتوى في المشاهد من الاستوديو.</p>
+      )}
+    </div>
+  );
+}
+
+function JourneyLesson({ ctx }) {
+  const {
+    lesson, journey, scene, sceneIndex, sceneCount, isFinalReview, isCompletionStep, isLessonDone, isFinalReviewScene,
+    sceneContentLocked, showAggregatedReviewFlow, youtubeId, quickRecallItems, isQuickRecallVisible,
+    fullMindMap, fullTimeline, fullQuestions, selectedMindNode, setSelectedMindNode,
+    tryOpenScene, isSceneCompleted, isSceneUnlocked, setActiveIndex, setAuthOpen, authOpts, heroExtra,
+  } = ctx;
+
+  const rootRef = useRef(null);
+  const navRef = useRef(null);
+  const mainRef = useRef(null);
+  const [tool, setTool] = useState(null); // null | "mindmap" | "timeline"
+  const [answered, setAnswered] = useState({});
+
+  const completedList = Array.isArray(journey.completedScenes) ? journey.completedScenes : [];
+  const doneCount = completedList.length;
+  const pct = sceneCount > 0 ? Math.round((doneCount / sceneCount) * 100) : 0;
+  const finalOpenable = !!journey.finalReviewUnlocked || doneCount >= sceneCount;
+
+  // ارتفاع الهيدر العلوي (لاصق) → المتغير --jr-top حتى يلصق شريط العناوين تحته مباشرة
+  useEffect(() => {
+    const bar = document.querySelector(".md-lv-topbar");
+    const root = rootRef.current;
+    if (!bar || !root) return undefined;
+    const set = () => root.style.setProperty("--jr-top", `${bar.offsetHeight}px`);
+    set();
+    const ro = typeof ResizeObserver !== "undefined" ? new ResizeObserver(set) : null;
+    ro?.observe(bar);
+    window.addEventListener("resize", set);
+    return () => { ro?.disconnect(); window.removeEventListener("resize", set); };
+  }, []);
+
+  // عند تغيير العنوان: نصفّر الأدوات ونرجع لأول المحتوى (بدون حركة لو الطالب مقلّل الحركة)
+  const firstRun = useRef(true);
+  useEffect(() => {
+    setTool(null);
+    setAnswered({});
+    if (firstRun.current) { firstRun.current = false; return; }
+    const el = mainRef.current;
+    if (!el) return;
+    const reduce = typeof window.matchMedia === "function" && window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+    const offset = (parseFloat(rootRef.current?.style.getPropertyValue("--jr-top")) || 0) + (navRef.current?.offsetHeight || 0) + 8;
+    const top = el.getBoundingClientRect().top + window.scrollY - offset;
+    window.scrollTo({ top: Math.max(0, top), behavior: reduce ? "auto" : "smooth" });
+    el.focus({ preventScroll: true });
+  }, [sceneIndex, isFinalReview, journey.view, lesson?.id]);
+
+  const kindOf = (s, i) => getSceneLockKind(s, i, { ...authOpts, isTeacherView: false, hasJourney: true, journey });
+  const stateOf = (kind, current) =>
+    kind === "COMPLETED" ? "done" : current ? "current" : kind === "ACCESS_LOCK" ? "access" : kind === "SEQUENCE_LOCK" ? "sequence" : "available";
+
+  const items = lesson.scenes.map((s, i) => {
+    const kind = kindOf(s, i);
+    const current = !isFinalReview && !isCompletionStep && i === sceneIndex && kind !== "SEQUENCE_LOCK" && kind !== "ACCESS_LOCK";
+    const info = sceneLockLabel(kind);
+    const state = stateOf(kind, current);
+    const mark = kind === "COMPLETED" ? "✓" : kind === "ACCESS_LOCK" ? "🔐" : kind === "SEQUENCE_LOCK" ? "🔒" : String(i + 1);
+    return { s, i, kind, current, state, mark, disabled: kind === "SEQUENCE_LOCK", label: `العنوان ${i + 1}: ${s.title || ""} — ${current ? "الحالي" : info.message}` };
+  });
+  const reviewItem = showAggregatedReviewFlow
+    ? { i: sceneCount, current: isFinalReview, state: isFinalReview ? "current" : finalOpenable ? "available" : "sequence", mark: finalOpenable ? "🧠" : "🔒", disabled: !finalOpenable, label: finalOpenable ? "المراجعة النهائية" : "المراجعة النهائية — أكمل كل العناوين أولًا" }
+    : null;
+
+  const navLabel = isLessonDone ? "🎉 تم إكمال الدرس" : isFinalReview ? "المراجعة النهائية" : isCompletionStep ? "أحسنت!" : `العنوان ${sceneIndex + 1} من ${sceneCount}`;
+
+  // ---- scene content flags ----
+  const hasText = !!(scene && scene.text && String(scene.text).replace(/<[^>]+>/g, "").trim());
+  const hasMind = !!(scene && !isFinalReviewScene && scene.mindmap && scene.mindmap.label);
+  const hasTimeline = !!(scene && !isFinalReviewScene && Array.isArray(scene.timeline) && scene.timeline.length > 0);
+  const hasQuestions = !!(scene && !isFinalReviewScene && Array.isArray(scene.questions) && scene.questions.length > 0);
+  const showRecall = !!(scene && isQuickRecallVisible && quickRecallItems.length > 0);
+  const completed = scene ? isSceneCompleted(sceneIndex) : false;
+  const answeredCount = Object.keys(answered).length;
+
+  // ---- action bar handlers (نفس منطق الأزرار القديمة بالحرف) ----
+  const onComplete = () => {
+    if (completed) {
+      if (sceneIndex + 1 < sceneCount) tryOpenScene(sceneIndex + 1);
+      else if (showAggregatedReviewFlow) tryOpenScene(sceneCount);
+      return;
+    }
+    journey.completeScene?.(sceneIndex);
+  };
+  const nextOpen = sceneIndex + 1 < sceneCount ? isSceneUnlocked(sceneIndex + 1) : showAggregatedReviewFlow && finalOpenable;
+  const onSkipNext = () => {
+    if (sceneIndex + 1 >= sceneCount) { if (showAggregatedReviewFlow) tryOpenScene(sceneCount); return; }
+    if (!isSceneUnlocked(sceneIndex + 1)) return;
+    tryOpenScene(sceneIndex + 1);
+  };
+  const completeLabel = completed
+    ? sceneIndex + 1 < sceneCount ? "مكتمل — التالي" : showAggregatedReviewFlow ? "مكتمل — المراجعة النهائية" : "مكتمل"
+    : "أكمل العنوان";
+
+  const renderNavButton = (it, variant) => (
+    <button
+      type="button"
+      key={it.s ? (it.s.id || `jr-${variant}-${it.i}`) : `jr-${variant}-review`}
+      className={variant === "chip" ? `md-jr-chip${it.s ? "" : " md-jr-chip--wide"}` : "md-jr-item"}
+      data-state={it.state}
+      aria-current={it.current ? "step" : undefined}
+      aria-disabled={it.disabled ? "true" : undefined}
+      aria-label={it.label}
+      title={it.label}
+      onClick={() => { if (!it.disabled) tryOpenScene(it.i); }}
+    >
+      {variant === "chip" ? (
+        <>{it.s ? it.mark : `${it.mark} مراجعة`}</>
+      ) : (
+        <>
+          <span className="md-jr-dot" aria-hidden="true">{it.mark}</span>
+          <span>{it.s ? it.s.title || `العنوان ${it.i + 1}` : "المراجعة النهائية"}</span>
+        </>
+      )}
+    </button>
+  );
+
+  return (
+    <div className="md-jr" ref={rootRef} dir="rtl">
+      <style>{JR_CSS}</style>
+      <div className="md-jr-wrap">
+        {/* 1) مدخل الدرس */}
+        <header className="md-jr-hero">
+          <span className="md-jr-pill">
+            {[lesson.stage, lesson.grade, lesson.term, lesson.subject].filter(Boolean).join(" · ")}
+          </span>
+          <h1 className="md-jr-h1">{lesson.title}</h1>
+          {lesson.description ? <p className="md-jr-desc">{lesson.description}</p> : null}
+          {heroExtra ? <div className="md-jr-hero-actions">{heroExtra}</div> : null}
+        </header>
+
+        {youtubeId && !sceneContentLocked ? <JrVideo key={lesson.id || youtubeId} videoId={youtubeId} lessonId={lesson.id} /> : null}
+
+        {/* شريط تنقل العناوين + التقدم (لاصق) */}
+        <nav className="md-jr-nav" ref={navRef} aria-label="عناوين الدرس">
+          <div className="md-jr-navrow">
+            <span>{navLabel}</span>
+            <small>عناوين مكتملة {doneCount}/{sceneCount}</small>
+          </div>
+          <div className="md-jr-track" role="progressbar" aria-label="تقدّم الدرس" aria-valuemin={0} aria-valuemax={100} aria-valuenow={pct}>
+            <div className="md-jr-fill" style={{ width: `${pct}%` }} />
+          </div>
+          <ol className="md-jr-chips">
+            {items.map((it) => <li key={it.s.id || `jr-chip-${it.i}`}>{renderNavButton(it, "chip")}</li>)}
+            {reviewItem ? <li>{renderNavButton(reviewItem, "chip")}</li> : null}
+          </ol>
+          {!isFinalReview && !isCompletionStep && scene ? <p className="md-jr-curtitle">{scene.title}</p> : null}
+        </nav>
+
+        <div className="md-jr-grid">
+          <aside className="md-jr-side" aria-label="قائمة عناوين الدرس">
+            <div className="md-jr-sidecard">
+              <p className="md-jr-sidehead">عناوين الدرس</p>
+              <ol className="md-jr-list">
+                {items.map((it) => <li key={it.s.id || `jr-side-${it.i}`}>{renderNavButton(it, "item")}</li>)}
+                {reviewItem ? <li>{renderNavButton(reviewItem, "item")}</li> : null}
+              </ol>
+              <p className="md-jr-legend">✓ مكتمل · 🔒 أكمل العنوان السابق · 🔐 تسجيل الدخول مطلوب</p>
+            </div>
+          </aside>
+
+          <main className="md-jr-main" ref={mainRef} tabIndex={-1} id="md-jr-content" aria-label="محتوى العنوان">
+            {/* 4) إتمام (قالب الإتمام الحالي) */}
+            {isCompletionStep && (
+              <section className="md-jr-card md-jr-notice">
+                <span className="md-jr-emoji" aria-hidden="true">🎉</span>
+                <h3>{journey.completionTitle || "تم إكمال هذا الجزء"}</h3>
+                <p>{journey.completionBody || "أحسنت — يمكنك المتابعة للخطوة التالية."}</p>
+                <button type="button" className="md-jr-btn md-jr-btn--primary md-jr-btn--block" onClick={() => journey.dismissCompletion?.()}>
+                  التالي <JrIcon name="next" />
+                </button>
+              </section>
+            )}
+
+            {sceneContentLocked && (
+              <section className="md-jr-card md-jr-notice md-jr-lock">
+                <span className="md-jr-emoji" aria-hidden="true">🔐</span>
+                <h3>تسجيل الدخول مطلوب</h3>
+                <p>هذا العنوان حصري للمستخدمين المسجّلين. سجّل دخولك للوصول إليه — وليس بسبب ترتيب المشاهد.</p>
+                <button type="button" className="md-jr-btn md-jr-btn--primary md-jr-btn--block" onClick={() => setAuthOpen(true)}>
+                  تسجيل الدخول / إنشاء حساب
+                </button>
+              </section>
+            )}
+
+            {/* 2) العنوان الحالي فقط */}
+            {!isFinalReview && !isCompletionStep && scene && !sceneContentLocked && (
+              <div key={scene.id || sceneIndex}>
+                {isLessonDone && journey.view === "done" && (
+                  <section className="md-jr-card md-jr-notice">
+                    <span className="md-jr-emoji" aria-hidden="true">🎉</span>
+                    <h3>تم إكمال الدرس</h3>
+                    <p>أحسنت — أنهيت رحلة هذا الدرس على مَدَار.</p>
+                  </section>
+                )}
+
+                <div className="md-jr-head">
+                  <p className="md-jr-scene-no">
+                    العنوان {sceneIndex + 1} من {sceneCount}
+                    {completed ? <span className="md-jr-badge"><JrIcon name="check" /> مكتمل</span> : null}
+                  </p>
+                  <h2 className="md-jr-title" style={{ fontFamily: scene.titleFont || undefined }}>{scene.title}</h2>
+                </div>
+
+                {/* أ) تذكّر سريع */}
+                {showRecall && (
+                  <JrRecall items={quickRecallItems} />
+                )}
+
+                {/* ب) الشرح */}
+                {hasText && (
+                  <section className="md-jr-card" data-kind="text" aria-label="الشرح">
+                    <h3 className="md-jr-eyebrow">الشرح</h3>
+                    <HotwordRenderer
+                      text={scene.text}
+                      hotwords={scene.hotwords}
+                      onJumpToScene={(targetSceneId) => {
+                        const targetIdx = lesson.scenes.findIndex((s) => String(s.id) === String(targetSceneId));
+                        if (targetIdx !== -1) setActiveIndex(targetIdx);
+                      }}
+                    />
+                  </section>
+                )}
+
+                {/* المراجعة النهائية كمشهد حقيقي (FINAL_REVIEW) */}
+                {isFinalReviewScene && (
+                  <JrAggregatedReview
+                    fullMindMap={fullMindMap} fullTimeline={fullTimeline} fullQuestions={fullQuestions}
+                    selectedMindNode={selectedMindNode} setSelectedMindNode={setSelectedMindNode}
+                  />
+                )}
+
+                {/* ج) أدوات الفهم */}
+                {(hasMind || hasTimeline) && (
+                  <section className="md-jr-card" aria-label="أدوات الفهم">
+                    <h3 className="md-jr-eyebrow">أدوات الفهم</h3>
+                    <div className="md-jr-tools">
+                      {hasMind && (
+                        <button type="button" className="md-jr-tool" aria-expanded={tool === "mindmap"} aria-controls="md-jr-panel-mindmap"
+                          onClick={() => setTool((t) => (t === "mindmap" ? null : "mindmap"))}>
+                          🧠 الخريطة الذهنية <JrIcon name="down" />
+                        </button>
+                      )}
+                      {hasTimeline && (
+                        <button type="button" className="md-jr-tool" aria-expanded={tool === "timeline"} aria-controls="md-jr-panel-timeline"
+                          onClick={() => setTool((t) => (t === "timeline" ? null : "timeline"))}>
+                          🕒 الخط الزمني <JrIcon name="down" />
+                        </button>
+                      )}
+                    </div>
+                    {tool === "mindmap" && hasMind && (
+                      <div className="md-jr-panel" id="md-jr-panel-mindmap" role="region" aria-label="الخريطة الذهنية">
+                        <MindMapViewerNode node={scene.mindmap} onSelectNode={(node) => setSelectedMindNode(node)} selectedNodeId={selectedMindNode?.id} />
+                        {selectedMindNode && (
+                          <div className="md-jr-detail">
+                            <p style={{ fontWeight: 800 }}>تفاصيل العنصر: {selectedMindNode.label}</p>
+                            <p>{selectedMindNode.description || "لا توجد تفاصيل إضافية."}</p>
+                            {selectedMindNode.sceneId && (
+                              <button
+                                type="button"
+                                className="md-jr-btn md-jr-btn--primary"
+                                style={{ flex: "none", minHeight: 44, marginTop: "0.6rem", fontSize: "0.88rem" }}
+                                onClick={() => {
+                                  const idx = lesson.scenes.findIndex((s) => String(s.id) === String(selectedMindNode.sceneId));
+                                  if (idx !== -1) setActiveIndex(idx);
+                                }}
+                              >
+                                الانتقال للمشهد المرتبط ↗
+                              </button>
+                            )}
+                          </div>
+                        )}
+                      </div>
+                    )}
+                    {tool === "timeline" && hasTimeline && (
+                      <div className="md-jr-panel" id="md-jr-panel-timeline" role="region" aria-label="الخط الزمني">
+                        <ol className="md-jr-tl">
+                          {scene.timeline.map((item, idx) => (
+                            <li key={item.id || `jr-tl-${idx}`}>
+                              <span className="md-jr-tl-date">{item.date}</span>
+                              <div style={{ flex: 1, minWidth: 0 }}>
+                                <h4>{item.title}</h4>
+                                {item.description ? <p>{item.description}</p> : null}
+                                {item.location ? <p style={{ color: "var(--jr-gold)", fontWeight: 800, marginTop: "0.25rem" }}>📍 الموقع: {item.location}</p> : null}
+                                {item.image ? <img src={item.image} alt={item.title || "حدث"} /> : null}
+                              </div>
+                            </li>
+                          ))}
+                        </ol>
+                      </div>
+                    )}
+                  </section>
+                )}
+
+                {/* د) اختبر نفسك */}
+                {hasQuestions && (
+                  <section className="md-jr-card" data-kind="questions" aria-label="اختبر نفسك">
+                    <div className="md-jr-quizhead">
+                      <h3 className="md-jr-eyebrow">❓ اختبر نفسك</h3>
+                      <span className="md-jr-count" aria-live="polite">أجبت عن {answeredCount} من {scene.questions.length}</span>
+                    </div>
+                    <div>
+                      {scene.questions.map((q, idx) => {
+                        const qk = q.id || `jr-q-${idx}`;
+                        return <JrQuestion key={qk} q={q} onAnswered={() => setAnswered((m) => (m[qk] ? m : { ...m, [qk]: true }))} />;
+                      })}
+                    </div>
+                  </section>
+                )}
+              </div>
+            )}
+
+            {/* 3) المراجعة النهائية (الخطوة الافتراضية القديمة) */}
+            {isFinalReview && !sceneContentLocked && (
+              <div>
+                {isLessonDone && (
+                  <section className="md-jr-card md-jr-notice">
+                    <span className="md-jr-emoji" aria-hidden="true">🎉</span>
+                    <h3>تم إكمال الدرس</h3>
+                    <p>أحسنت — أنهيت رحلة هذا الدرس على مَدَار.</p>
+                  </section>
+                )}
+                <JrAggregatedReview
+                  fullMindMap={fullMindMap} fullTimeline={fullTimeline} fullQuestions={fullQuestions}
+                  selectedMindNode={selectedMindNode} setSelectedMindNode={setSelectedMindNode}
+                />
+              </div>
+            )}
+
+            {/* شريط الإجراءات */}
+            {!isFinalReview && !isCompletionStep && scene && !sceneContentLocked && (
+              <div className="md-jr-bar" role="group" aria-label="التنقل بين العناوين">
+                <button type="button" className="md-jr-btn md-jr-btn--ghost" onClick={() => tryOpenScene(sceneIndex - 1)} disabled={sceneIndex <= 0}>
+                  <JrIcon name="prev" /> السابق
+                </button>
+                {!completed && nextOpen && (
+                  <button type="button" className="md-jr-btn md-jr-btn--ghost" onClick={onSkipNext}>
+                    التالي <JrIcon name="next" />
+                  </button>
+                )}
+                <button type="button" className={`md-jr-btn md-jr-btn--primary${completed ? " md-jr-btn--done" : ""}`} onClick={onComplete}>
+                  {completed ? <JrIcon name="check" /> : null}
+                  {completeLabel}
+                  {!completed ? <JrIcon name="check" /> : null}
+                </button>
+              </div>
+            )}
+            {isFinalReview && !sceneContentLocked && (
+              <div className="md-jr-bar" role="group" aria-label="إجراءات المراجعة النهائية">
+                <button type="button" className="md-jr-btn md-jr-btn--ghost" onClick={() => tryOpenScene(Math.max(0, sceneCount - 1))}>
+                  <JrIcon name="prev" /> آخر عنوان
+                </button>
+                {!isLessonDone && (
+                  <button type="button" className="md-jr-btn md-jr-btn--primary" onClick={() => journey.completeFinalReview?.()}>
+                    إنهاء المراجعة وإكمال الدرس <JrIcon name="check" />
+                  </button>
+                )}
+              </div>
+            )}
+          </main>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+// ---------------------------------------------------------------------------
 // Student View Unified Component
 // ---------------------------------------------------------------------------
 export function StudentView({
@@ -905,6 +1741,30 @@ export function StudentView({
   const showAggregatedReviewFlow = hasJourney && !!journey.journeyConfig?.includeAggregatedReview;
 
     
+  // تجربة الطالب الجديدة (رحلة العناوين) — فقط عند وجود journey. معاينة المعلم/التصوير تكمل للمسار القديم أدناه.
+  if (hasJourney) {
+    return (
+      <>
+        <JourneyLesson
+          ctx={{
+            lesson, journey, scene, sceneIndex, sceneCount, isFinalReview, isCompletionStep, isLessonDone,
+            isFinalReviewScene, sceneContentLocked, showAggregatedReviewFlow, youtubeId,
+            quickRecallItems, isQuickRecallVisible: !!isQuickRecallVisible,
+            fullMindMap, fullTimeline, fullQuestions, selectedMindNode, setSelectedMindNode,
+            tryOpenScene, isSceneCompleted, isSceneUnlocked, setActiveIndex, setAuthOpen, authOpts, heroExtra,
+          }}
+        />
+        <RegistrationGate open={gateOpen} featureLabel={gateFeature}
+          onClose={() => { setGateOpen(false); setPendingFeature(null); }}
+          onRequestAuth={() => { setGateOpen(false); setAuthOpen(true); }} />
+        <AuthModal open={authOpen} onClose={() => setAuthOpen(false)}
+          onSuccess={(s) => { onAuthSuccess?.(s); setAuthOpen(false); }}
+          title="🔒 هذا المحتوى متاح للأعضاء فقط"
+          subtitle="سجّل دخولك واستمتع بكل مميزات مَدَار مجانًا بالكامل." />
+      </>
+    );
+  }
+
   return (
     <div
       className="ts-root ts-scrollbar dir-rtl text-right md-lv"

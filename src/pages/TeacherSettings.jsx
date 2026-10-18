@@ -1,3 +1,4 @@
+import { PageLoader } from "../components/DuoFx";
 import { useEffect, useMemo, useState } from "react";
 import { Link } from "react-router-dom";
 import { SOCIAL_PLATFORMS } from "../components/SocialIcons";
@@ -281,11 +282,7 @@ export default function TeacherSettings() {
             {err}
           </div>
         )}
-        {loading && (
-          <p className="text-sm mb-4" style={{ color: "var(--duo-muted)" }}>
-            جاري تحميل الإعدادات...
-          </p>
-        )}
+        {loading && <PageLoader compact label="جاري تحميل الإعدادات…" />}
 
         {/* تبويبات بشرح */}
         <div className="flex flex-col gap-2 mb-6">

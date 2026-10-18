@@ -1,3 +1,4 @@
+import { PageLoader } from "../components/DuoFx";
 import { useEffect, useMemo, useState } from "react";
 import { useNavigate, Link } from "react-router-dom";
 import { CreateLessonModal } from "../components/Studio";
@@ -370,7 +371,7 @@ export default function LessonLibraryPage({ session }) {
       <div className="duo-lib-wrap">
         {error && <p className="duo-lib-error">{error}</p>}
 
-        {lessons === null && <p style={{ color: "var(--duo-muted)", fontWeight: 700 }}>جاري التحميل...</p>}
+        {lessons === null && <PageLoader compact />}
 
         {lessons && lessons.length === 0 && (
           <div className="duo-lib-empty" style={{ marginBottom: 18 }}>

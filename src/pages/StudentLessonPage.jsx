@@ -1,3 +1,4 @@
+import { PageLoader } from "../components/DuoFx";
 import { useEffect, useRef, useState, useCallback, useMemo } from "react";
 import { useNavigate, useParams, useLocation } from "react-router-dom";
 import { getLessonWithScenes, listCompletionTemplates, getMyLessonProgress, saveMyLessonProgress } from "../lib/db";
@@ -489,9 +490,7 @@ export default function StudentLessonPage() {
             تسجيل الدخول
           </span>
         </div>
-        <div className="flex-1 flex items-center justify-center p-10 dir-rtl" style={{ color: "var(--duo-muted)" }}>
-          <p>جاري تحميل الدرس...</p>
-        </div>
+        <div className="flex-1 flex items-center justify-center dir-rtl"><PageLoader compact label="جاري تحميل الدرس…" /></div>
       </div>
     );
   }

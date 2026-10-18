@@ -3,14 +3,22 @@ import { useSavedLessonIds } from "../lib/useSavedLessons";
 import { lessonPath, isLessonComingSoon } from "../pages/student-platform/helpers";
 
 /* "دروسي المحفوظة" — the same block for everyone:
-   - signed-in student → their saved lessons (cards, open / remove)
-   - guest             → the same layout, but blurred placeholder cards + a "sign in" prompt
-                         (no lesson data is requested or shown). */
+   - signed-in student → their saved lessons from the account (cards, open / remove)
+   - guest             → the lessons saved on this browser, same cards, plus a small "sign in to keep them" note */
 
 export const SAVED_AUTH_COPY = {
-  title: "سجّل دخولك لعرض دروسك المحفوظة",
-  subtitle: "احفظ أي درس وارجع إليه في أي وقت من أي جهاز.",
+  title: "سجّل دخولك لتحتفظ بدروسك على كل أجهزتك",
+  subtitle: "دروسك المحفوظة الآن على هذا المتصفح فقط. سجّل دخولك لتجدها من أي جهاز.",
 };
+
+const NOTE_CSS = `
+.duo-saved-guestnote { display: flex; align-items: center; flex-wrap: wrap; gap: 10px 14px; margin: 0 0 14px; padding: 12px 16px; background: var(--duo-yellow-s); border: 1px dashed var(--duo-yellow); border-radius: 18px; color: var(--duo-yellow-ink); }
+.duo-saved-guestnote > span { font-size: 1.3rem; }
+.duo-saved-guestnote p { flex: 1 1 200px; margin: 0; font-size: 0.86rem; font-weight: 700; line-height: 1.7; }
+.duo-saved-guestnote b { font-weight: 800; }
+.duo-saved-guestnote button { padding: 7px 18px; border: 0; border-radius: 14px; background: var(--duo-orange); color: #FFFFFF; font: inherit; font-size: 0.84rem; font-weight: 800; cursor: pointer; box-shadow: 0 4px 0 rgba(0, 0, 0, 0.18); transition: transform 0.08s ease, box-shadow 0.08s ease; }
+.duo-saved-guestnote button:active { transform: translateY(3px); box-shadow: 0 0 0 transparent; }
+`;
 
 const ICON = { viewBox: "0 0 24 24", strokeWidth: 2, strokeLinecap: "round", strokeLinejoin: "round", "aria-hidden": "true" };
 
@@ -18,14 +26,6 @@ export function BookmarkIcon({ filled = true }) {
   return (
     <svg {...ICON} fill={filled ? "currentColor" : "none"} stroke="currentColor">
       <path d="M6 3h12a1 1 0 0 1 1 1v17l-7-4.5L5 21V4a1 1 0 0 1 1-1z" />
-    </svg>
-  );
-}
-function LockIcon() {
-  return (
-    <svg {...ICON} fill="none" stroke="currentColor" width="26" height="26">
-      <rect x="4.5" y="10.5" width="15" height="10" rx="3" fill="currentColor" stroke="none" />
-      <path d="M8 10.5V8a4 4 0 0 1 8 0v2.5" />
     </svg>
   );
 }
@@ -96,20 +96,6 @@ export function SavedLessonsPanel({ session, lessons, limit, onRequireLogin, onS
 
   if (session === undefined) {
     body = <GhostList />;
-  } else if (!session) {
-    body = (
-      <div className="duo-saved-locked">
-        <GhostList />
-        <div className="duo-saved-lockmsg">
-          <div className="duo-saved-lockbox" role="group" aria-label="تسجيل الدخول مطلوب">
-            <span className="duo-saved-lockicon"><LockIcon /></span>
-            <p>{SAVED_AUTH_COPY.title}</p>
-            <small>{SAVED_AUTH_COPY.subtitle}</small>
-            <button type="button" className="duo-btn duo-btn-primary px-6 py-2 text-sm text-white" onClick={onRequireLogin}>تسجيل الدخول</button>
-          </div>
-        </div>
-      </div>
-    );
   } else if (ids === null || lessons === null) {
     body = <GhostList />;
   } else {
@@ -119,6 +105,13 @@ export function SavedLessonsPanel({ session, lessons, limit, onRequireLogin, onS
     const shown = limit ? items.slice(0, limit) : items;
     body = (
       <>
+        {!session && onRequireLogin ? (
+          <div className="duo-saved-guestnote">
+            <span aria-hidden="true">💾</span>
+            <p><b>محفوظة على هذا الجهاز فقط.</b> سجّل دخولك لتحتفظ بها وتجدها من أي جهاز.</p>
+            <button type="button" onClick={onRequireLogin}>تسجيل الدخول</button>
+          </div>
+        ) : null}
         {error ? (
           <div className="md-alert error flex flex-wrap items-center justify-between gap-3" style={{ marginBottom: 12 }}>
             <span><span>⚠</span> {error}</span>
@@ -146,6 +139,7 @@ export function SavedLessonsPanel({ session, lessons, limit, onRequireLogin, onS
 
   return (
     <div className="duo-saved">
+      <style>{NOTE_CSS}</style>
       {hideHeader ? null : (
         <div className="duo-saved-head">
           <h2 className="duo-saved-title">

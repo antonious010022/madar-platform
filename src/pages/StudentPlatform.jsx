@@ -8,7 +8,8 @@ import StudentAccountMenu from "../components/StudentAccountMenu";
 import { DidYouKnowCard, DYK_AUTH_COPY } from "../components/DidYouKnow";
 import { slugify } from "../lib/slugify";
 import { arabicLessonOrdinal, lessonPath, isLessonComingSoon, lessonDisplayNumber, sortLessonsForSequence, buildLessonLockStates, lessonLockUi, readGuestGradeLocal, writeGuestGradeLocal } from "./student-platform/helpers";import { CompassRose, Galaxy, ContinentsAtlas, usePointerParallax, HistoryFrieze, CompassSpinner } from "./student-platform/decor";
-import { gradeNumber, gradeArtKind, stageArtKind, PickArt } from "./student-platform/uiParts";
+import { gradeNumber } from "./student-platform/uiParts";
+import { Icon } from "../components/MadarIcons";
 import { PLATFORM_CSS } from "./student-platform/platformStyles";
 
 /* ---------------------------------------------------------------------------
@@ -89,9 +90,9 @@ function ProgressRing({ pct, size = 112, stroke = 11 }) {
 }
 
 const SB_NAV = [
-  { to: "/student", label: "الرئيسية", icon: "🏠", end: true },
-  { to: "/student/saved", label: "دروسي المحفوظة", icon: "🔖" },
-  { to: "/welcome", label: "عن المنصة", icon: "✨" },
+  { to: "/student", label: "الرئيسية", icon: "home", end: true },
+  { to: "/student/saved", label: "دروسي المحفوظة", icon: "bookmark" },
+  { to: "/welcome", label: "عن مَدَار", icon: "sparkles" },
 ];
 
 /* القائمة الجانبية: ملف الطالب + تقدّمه، ثم الفصل والوحدات (تصفّح الصف)، ثم التنقّل والتخصيص */
@@ -196,7 +197,7 @@ function StudentOrganizedNav({ open, onClose, session, onLogin, ctx }) {
               const active = isActive(item);
               return (
                 <button key={item.to} type="button" className={`md-sb-link${active ? " is-active" : ""}`} aria-current={active ? "page" : undefined} onClick={() => go(item.to)}>
-                  <span className="md-sb-link-ico" aria-hidden="true">{item.icon}</span>
+                  <span className="md-sb-link-ico" aria-hidden="true"><Icon name={item.icon} /></span>
                   {item.label}
                 </button>
               );
@@ -206,12 +207,12 @@ function StudentOrganizedNav({ open, onClose, session, onLogin, ctx }) {
           <section className="md-sb-sec">
             <h3 className="md-sb-h">تخصيص</h3>
             <button type="button" className="md-sb-switch" role="switch" aria-checked={!!c.dark} onClick={() => c.onToggleDark && c.onToggleDark()}>
-              <span className="md-sb-link-ico" aria-hidden="true">🌙</span>
+              <span className="md-sb-link-ico" aria-hidden="true"><Icon name="moon" /></span>
               <span className="md-sb-switch-text"><b>الوضع الداكن</b></span>
               <span className={`md-sb-knob${c.dark ? " is-on" : ""}`} aria-hidden="true"><i /></span>
             </button>
             <button type="button" className="md-sb-switch" role="switch" aria-checked={!!c.calm} onClick={() => c.onToggleCalm && c.onToggleCalm()}>
-              <span className="md-sb-link-ico" aria-hidden="true">🍃</span>
+              <span className="md-sb-link-ico" aria-hidden="true"><Icon name="leaf" /></span>
               <span className="md-sb-switch-text"><b>وضع هادئ</b><small>بدون حركات وتأثيرات</small></span>
               <span className={`md-sb-knob${c.calm ? " is-on" : ""}`} aria-hidden="true"><i /></span>
             </button>
@@ -239,8 +240,6 @@ function StudentOrganizedNav({ open, onClose, session, onLogin, ctx }) {
 /* ---------------------------------------------------------------------------
    Main Component — Logic 100% preserved
 --------------------------------------------------------------------------- */
-const GRADE_PHOTO_CSS = ".md-pick-card--photo{position:relative;overflow:hidden;min-height:7.5rem;display:flex;align-items:flex-end;padding:0!important;border-radius:1.15rem;border:1.5px solid var(--duo-line,#DED4BD);background:linear-gradient(145deg,#F3F8F6,#E5EFEC);text-align:right}.md-pick-card--photo .md-pick-cover{position:absolute;inset:0;background-size:cover;background-position:center;opacity:.5;transform:scale(1.02);transition:transform .35s ease}.md-pick-card--photo.has-cover .md-pick-cover{opacity:.5}.md-pick-card--photo .md-pick-cover-scrim{position:absolute;inset:0;background:linear-gradient(180deg,rgba(255,255,255,.18),rgba(14,83,72,.12) 45%,rgba(14,83,72,.55));pointer-events:none}.md-pick-card--photo .md-pick-photo-body{position:relative;z-index:1;width:100%;padding:.85rem 1rem .95rem;display:flex;flex-direction:column;gap:.2rem}.md-pick-card--photo .md-pick-title{color:#fff!important;font-weight:850;font-size:.95rem;text-shadow:0 1px 8px rgba(0,0,0,.25)}.md-pick-card--photo .md-pick-num{color:rgba(255,255,255,.9)!important;font-weight:800;font-size:.75rem}.md-pick-card--photo:hover .md-pick-cover,.md-pick-card--photo.selected .md-pick-cover{opacity:.5;transform:scale(1.05)}.md-pick-card--photo.selected{border-color:#147A6A;box-shadow:0 0 0 2px rgba(20,122,106,.35),0 12px 28px -14px rgba(14,83,72,.4)}.md-pick-card--photo:not(.has-cover) .md-pick-title{color:#0E5348!important;text-shadow:none}.md-pick-card--photo:not(.has-cover) .md-pick-num{color:#147A6A!important}.md-pick-card--photo:not(.has-cover) .md-pick-cover-scrim{background:linear-gradient(160deg,rgba(20,122,106,.06),rgba(14,83,72,.14))}html[data-theme='dark'] .md-pick-card--photo{background:linear-gradient(145deg,#1a2420,#15201c);border-color:#30423B}html[data-theme='dark'] .md-pick-card--photo:not(.has-cover) .md-pick-title{color:#EAF1ED!important}";
-
 export default function StudentPlatform() {
   const navigate = useNavigate();
   const location = useLocation();
@@ -761,7 +760,7 @@ export default function StudentPlatform() {
 
       <main className="md-main">
         {/* Hero — greeting + the ONE "continue learning" card */}
-        <section className="md-hero2" aria-label="ترحيب">
+        <section className={`md-hero2${pickingGrade ? " md-hero2--compact" : ""}`} aria-label="ترحيب">
           <svg className="md-hero2-orbits" viewBox="0 0 420 260" preserveAspectRatio="xMinYMid slice" aria-hidden="true">
             <ellipse cx="210" cy="130" rx="190" ry="68" transform="rotate(-24 210 130)" fill="none" stroke="rgba(255,255,255,.16)" strokeWidth="1.5" />
             <ellipse cx="210" cy="130" rx="140" ry="48" transform="rotate(-24 210 130)" fill="none" stroke="rgba(227,192,139,.35)" strokeWidth="1.5" strokeDasharray="3 7" />
@@ -802,96 +801,79 @@ export default function StudentPlatform() {
           </div>
         </section>
 
-        <style id="md-grade-photo-css" dangerouslySetInnerHTML={{ __html: GRADE_PHOTO_CSS }} />
-
         {/* اختيار المرحلة والصف (أول مرة أو تغيير الصف) */}
         {lessons && lessons.length > 0 && gradeMetaReady && pickingGrade && (
-          <section className="md-dashboard mb-6" aria-label="اختيار الصف الدراسي">
-            <div className="md-panel rounded-2xl p-5 bg-white" style={{ border: "1.5px solid var(--duo-line)" }}>
-              <div className="md-pick-head">
-                <span className="md-pick-head-icon" aria-hidden="true">🎓</span>
-                <div>
-                  <h2 className="font-black text-base mb-1" style={{ color: "var(--duo-green-ink)" }}>ابدأ رحلتك من هنا</h2>
-                  <p className="text-xs" style={{ color: "var(--duo-muted)" }}>
-                    اختر صفك الدراسي لنعرض لك الدروس المناسبة. يمكنك تغيير الصف لاحقًا من قائمة الحساب.
-                  </p>
-                </div>
+          <section className="md-gp" aria-label="اختيار الصف الدراسي">
+            <header className="md-gp-head">
+              <span className="md-gp-step">🎓 ابدأ رحلتك</span>
+              <h2 className="md-gp-title">اختر صفك الدراسي</h2>
+              <p className="md-gp-sub">سنعرض لك دروس صفك فقط، وتقدر تغيّره في أي وقت من القائمة الجانبية.</p>
+            </header>
+
+            {availableStages.length > 1 && (
+              <div className="md-gp-stages" role="group" aria-label="المرحلة الدراسية">
+                {availableStages.map((st) => (
+                  <button
+                    key={st}
+                    type="button"
+                    className={`md-gp-stage${selectedStage === st ? " is-on" : ""}`}
+                    aria-pressed={selectedStage === st}
+                    disabled={gradeSaving}
+                    onClick={() => { setSelectedStage(st); setSelectedGrade(""); }}
+                  >
+                    {st}
+                  </button>
+                ))}
               </div>
-              {availableStages.length > 1 && (
-                <div className="mb-4">
-                  <p className="md-pick-label text-xs font-bold mb-2">المرحلة الدراسية</p>
-                  <div className="md-pick-grid">
-                    {availableStages.map((st) => (
+            )}
+
+            {availableStages.length > 1 && !selectedStage && (
+              <p className="md-gp-hint">اختر المرحلة الدراسية أولًا لتظهر لك الصفوف.</p>
+            )}
+
+            {(selectedStage || availableStages.length <= 1) && (
+              availableGrades.length === 0 ? (
+                <p className="md-empty">لا توجد صفوف منشورة لهذه المرحلة حالياً.</p>
+              ) : (
+                <div className="md-gp-grid">
+                  {availableGrades.map((g, gi) => {
+                    const cover = resolveGradeCover(gradeCovers, g);
+                    const stageForGrade = selectedStage || (availableStages.length === 1 ? availableStages[0] : "");
+                    const count = lessons.filter((l) => l.grade === g && (!stageForGrade || l.stage === stageForGrade)).length;
+                    const num = gradeNumber(g);
+                    return (
                       <button
-                        key={st}
+                        key={g}
                         type="button"
-                        className={`md-pick-card${selectedStage === st ? " selected" : ""}`}
-                        aria-pressed={selectedStage === st}
+                        className={`md-gp-card${selectedGrade === g ? " is-on" : ""}${cover ? " has-cover" : ""}`}
+                        style={{ "--c": UNIT_COLORS[gi % UNIT_COLORS.length], animationDelay: `${Math.min(gi, 8) * 0.07}s` }}
+                        aria-pressed={selectedGrade === g}
                         disabled={gradeSaving}
-                        onClick={() => {
-                          setSelectedStage(st);
-                          setSelectedGrade("");
-                        }}
+                        onClick={() => persistGradeChoice(stageForGrade, g)}
                       >
-                        <span className="md-pick-art"><PickArt kind={stageArtKind(st)} /></span>
-                        <span className="md-pick-title">{st}</span>
+                        {cover ? <span className="md-gp-cover" aria-hidden="true" style={{ backgroundImage: `url("${cover}")` }} /> : null}
+                        {num ? <span className="md-gp-num" aria-hidden="true">{num}</span> : null}
+                        <span className="md-gp-scrim" aria-hidden="true" />
+                        {selectedGrade === g ? <span className="md-gp-check" aria-hidden="true">✓</span> : null}
+                        <span className="md-gp-body">
+                          <b>{String(g).startsWith("الصف") ? g : `الصف ${g}`}</b>
+                          <small>{count} {count === 1 ? "درس" : "دروس"}</small>
+                          <span className="md-gp-go" aria-hidden="true">ابدأ ‹</span>
+                        </span>
                       </button>
-                    ))}
-                  </div>
+                    );
+                  })}
                 </div>
-              )}
-              {(selectedStage || availableStages.length <= 1) && (
-                <div>
-                  <p className="md-pick-label text-xs font-bold mb-2">الصف الدراسي</p>
-                  {availableGrades.length === 0 ? (
-                    <p className="md-empty">لا توجد صفوف منشورة لهذه المرحلة حالياً.</p>
-                  ) : (
-                    <div className="md-pick-grid">
-                      {availableGrades.map((g) => {
-                        const cover = resolveGradeCover(gradeCovers, g);
-                        return (
-                          <button
-                            key={g}
-                            type="button"
-                            className={`md-pick-card md-pick-card--photo${selectedGrade === g ? " selected" : ""}${cover ? " has-cover" : ""}`}
-                            aria-pressed={selectedGrade === g}
-                            disabled={gradeSaving}
-                            onClick={() => persistGradeChoice(selectedStage || (availableStages.length === 1 ? availableStages[0] : ""), g)}
-                          >
-                            <span
-                              className="md-pick-cover"
-                              aria-hidden="true"
-                              style={cover ? { backgroundImage: `url("${cover}")` } : undefined}
-                            />
-                            <span className="md-pick-cover-scrim" aria-hidden="true" />
-                            <span className="md-pick-photo-body">
-                              {gradeNumber(g) ? <span className="md-pick-num" aria-hidden="true">{gradeNumber(g)}</span> : null}
-                              <span className="md-pick-title">{String(g).startsWith("الصف") ? g : `الصف ${g}`}</span>
-                            </span>
-                          </button>
-                        );
-                      })}
-                    </div>
-                  )}
-                </div>
-              )}
-              {gradeSaveError && (
-                <p className="text-xs mt-3" style={{ color: "var(--duo-red-d)" }}>{gradeSaveError}</p>
-              )}
-              {gradeSaving && (
-                <p className="text-xs mt-3" style={{ color: "var(--duo-muted)" }}>جاري الحفظ...</p>
-              )}
-              {selectedGrade && (
-                <button
-                  type="button"
-                  className="duo-btn duo-btn-ghost mt-4 px-5 py-2 text-xs"
-                  disabled={gradeSaving}
-                  onClick={cancelGradePick}
-                >
-                  إلغاء والبقاء على الصف الحالي
-                </button>
-              )}
-            </div>
+              )
+            )}
+
+            {gradeSaveError && <p className="md-gp-msg is-error">{gradeSaveError}</p>}
+            {gradeSaving && <p className="md-gp-msg">جاري الحفظ...</p>}
+            {selectedGrade && (
+              <button type="button" className="md-gp-cancel" disabled={gradeSaving} onClick={cancelGradePick}>
+                إلغاء والبقاء على الصف الحالي
+              </button>
+            )}
           </section>
         )}
 
@@ -910,7 +892,7 @@ export default function StudentPlatform() {
             <div className={`md-dash-row${recentLessons.length > 0 ? "" : " md-dash-row--single"}`}>
               <article className="md-dash-card md-dash-progress">
                 <div className="md-dash-card-head">
-                  <span className="md-dash-card-ico" aria-hidden="true">🧭</span>
+                  <span className="md-dash-card-ico" aria-hidden="true"><Icon name="compass" /></span>
                   <h2 className="md-dash-card-title">رحلتي في التعلّم</h2>
                 </div>
                 {progressTotals.total > 0 ? (
@@ -968,7 +950,7 @@ export default function StudentPlatform() {
                   <div className="md-recent-grid">
                     {recentLessons.map((l, i) => (
                       <button key={l.id} type="button" className="md-recent-card" style={{ "--u": UNIT_COLORS[i % UNIT_COLORS.length] }} onClick={() => navigate(lessonPath(l))}>
-                        <span className="md-recent-ico" aria-hidden="true">📘</span>
+                        <span className="md-recent-ico" aria-hidden="true"><Icon name="book" /></span>
                         <span className="md-recent-text">
                           <b>{l.title}</b>
                           {l.subject ? <small>{l.subject}</small> : null}
@@ -1428,6 +1410,71 @@ export default function StudentPlatform() {
         .md-platform.is-dark .md-resume-text em, html[data-theme="dark"] .md-resume-text em { color: #A5B7AF; }
         .md-platform.is-dark .md-resume-text small, html[data-theme="dark"] .md-resume-text small { color: #E3C08B; }
         .md-platform.is-dark .md-resume-go, html[data-theme="dark"] .md-resume-go { color: #9ED8CB; }
+
+        /* —— Grade picker —— */
+        .md-hero2--compact { padding-block: clamp(1rem, 2.6vw, 1.4rem); margin-bottom: 1.1rem; }
+        .md-hero2--compact .md-hero2-sub { display: none; }
+        .md-gp { margin: 0 0 1.6rem; }
+        .md-gp-head { text-align: center; margin-bottom: 1.15rem; }
+        .md-gp-step { display: inline-block; padding: 0.25rem 0.85rem; border-radius: 999px; background: #FBF3E1; color: #86600F; font-size: 0.78rem; font-weight: 900; border: 1px dashed #E3B93C; }
+        .md-gp-title { margin: 0.65rem 0 0.3rem; font-size: clamp(1.4rem, 3.4vw, 1.9rem); font-weight: 900; color: #0E5348; }
+        .md-gp-sub { margin: 0 auto; max-width: 32rem; font-size: 0.9rem; line-height: 1.8; color: #5A6B65; }
+        .md-gp-stages { display: flex; justify-content: center; flex-wrap: wrap; gap: 0.5rem; margin-bottom: 1.1rem; }
+        .md-gp-stage { padding: 0.5rem 1.25rem; border-radius: 999px; border: 1.5px solid var(--duo-line, #DED4BD); background: #fff; color: #3F4E49; font-size: 0.9rem; font-weight: 850; cursor: pointer; transition: transform 0.15s ease, background 0.15s ease, color 0.15s ease; }
+        .md-gp-stage:hover { transform: translateY(-1px); border-color: #147A6A; }
+        .md-gp-stage.is-on { background: #147A6A; border-color: #147A6A; color: #fff; box-shadow: 0 8px 16px -10px rgba(14, 83, 72, 0.8); }
+        .md-gp-hint { margin: 0; text-align: center; font-size: 0.85rem; font-weight: 700; color: #6B7A75; }
+        .md-gp-grid { display: grid; grid-template-columns: 1fr; gap: 1rem; max-width: 60rem; margin: 0 auto; }
+        @media (min-width: 560px) { .md-gp-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
+        @media (min-width: 900px) { .md-gp-grid { grid-template-columns: repeat(3, minmax(0, 1fr)); } }
+        .md-gp-card {
+          position: relative; isolation: isolate; overflow: hidden; display: flex; align-items: flex-end;
+          min-height: clamp(9.5rem, 22vw, 12.5rem); padding: 0; border: 0; border-radius: 1.5rem; cursor: pointer; text-align: right; color: #fff;
+          background: linear-gradient(145deg, var(--c), color-mix(in srgb, var(--c) 55%, #0A3F36));
+          box-shadow: 0 6px 0 color-mix(in srgb, var(--c) 55%, #0A3F36), 0 22px 36px -24px rgba(14, 83, 72, 0.7);
+          animation: md-gp-in 0.55s cubic-bezier(0.22, 1, 0.36, 1) both;
+          transition: transform 0.2s ease, box-shadow 0.2s ease;
+        }
+        .md-gp-card:hover:not(:disabled) { transform: translateY(-4px); box-shadow: 0 10px 0 color-mix(in srgb, var(--c) 55%, #0A3F36), 0 28px 40px -22px rgba(14, 83, 72, 0.75); }
+        .md-gp-card:active:not(:disabled) { transform: translateY(3px); box-shadow: 0 2px 0 color-mix(in srgb, var(--c) 55%, #0A3F36); }
+        .md-gp-card:focus-visible { outline: 3px solid #E3C08B; outline-offset: 3px; }
+        .md-gp-card:disabled { opacity: 0.7; cursor: progress; }
+        .md-gp-card.is-on { outline: 3px solid #E3C08B; outline-offset: 3px; }
+        .md-gp-cover { position: absolute; inset: 0; z-index: -3; background-size: cover; background-position: center; opacity: 0.5; transition: transform 0.4s ease; }
+        .md-gp-card:hover .md-gp-cover { transform: scale(1.05); }
+        .md-gp-num { position: absolute; z-index: -2; top: -0.5rem; inset-inline-end: 0.4rem; font-size: clamp(5.5rem, 12vw, 8rem); font-weight: 900; line-height: 1; color: rgba(255, 255, 255, 0.2); pointer-events: none; }
+        .md-gp-scrim { position: absolute; inset: 0; z-index: -1; pointer-events: none; background: linear-gradient(180deg, rgba(255, 255, 255, 0.06) 0%, rgba(10, 63, 54, 0.12) 45%, rgba(10, 63, 54, 0.72) 100%); }
+        .md-gp-check { position: absolute; top: 0.75rem; inset-inline-start: 0.75rem; width: 2rem; height: 2rem; border-radius: 50%; display: inline-flex; align-items: center; justify-content: center; background: #E3C08B; color: #5E4309; font-weight: 900; box-shadow: 0 4px 10px rgba(0, 0, 0, 0.25); }
+        .md-gp-body { width: 100%; display: flex; flex-direction: column; gap: 0.15rem; padding: 1rem 1.15rem 1.05rem; text-shadow: 0 1px 8px rgba(0, 0, 0, 0.3); }
+        .md-gp-body b { font-size: clamp(1.1rem, 2.4vw, 1.3rem); font-weight: 900; line-height: 1.4; }
+        .md-gp-body small { font-size: 0.8rem; font-weight: 800; color: rgba(255, 255, 255, 0.9); }
+        .md-gp-go { margin-top: 0.4rem; width: fit-content; padding: 0.2rem 0.75rem; border-radius: 999px; background: rgba(255, 255, 255, 0.2); border: 1px solid rgba(255, 255, 255, 0.38); font-size: 0.76rem; font-weight: 900; text-shadow: none; transition: background 0.15s ease, transform 0.15s ease; }
+        .md-gp-card:hover .md-gp-go { background: #fff; color: #0E5348; transform: translateX(-3px); }
+        .md-gp-msg { margin: 0.9rem 0 0; text-align: center; font-size: 0.82rem; font-weight: 700; color: #6B7A75; }
+        .md-gp-msg.is-error { color: #B3261E; }
+        .md-gp-cancel { display: block; margin: 1.3rem auto 0; padding: 0.5rem 1.2rem; border-radius: 999px; border: 1.5px solid var(--duo-line, #DED4BD); background: transparent; color: #5A6B65; font-size: 0.82rem; font-weight: 800; cursor: pointer; }
+        .md-gp-cancel:hover:not(:disabled) { border-color: #147A6A; color: #0E5348; }
+        @keyframes md-gp-in { from { opacity: 0; transform: translateY(16px) scale(0.97); } to { opacity: 1; transform: none; } }
+        .md-platform.is-dark .md-gp-title, html[data-theme="dark"] .md-gp-title { color: #B5DDD2; }
+        .md-platform.is-dark .md-gp-sub, .md-platform.is-dark .md-gp-hint, .md-platform.is-dark .md-gp-msg, .md-platform.is-dark .md-gp-cancel,
+        html[data-theme="dark"] .md-gp-sub, html[data-theme="dark"] .md-gp-hint, html[data-theme="dark"] .md-gp-msg, html[data-theme="dark"] .md-gp-cancel { color: #A5B7AF; }
+        .md-platform.is-dark .md-gp-step, html[data-theme="dark"] .md-gp-step { background: rgba(227, 192, 139, 0.12); color: #E3C08B; border-color: #8A6D1C; }
+        .md-platform.is-dark .md-gp-stage, html[data-theme="dark"] .md-gp-stage { background: #192723; border-color: #30423B; color: #CBD8D2; }
+        .md-platform.is-dark .md-gp-stage.is-on, html[data-theme="dark"] .md-gp-stage.is-on { background: #3A9C89; border-color: #3A9C89; color: #0A3F36; }
+        .md-platform.is-dark .md-gp-cancel, html[data-theme="dark"] .md-gp-cancel { border-color: #30423B; }
+        @media (prefers-reduced-motion: reduce) { .md-gp-card { animation: none !important; transition: none !important; } .md-gp-cover, .md-gp-go { transition: none !important; } }
+
+                /* —— أيقونات الصناديق (SVG موحّدة) —— */
+        .md-dash-card-ico svg, .md-recent-ico svg, .md-sb-link-ico svg { display: block; width: 1.15rem; height: 1.15rem; }
+        .md-dash-card-ico { color: #147A6A; }
+        .md-recent-ico { color: var(--u, #147A6A); }
+        .md-sb-link-ico { color: #147A6A; }
+        .md-sb-link.is-active .md-sb-link-ico { color: #fff; }
+        .md-sb-switch[aria-checked="true"] .md-sb-link-ico { background: #147A6A; color: #fff; }
+        .md-platform.is-dark .md-dash-card-ico, html[data-theme="dark"] .md-dash-card-ico { color: #9ED8CB; }
+        .md-platform.is-dark .md-sb-link-ico, html[data-theme="dark"] .md-sb-link-ico { color: #9ED8CB; }
+        .md-platform.is-dark .md-sb-link.is-active .md-sb-link-ico, html[data-theme="dark"] .md-sb-link.is-active .md-sb-link-ico { color: #0A3F36; }
+        .md-platform.is-dark .md-sb-switch[aria-checked="true"] .md-sb-link-ico, html[data-theme="dark"] .md-sb-switch[aria-checked="true"] .md-sb-link-ico { background: #3A9C89; color: #0A3F36; }
 
         /* —— Dashboard —— */
         .md-dash-row { display: grid; grid-template-columns: 1fr; gap: 1rem; align-items: start; }

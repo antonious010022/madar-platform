@@ -1,3 +1,4 @@
+import { PageLoader } from "../components/DuoFx";
 import { useCallback, useEffect, useRef, useState } from "react";
 import { useLocation, useNavigate, useParams } from "react-router-dom";
 import { Pill, StudentView } from "../components/Viewer";
@@ -475,7 +476,7 @@ export default function TeacherStudioPage() {
   }, [showPreview, mobilePanel]);
 
   if (lesson === null) {
-    return <div className="p-10 text-center" style={{ color: "#6E6B85" }}>جاري تحميل الدرس...</div>;
+    return <PageLoader label="جاري تحميل الدرس…" />;
   }
   if (lesson === false) {
     return <div className="p-10 text-center" style={{ color: "#D6334B" }}>لم يتم العثور على هذا الدرس.</div>;
