@@ -234,7 +234,7 @@ function HeroSection({ theme, onStart, onFeatures }) {
         </div>
         {/* Main headline */}
         <h1 className="hero-headline">
-          لم نطوّر تجربة التعليم…{" "}
+          <span className="hero-headline-lead">لم نطوّر تجربة التعليم…</span>{" "}
           <span className="hero-headline-accent">أعدنا بناءها.</span>
         </h1>
         {/* Description */}
@@ -457,6 +457,15 @@ const HERO_CSS = `
 }
 html[data-theme="dark"] .hero-headline-accent {
   background: linear-gradient(145deg, #0A3F36 0%, #0E5348 50%, #147A6A 100%);
+}
+@media (max-width: 640px) {
+  .hero-headline {
+    white-space: normal;
+    font-size: clamp(1.5rem, 7vw, 2.1rem);
+    line-height: 1.5;
+  }
+  .hero-headline-lead { display: block; margin-bottom: 0.6rem; }
+  .hero-headline-accent { padding: 0.05em 0.5em 0.15em; border-radius: 0.6em; }
 }
 /* ---- description ---- */
 .hero-desc {
@@ -1328,12 +1337,22 @@ function MadarJourney({ isDark }) {
   );
 }
 
+/* وجهة زر "تصفّح المناهج": شاشة اختيار الصف (الأول/الثاني/الثالث الإعدادي) داخل المنصة.
+   غيّر القيمة دي لمسار شاشة الصفوف الفعلي عندك. */
+const GRADES_PATH = "/student#grades";
+
 export default function LandingPage() {
   const navigate = useNavigate();
   const session = useAuth();
   const [authOpen, setAuthOpen] = useState(false);
   const [dark, toggleDark] = useTheme();
   const [menuOpen, setMenuOpen] = useState(false);
+  useEffect(() => {
+    if (!menuOpen) return undefined;
+    const onKey = (ev) => { if (ev.key === "Escape") setMenuOpen(false); };
+    window.addEventListener("keydown", onKey);
+    return () => window.removeEventListener("keydown", onKey);
+  }, [menuOpen]);
 
   // 3D Parallax Tilt Effect for Demo Card
   const demoCardRef = useRef(null);
@@ -1382,6 +1401,10 @@ export default function LandingPage() {
         <div className="lp-grid-pattern" />
       </div>
 
+      {menuOpen && (
+        <button type="button" className="lp-menu-overlay" aria-label="إغلاق القائمة" onClick={() => setMenuOpen(false)} />
+      )}
+
       <header className="lp-header">
         <div className="lp-header-inner">
           <div className="lp-header-start">
@@ -1391,7 +1414,7 @@ export default function LandingPage() {
             </Link>
 
             <nav className="lp-nav-desk" aria-label="روابط رئيسية">
-              <Link to="/student" className="lp-nav-link">المناهج</Link>
+              <Link to="/student" className="lp-nav-link">المناهج<span className="lp-nav-pill">إعدادي</span></Link>
               <a
                 href="#features"
                 className="lp-nav-link"
@@ -1417,14 +1440,8 @@ export default function LandingPage() {
               <ThemeIcon dark={dark} />
             </button>
 
-            {session ? (
-              <Link to="/student" className="lp-btn lp-btn-ghost">منصتي</Link>
-            ) : (
-              <button
-                type="button"
-                className="lp-btn lp-btn-ghost"
-                onClick={() => setAuthOpen(true)}
-              >
+            {!session && (
+              <button type="button" className="lp-btn lp-btn-ghost" onClick={() => setAuthOpen(true)}>
                 تسجيل الدخول
               </button>
             )}
@@ -1445,16 +1462,61 @@ export default function LandingPage() {
 
         {menuOpen && (
           <div className="lp-menu-mobile" role="navigation" aria-label="قائمة الموبايل">
-            <Link to="/student" className="lp-menu-item" onClick={() => setMenuOpen(false)}>المناهج</Link>
-            <button type="button" className="lp-menu-item" onClick={() => { setMenuOpen(false); scrollToFeatures(); }}>طريقة التعلُّم</button>
-            <Link to="/student/about" className="lp-menu-item" onClick={() => setMenuOpen(false)}>عن مَدَار</Link>
-            <Link to="/student/privacy" className="lp-menu-item" onClick={() => setMenuOpen(false)}>الخصوصية</Link>
+            <Link to="/student" className="lp-menu-item" onClick={() => setMenuOpen(false)}>
+              <span className="lp-menu-ico" aria-hidden="true"><svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M4 5.5A2.5 2.5 0 0 1 6.5 3H20v16H6.5A2.5 2.5 0 0 0 4 21.5z" /><path d="M4 19V5.5" /></svg></span>
+              <span className="lp-menu-txt"><b>المناهج</b><small>للمرحلة الإعدادية</small></span>
+              <ArrowLeft size={16} className="lp-menu-arrow" aria-hidden="true" />
+            </Link>
+            <button type="button" className="lp-menu-item" onClick={() => { setMenuOpen(false); scrollToFeatures(); }}>
+              <span className="lp-menu-ico" aria-hidden="true"><Sparkles size={20} /></span>
+              <span className="lp-menu-txt"><b>طريقة التعلُّم</b><small>رحلتك داخل المنصة</small></span>
+              <ArrowLeft size={16} className="lp-menu-arrow" aria-hidden="true" />
+            </button>
+            <Link to="/student/about" className="lp-menu-item" onClick={() => setMenuOpen(false)}>
+              <span className="lp-menu-ico" aria-hidden="true"><svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="9" /><path d="M12 11v5M12 8h.01" /></svg></span>
+              <span className="lp-menu-txt"><b>عن مَدَار</b></span>
+              <ArrowLeft size={16} className="lp-menu-arrow" aria-hidden="true" />
+            </Link>
+            <Link to="/student/privacy" className="lp-menu-item" onClick={() => setMenuOpen(false)}>
+              <span className="lp-menu-ico" aria-hidden="true"><svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M12 3l8 3v6c0 5-3.5 8-8 9-4.5-1-8-4-8-9V6z" /></svg></span>
+              <span className="lp-menu-txt"><b>الخصوصية</b></span>
+              <ArrowLeft size={16} className="lp-menu-arrow" aria-hidden="true" />
+            </Link>
+            <button type="button" className="lp-menu-start" onClick={() => { setMenuOpen(false); startLearning(); }}>
+              <span>ابدأ التعلّم الآن</span>
+              <ArrowLeft size={18} aria-hidden="true" />
+            </button>
           </div>
         )}
       </header>
 
       <main>
         <HeroSection theme={dark ? "dark" : "light"} onStart={startLearning} onFeatures={scrollToFeatures} />
+
+        <section id="curricula" className="lp-stage" aria-labelledby="lp-stage-title">
+          <div className="lp-stage-card">
+            <span className="lp-stage-icon" aria-hidden="true">
+              <svg viewBox="0 0 24 24" width="30" height="30" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                <path d="M22 10 12 5 2 10l10 5 10-5z" />
+                <path d="M6 12v5c3 2 9 2 12 0v-5" />
+              </svg>
+            </span>
+            <div className="lp-stage-copy">
+              <span className="lp-stage-tag">للمرحلة الإعدادية</span>
+              <h2 id="lp-stage-title">مَدَار مخصّصة لطلاب المرحلة الإعدادية</h2>
+              <p>افتح المناهج، اختر صفك الدراسي، وتابع دروسك خطوة بخطوة داخل المنصة.</p>
+              <ul className="lp-stage-grades">
+                <li>الصف الأول الإعدادي</li>
+                <li>الصف الثاني الإعدادي</li>
+                <li>الصف الثالث الإعدادي</li>
+              </ul>
+            </div>
+            <Link to={GRADES_PATH} className="lp-stage-btn">
+              <span>تصفّح المناهج</span>
+              <ArrowLeft size={18} aria-hidden="true" />
+            </Link>
+          </div>
+        </section>
 
         <section className="lp-highlight-section" aria-labelledby="lp-highlight-title">
           <div className="lp-highlight-card">
@@ -1814,32 +1876,32 @@ const LP_CSS = `
   .lp-menu-btn { display: inline-flex; }
   @media (min-width: 860px) { .lp-menu-btn { display: none; } }
 
+  .lp-menu-overlay { position: fixed; inset: 0; z-index: 49; padding: 0; border: 0; background: rgba(8, 24, 20, .45); -webkit-backdrop-filter: blur(3px); backdrop-filter: blur(3px); animation: lpFadeInUp .2s ease both; }
   .lp-menu-mobile {
-    display: flex;
-    flex-direction: column;
-    gap: .35rem;
-    padding: .75rem 1.25rem 1.1rem;
-    border-top: 1px solid var(--lp-line);
-    background: var(--lp-surface);
+    position: absolute; top: calc(100% + .5rem); inset-inline: .75rem; z-index: 2;
+    display: flex; flex-direction: column; gap: .3rem; padding: .6rem;
+    max-height: calc(100dvh - 5.5rem); overflow-y: auto;
+    border-radius: 1.5rem; border: 1px solid var(--lp-line-strong); background: var(--lp-surface);
+    box-shadow: 0 24px 48px -16px rgba(0, 0, 0, .35);
     animation: lpFadeInUp .25s ease forwards;
   }
-
-  @media (min-width: 860px) { .lp-menu-mobile { display: none !important; } }
-
+  @media (min-width: 860px) { .lp-menu-mobile, .lp-menu-overlay { display: none !important; } }
   .lp-menu-item {
-    text-align: right;
-    padding: .75rem .9rem;
-    border-radius: .75rem;
-    border: 0;
-    background: transparent;
-    color: var(--lp-text);
-    font: inherit;
-    font-weight: 700;
-    font-size: .95rem;
-    text-decoration: none;
-    cursor: pointer;
-    transition: all .2s ease;
+    display: flex; align-items: center; gap: .8rem; width: 100%; padding: .65rem .7rem;
+    border-radius: 1rem; border: 0; background: transparent; color: var(--lp-text);
+    font: inherit; text-align: start; text-decoration: none; cursor: pointer; transition: background .2s ease;
   }
+  .lp-menu-ico { flex: none; display: grid; place-items: center; width: 2.5rem; height: 2.5rem; border-radius: .85rem; background: var(--lp-soft-accent); color: var(--lp-teal); }
+  .lp-menu-txt { flex: 1 1 auto; min-width: 0; display: flex; flex-direction: column; gap: .1rem; }
+  .lp-menu-txt b { font-size: .98rem; font-weight: 900; line-height: 1.4; }
+  .lp-menu-txt small { font-size: .76rem; font-weight: 700; color: var(--lp-muted); }
+  .lp-menu-arrow { flex: none; color: var(--lp-muted); }
+  .lp-menu-start {
+    display: flex; align-items: center; justify-content: center; gap: .5rem; width: 100%; min-height: 3rem; margin-top: .35rem;
+    border: 0; border-radius: 1rem; color: #fff; font: inherit; font-weight: 900; font-size: 1rem; cursor: pointer;
+    background: linear-gradient(145deg, #0E5348 0%, #147A6A 60%, #1A8F7C 100%);
+  }
+  .lp-nav-pill { margin-inline-start: .45rem; padding: .08rem .5rem; border-radius: 999px; font-size: .68rem; font-weight: 900; background: var(--lp-soft-accent); color: var(--lp-teal); }
 
   /* Premium Interactive Buttons */
   .lp-btn {
@@ -2365,6 +2427,24 @@ const LP_CSS = `
 
   /* Video Explainer Section */
 
+  /* ---- المرحلة الإعدادية ---- */
+  .lp-stage { scroll-margin-top: 5rem; max-width: 1140px; margin: 0 auto; padding: 0 1.25rem 3rem; }
+  .lp-stage-card { display: grid; grid-template-columns: auto minmax(0, 1fr) auto; gap: 1.5rem; align-items: center; padding: clamp(1.25rem, 3vw, 2rem) clamp(1.25rem, 3vw, 2.25rem); border-radius: 2rem; border: 1px solid var(--lp-line-strong); background: radial-gradient(circle at 100% 0%, var(--lp-soft-accent), transparent 55%), var(--lp-surface); box-shadow: var(--lp-card-shadow); color: var(--lp-text); }
+  .lp-stage-icon { display: grid; place-items: center; width: 4.25rem; height: 4.25rem; border-radius: 1.3rem; color: #fff; background: linear-gradient(145deg, #0E5348, #1A8F7C); transform: rotate(-4deg); }
+  .lp-stage-tag { display: inline-block; padding: .25rem .8rem; border-radius: 999px; font-size: .78rem; font-weight: 900; color: var(--lp-teal); background: var(--lp-soft-accent); border: 1px solid color-mix(in srgb, var(--lp-teal) 30%, transparent); }
+  .lp-stage-copy h2 { margin: .7rem 0 .4rem; font-size: clamp(1.25rem, 3vw, 1.7rem); font-weight: 900; line-height: 1.45; }
+  .lp-stage-copy p { margin: 0; font-size: .98rem; line-height: 1.85; color: var(--lp-muted); }
+  .lp-stage-grades { list-style: none; margin: 1rem 0 0; padding: 0; display: flex; flex-wrap: wrap; gap: .5rem; }
+  .lp-stage-grades li { padding: .35rem .9rem; border-radius: 999px; font-size: .82rem; font-weight: 800; border: 1px solid var(--lp-line-strong); background: var(--lp-surface); }
+  .lp-stage-btn { display: inline-flex; align-items: center; justify-content: center; gap: .55rem; min-height: 3.1rem; padding: .7rem 1.6rem; border-radius: 999px; color: #fff; font-weight: 900; text-decoration: none; background: linear-gradient(145deg, #0E5348 0%, #147A6A 60%, #1A8F7C 100%); box-shadow: 0 14px 28px -14px rgba(14, 83, 72, .6); transition: transform .15s ease; }
+  .lp-stage-btn:hover { transform: translateY(-2px); }
+  @media (max-width: 760px) {
+    .lp-stage { padding-inline: .85rem; padding-bottom: 2.25rem; }
+    .lp-stage-card { grid-template-columns: minmax(0, 1fr); justify-items: center; text-align: center; border-radius: 1.6rem; gap: 1.1rem; }
+    .lp-stage-grades { justify-content: center; }
+    .lp-stage-btn { width: 100%; }
+  }
+
   /* ---- رحلة الطالب ---- */
   .lp-journey { scroll-margin-top: 5rem; max-width: 1140px; margin: 0 auto; padding: .5rem 1.25rem 3.5rem; color: var(--lp-text); }
   .lp-journey-head { text-align: center; max-width: 44rem; margin: 0 auto 2.5rem; }
@@ -2383,7 +2463,7 @@ const LP_CSS = `
   .lp-step-copy ul { list-style: none; margin: 1.25rem 0 0; padding: 0; display: grid; gap: .55rem; }
   .lp-step-copy li { display: flex; gap: .6rem; align-items: flex-start; font-size: .93rem; font-weight: 700; line-height: 1.7; }
   .lp-step-copy li i { flex: none; display: grid; place-items: center; width: 1.3rem; height: 1.3rem; margin-top: .15rem; border-radius: 50%; background: var(--ac); color: #fff; font-size: .72rem; font-style: normal; }
-  .lp-step-canvas { --ts: 1; min-height: 12rem; padding: .6rem; border-radius: 1.25rem; border: 1px solid var(--lp-line-strong); background-color: color-mix(in srgb, var(--lp-surface) 92%, var(--lp-bg)); background-image: radial-gradient(circle at 1px 1px, color-mix(in srgb, var(--ac) 22%, transparent) 1px, transparent 1.4px); background-size: 18px 18px; }
+  .lp-step-canvas { --ts: 1; display: grid; align-items: center; aspect-ratio: 400 / 230; width: 100%; padding: .5rem; border-radius: 1.25rem; border: 1px solid var(--lp-line-strong); background-color: color-mix(in srgb, var(--lp-surface) 92%, var(--lp-bg)); background-image: radial-gradient(circle at 1px 1px, color-mix(in srgb, var(--ac) 22%, transparent) 1px, transparent 1.4px); background-size: 18px 18px; }
   .msc-art { display: block; width: 100%; height: auto; font-family: inherit; direction: rtl; overflow: visible; }
   .lp-step:not(.is-live) .msc-card, .lp-step:not(.is-live) .msc-art * { animation-play-state: paused !important; }
   @media (min-width: 900px) {
@@ -2392,10 +2472,18 @@ const LP_CSS = `
   }
   @media (max-width: 520px) {
     .lp-journey { padding-inline: .85rem; }
-    .lp-steps { padding-inline-end: 2.6rem; }
-    .lp-step-node { inset-inline-start: -2.6rem; width: 1.9rem; height: 1.9rem; }
-    .lp-steps::before { inset-inline-start: .9rem; }
-    .lp-step-canvas { --ts: 1.2; padding: .4rem; }
+    .lp-steps { padding-inline-end: 2.1rem; }
+    .lp-step { padding: 1rem .85rem; gap: 1.1rem; border-radius: 1.4rem; }
+    .lp-step-node { inset-inline-start: -2.1rem; width: 1.7rem; height: 1.7rem; font-size: .85rem; box-shadow: 0 0 0 4px var(--lp-bg); }
+    .lp-steps::before { inset-inline-start: .75rem; }
+    .lp-step-canvas { --ts: 1.2; padding: .3rem; border-radius: 1rem; }
+    .lp-step h4.msc-card { gap: 10px; padding: 12px 12px; border-radius: 16px; align-items: flex-start; }
+    .lp-step h4.msc-card .msc-card-icon { width: 38px; height: 38px; border-radius: 12px; }
+    .lp-step h4.msc-card .msc-card-icon svg { width: 19px; height: 19px; }
+    .lp-step h4.msc-card .msc-card-body { padding-inline-end: 0; }
+    .lp-step h4.msc-card .msc-card-body b { font-size: .95rem; }
+    .lp-step h4.msc-card .msc-card-body small { font-size: .78rem; line-height: 1.65; }
+    .lp-step h4.msc-card .msc-card-tag { position: static; align-self: flex-start; padding: .15rem .6rem; border-radius: 999px; background: var(--soft); font-size: .68rem; }
   }
 
   /* حركة الرسومات التوضيحية (منقولة من MadarShowcase) */

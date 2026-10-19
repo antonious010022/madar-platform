@@ -2,6 +2,7 @@ import React, { useEffect, useRef, useState, useCallback, useMemo } from "react"
 import { extractYouTubeId } from "../lib/db";
 import AuthModal, { RegistrationGate } from "./AuthModal";
 import { MindMapViewerNode } from "./MindMap";
+import TimelineView from "./TimelineView";
 
 // الخريطة الذهنية في ملف مستقل (MindMap.jsx). نعيد تصديرها من هنا لأن ملفات أخرى (مثل Studio) تستوردها من Viewer.
 export { MindMapViewerNode };
@@ -708,29 +709,31 @@ html[data-theme="dark"] .md-jr .md-jr-hero { background: linear-gradient(125deg,
 
 /* ---- sticky navigation ---- */
 .md-jr .md-jr-nav {
-  position: sticky; top: var(--jr-top, 0px); z-index: 30; margin-top: 1rem; padding: 0.6rem 0 0.55rem;
-  background: color-mix(in srgb, var(--jr-bg) 93%, transparent); -webkit-backdrop-filter: blur(12px); backdrop-filter: blur(12px);
+  position: sticky; top: var(--jr-top, 0px); z-index: 30; margin-top: 0.75rem; padding: 0.3rem 0 0.35rem;
+  background: color-mix(in srgb, var(--jr-bg) 93%, transparent); -webkit-backdrop-filter: blur(10px); backdrop-filter: blur(10px);
   border-bottom: 1px solid var(--jr-line);
 }
-.md-jr .md-jr-navrow { display: flex; align-items: center; justify-content: space-between; gap: 0.75rem; font-size: 0.82rem; font-weight: 800; color: var(--jr-teal-deep); }
-.md-jr .md-jr-navrow small { font-size: 0.78rem; font-weight: 700; color: var(--jr-muted); }
-.md-jr .md-jr-track { height: 6px; margin-top: 0.45rem; border-radius: 999px; background: var(--jr-line); overflow: hidden; }
+.md-jr .md-jr-navrow { display: flex; align-items: center; justify-content: space-between; gap: 0.6rem; font-size: 0.72rem; font-weight: 800; line-height: 1.3; color: var(--jr-teal-deep); }
+.md-jr .md-jr-navrow small { font-size: 0.7rem; font-weight: 700; color: var(--jr-muted); }
+.md-jr .md-jr-track { height: 3px; margin-top: 0.25rem; border-radius: 999px; background: var(--jr-line); overflow: hidden; }
 .md-jr .md-jr-fill { height: 100%; border-radius: 999px; background: var(--jr-teal); transition: width 0.4s ease; }
-.md-jr .md-jr-chips { display: flex; gap: 0.5rem; margin: 0.35rem 0 0; padding: 0.3rem 0.1rem; list-style: none; overflow-x: auto; scroll-snap-type: x proximity; -webkit-overflow-scrolling: touch; }
+.md-jr .md-jr-chips { display: flex; gap: 0.35rem; margin: 0.3rem 0 0; padding: 0.1rem 0.1rem 0.15rem; list-style: none; overflow-x: auto; scroll-snap-type: x proximity; -webkit-overflow-scrolling: touch; scrollbar-width: none; }
+.md-jr .md-jr-chips::-webkit-scrollbar { display: none; }
 .md-jr .md-jr-chips li { flex: none; scroll-snap-align: center; }
 .md-jr .md-jr-chip {
-  display: inline-flex; align-items: center; justify-content: center; min-width: 44px; height: 44px; padding: 0 0.6rem; border-radius: 999px;
-  font-size: 0.95rem; font-weight: 900; color: var(--jr-text); background: var(--jr-surface); border: 1.5px solid var(--jr-line);
+  display: inline-flex; align-items: center; gap: 0.35rem; min-height: 32px; padding: 0.2rem 0.7rem 0.2rem 0.6rem; border-radius: 999px; white-space: nowrap;
+  font-size: 0.76rem; font-weight: 800; line-height: 1.2; color: var(--jr-text); background: var(--jr-surface); border: 1.5px solid var(--jr-line);
   transition: border-color 0.15s ease, background-color 0.15s ease;
 }
-.md-jr .md-jr-chip--wide { padding: 0 0.95rem; font-size: 0.85rem; }
+.md-jr .md-jr-chip-mark { flex: none; display: inline-grid; place-items: center; min-width: 1.05rem; height: 1.05rem; border-radius: 999px; font-size: 0.66rem; font-weight: 900; background: color-mix(in srgb, currentColor 14%, transparent); }
 .md-jr .md-jr-chip[data-state="current"] { background: var(--jr-btn); border-color: var(--jr-btn); color: #fff; }
 .md-jr .md-jr-chip[data-state="done"] { background: var(--jr-ok-soft); border-color: var(--jr-teal); color: var(--jr-teal-deep); }
+.md-jr .md-jr-chip[data-state="done"][aria-current="step"] { background: var(--jr-btn); border-color: var(--jr-btn); color: #fff; }
 .md-jr .md-jr-chip[data-state="access"] { background: var(--jr-gold-soft); border-color: var(--jr-gold); }
 .md-jr .md-jr-chip[data-state="sequence"] { background: var(--jr-soft); border-style: dashed; color: var(--jr-muted); }
 .md-jr .md-jr-chip[aria-disabled="true"] { cursor: not-allowed; }
-.md-jr .md-jr-chip:hover:not([aria-disabled="true"]):not([data-state="current"]) { border-color: var(--jr-teal); }
-.md-jr .md-jr-curtitle { margin: 0.2rem 0 0; font-size: 0.9rem; font-weight: 800; color: var(--jr-text); }
+.md-jr .md-jr-chip:hover:not([aria-disabled="true"]):not([data-state="current"]):not([aria-current="step"]) { border-color: var(--jr-teal); }
+.md-jr .md-jr-curtitle { display: none; }
 
 /* ---- layout ---- */
 .md-jr .md-jr-grid { display: block; margin-top: 1rem; }
@@ -881,14 +884,13 @@ html[data-theme="dark"] .md-jr .ts-richtext-content .ts-hotword-highlight { back
 html[data-theme="dark"] .md-jr .ts-richtext-content .ts-hotword-highlight::after { color: #8FC3E0; -webkit-text-fill-color: #8FC3E0; }
 
 /* ---- action bar ---- */
-.md-jr .md-jr-bar { display: flex; align-items: stretch; gap: 0.6rem; margin-top: 1rem; max-width: 46rem; margin-inline: auto; }
+.md-jr .md-jr-bar { display: flex; align-items: center; justify-content: space-between; gap: 0.5rem; margin-top: 0.9rem; max-width: 46rem; margin-inline: auto; pointer-events: none; }
+.md-jr .md-jr-bar .md-jr-btn { pointer-events: auto; flex: 0 0 auto; min-height: 36px; min-width: 0; padding: 0.3rem 0.85rem; border-radius: 999px; font-size: 0.82rem; box-shadow: 0 6px 14px -8px rgba(0, 0, 0, 0.45); }
+.md-jr .md-jr-bar .md-jr-btn--ghost { background: color-mix(in srgb, var(--jr-surface) 90%, transparent); -webkit-backdrop-filter: blur(8px); backdrop-filter: blur(8px); }
+.md-jr .md-jr-bar .md-jr-btn--primary { min-height: 36px; font-size: 0.82rem; }
+.md-jr .md-jr-bar .md-jr-btn svg { width: 0.9rem; height: 0.9rem; }
 @media (max-width: 1023.98px) {
-  .md-jr .md-jr-bar {
-    position: sticky; bottom: 0; z-index: 25; max-width: none; margin-inline: calc(-1 * var(--jr-pad));
-    padding: 0.65rem var(--jr-pad) calc(0.65rem + env(safe-area-inset-bottom, 0px));
-    background: color-mix(in srgb, var(--jr-bg) 95%, transparent); -webkit-backdrop-filter: blur(12px); backdrop-filter: blur(12px);
-    border-top: 1px solid var(--jr-line);
-  }
+  .md-jr .md-jr-bar { position: sticky; bottom: 0; z-index: 25; max-width: none; margin-inline: 0; padding: 0.4rem 0 calc(0.4rem + env(safe-area-inset-bottom, 0px)); background: transparent; border: 0; }
 }
 .md-jr .md-jr-btn {
   min-height: 48px; min-width: 44px; padding: 0.55rem 1.1rem; border-radius: 1rem; font-size: 0.98rem; font-weight: 800;
@@ -1090,15 +1092,7 @@ function JrAggregatedReview({ fullMindMap, fullTimeline, fullQuestions, selected
       {hasTl && (
         <div style={{ marginBottom: "1.4rem" }}>
           <p className="md-jr-eyebrow">🕒 الخط الزمني الكامل</p>
-          <ol className="md-jr-tl">
-            {fullTimeline.map((item, idx) => (
-              <li key={item.id || `jr-ft-${idx}`} style={{ flexDirection: "column", gap: "0.2rem" }}>
-                <span style={{ fontSize: "0.82rem", fontWeight: 900, color: "var(--jr-teal)" }}>{item.date}</span>
-                <h4>{item.title}</h4>
-                {item.description ? <p>{item.description}</p> : null}
-              </li>
-            ))}
-          </ol>
+          <TimelineView items={fullTimeline} showSceneTitle />
         </div>
       )}
       {hasQs && (
@@ -1224,7 +1218,10 @@ function JourneyLesson({ ctx }) {
       onClick={() => { if (!it.disabled) tryOpenScene(it.i); }}
     >
       {variant === "chip" ? (
-        <>{it.s ? it.mark : `${it.mark} مراجعة`}</>
+        <>
+          <span className="md-jr-chip-mark" aria-hidden="true">{it.mark}</span>
+          <span className="md-jr-chip-title">{it.s ? it.s.title || `العنوان ${it.i + 1}` : "المراجعة النهائية"}</span>
+        </>
       ) : (
         <>
           <span className="md-jr-dot" aria-hidden="true">{it.mark}</span>
@@ -1233,6 +1230,11 @@ function JourneyLesson({ ctx }) {
       )}
     </button>
   );
+
+  useEffect(() => {
+    const chip = navRef.current && navRef.current.querySelector('.md-jr-chip[aria-current="step"]');
+    if (chip && chip.scrollIntoView) chip.scrollIntoView({ inline: "center", block: "nearest", behavior: "smooth" });
+  }, [sceneIndex]);
 
   return (
     <div className="md-jr" ref={rootRef} dir="rtl">
@@ -1393,19 +1395,7 @@ function JourneyLesson({ ctx }) {
                     )}
                     {tool === "timeline" && hasTimeline && (
                       <div className="md-jr-panel" id="md-jr-panel-timeline" role="region" aria-label="الخط الزمني">
-                        <ol className="md-jr-tl">
-                          {scene.timeline.map((item, idx) => (
-                            <li key={item.id || `jr-tl-${idx}`}>
-                              <span className="md-jr-tl-date">{item.date}</span>
-                              <div style={{ flex: 1, minWidth: 0 }}>
-                                <h4>{item.title}</h4>
-                                {item.description ? <p>{item.description}</p> : null}
-                                {item.location ? <p style={{ color: "var(--jr-gold)", fontWeight: 800, marginTop: "0.25rem" }}>📍 الموقع: {item.location}</p> : null}
-                                {item.image ? <img src={item.image} alt={item.title || "حدث"} /> : null}
-                              </div>
-                            </li>
-                          ))}
-                        </ol>
+                        <TimelineView items={scene.timeline} />
                       </div>
                     )}
                   </section>
@@ -1953,15 +1943,7 @@ export function StudentView({
             {Array.isArray(fullTimeline) && fullTimeline.length > 0 && (
               <div className="mb-6">
                 <p className="font-bold text-sm mb-2" style={{ color: "#0E5348" }}>🕒 الخط الزمني الكامل</p>
-                <div className="flex flex-col gap-3">
-                  {fullTimeline.map((item, idx) => (
-                    <div key={item.id || `fr-ft-${idx}`} className="md-lv-tl-item p-3 rounded-xl" style={{ background: "#FAF6ED", border: "1px solid #DED4BD" }}>
-                      <p className="font-bold text-xs" style={{ color: "#147A6A" }}>{item.date}</p>
-                      <p className="text-sm font-bold" style={{ color: "#263B35" }}>{item.title}</p>
-                      {item.description && <p className="text-xs mt-1" style={{ color: "#3F4E49" }}>{item.description}</p>}
-                    </div>
-                  ))}
-                </div>
+                <TimelineView items={fullTimeline} showSceneTitle />
               </div>
             )}
             {Array.isArray(fullQuestions) && fullQuestions.length > 0 && (
@@ -2068,48 +2050,7 @@ export function StudentView({
               </button>
             </div>
             {showTimeline && (
-              <div className="flex flex-col gap-4">
-                {scene.timeline.map((item, idx) => (
-                  <div
-                    key={item.id || `timeline-item-${idx}`}
-                    className="md-lv-tl-item flex gap-4 p-4 rounded-2xl border"
-                    style={{ background: "#FAF6ED", borderColor: "#DED4BD" }}
-                  >
-                    <div
-                      className="md-lv-tl-date font-black px-3 py-2 rounded-xl h-fit text-sm whitespace-nowrap"
-                      style={{ background: "#147A6A", color: "#FAF6ED" }}
-                    >
-                      {item.date}
-                    </div>
-                    <div className="flex-1">
-                      <h4
-                        className="font-bold text-base mb-1"
-                        style={{ color: "#263B35" }}
-                      >
-                        {item.title}
-                      </h4>
-                      <p className="text-sm mb-2" style={{ color: "#3F4E49" }}>
-                        {item.description}
-                      </p>
-                      {item.location && (
-                        <p
-                          className="text-xs font-semibold"
-                          style={{ color: "#B8832A" }}
-                        >
-                          📍 الموقع: {item.location}
-                        </p>
-                      )}
-                      {item.image && (
-                        <img
-                          src={item.image}
-                          alt={item.title || "حدث"}
-                          className="mt-2 rounded-xl max-h-40 object-cover w-full block"
-                        />
-                      )}
-                    </div>
-                  </div>
-                ))}
-              </div>
+              <TimelineView items={scene.timeline} />
             )}
           </div>
         )}
@@ -2225,15 +2166,7 @@ export function StudentView({
               {Array.isArray(fullTimeline) && fullTimeline.length > 0 && (
                 <div className="mb-6">
                   <p className="font-bold text-sm mb-2" style={{ color: "#0E5348" }}>الخط الزمني الكامل</p>
-                  <div className="flex flex-col gap-3">
-                    {fullTimeline.map((item, idx) => (
-                      <div key={item.id || `ft-${idx}`} className="md-lv-tl-item p-3 rounded-xl" style={{ background: "#FAF6ED", border: "1px solid #DED4BD" }}>
-                        <p className="font-bold text-xs" style={{ color: "#147A6A" }}>{item.date}</p>
-                        <p className="text-sm font-bold" style={{ color: "#263B35" }}>{item.title}</p>
-                        {item.description && <p className="text-xs mt-1" style={{ color: "#3F4E49" }}>{item.description}</p>}
-                      </div>
-                    ))}
-                  </div>
+                  <TimelineView items={fullTimeline} showSceneTitle />
                 </div>
               )}
               {Array.isArray(fullQuestions) && fullQuestions.length > 0 && (

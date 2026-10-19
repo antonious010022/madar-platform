@@ -253,7 +253,7 @@ export function DidYouKnowCard({ session, stage, grade, ready = true, onRequireL
       <Shell>
         <span className="md-dyk-tag">💡 هل تعلم؟</span>
         <p className="md-dyk-text md-dyk-text--plain">
-          لا توجد معلومات متاحة لصفك حاليًا. أضف معلومة نشطة من لوحة المعلم.
+          لا توجد معلومات متاحة لصفك حاليًا.
         </p>
       </Shell>
     );

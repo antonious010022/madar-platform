@@ -6,9 +6,9 @@ import {
   RichTextEditor,
   StudioHotwords,
   MindMapStudioBuilder,
-  TimelineStudioEditor,
   QuestionStudioEditor,
 } from "../components/Studio";
+import TimelineBuilder from "../components/TimelineBuilder";
 import { STATUSES, statusMeta } from "../lib/constants";
 import { slugify } from "../lib/slugify";
 import {
@@ -1062,7 +1062,7 @@ export default function TeacherStudioPage() {
               )}
 
               {showTL && (
-              <TimelineStudioEditor
+              <TimelineBuilder
                 items={scene.timeline || []}
                 uploadFn={uploadFn}
                 onAdd={(item) => patchScene(scene.id, { timeline: [...(scene.timeline || []), item] })}

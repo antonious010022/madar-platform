@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { useNavigate, useLocation, Link } from "react-router-dom";
-import { listPublishedLessons, listMyProgress, getStudentGradeMeta, saveStudentGradeMeta, getGradeCovers, resolveGradeCover } from "../lib/db";
+import { listPublishedLessons, listCurriculumNodes, listMyProgress, getStudentGradeMeta, saveStudentGradeMeta, getGradeCovers, resolveGradeCover } from "../lib/db";
 import { useAuth } from "../lib/hooks";
 import Footer from "../components/Footer";
 import AuthModal, { GuestWelcomeBanner } from "../components/AuthModal";
@@ -11,6 +11,235 @@ import { arabicLessonOrdinal, lessonPath, isLessonComingSoon, lessonDisplayNumbe
 import { gradeNumber } from "./student-platform/uiParts";
 import { Icon } from "../components/MadarIcons";
 import { PLATFORM_CSS } from "./student-platform/platformStyles";
+
+/* ---------------------------------------------------------------------------
+   Curriculum order — the teacher's tree (Settings → المنهج) decides the order of
+   stages / grades / terms / units. Names are matched under their parent, because
+   the same name (e.g. "الترم الأول") exists under many grades.
+   Names missing from the tree go last, in their original order.
+--------------------------------------------------------------------------- */
+function curriculumIdsOf(nodes, kind, name, parentIds) {
+  if (!name) return null;
+  return new Set(
+    nodes
+      .filter((n) => n.kind === kind && n.name === name && (!parentIds || parentIds.has(n.parentId)))
+      .map((n) => n.id)
+  );
+}
+function curriculumRank(nodes, kind, name, parentIds) {
+  let best = Infinity;
+  for (const n of nodes) {
+    if (n.kind !== kind || n.name !== name) continue;
+    if (parentIds && !parentIds.has(n.parentId)) continue;
+    const r = Number(n.sortOrder) || 0;
+    if (r < best) best = r;
+  }
+  return best;
+}
+function sortByCurriculum(names, nodes, kind, parentIds) {
+  if (!nodes || !nodes.length) return names;
+  return names
+    .map((name, i) => ({ name, i, r: curriculumRank(nodes, kind, name, parentIds) }))
+    .sort((a, b) => (a.r === b.r ? a.i - b.i : a.r - b.r))
+    .map((x) => x.name);
+}
+
+
+/* ---------------------------------------------------------------------------
+   لمسة الفخر — تفاصيل الحركة والتلميحات. كلها CSS فوق ستايل المنصة الأساسي،
+   وبتتوقف في الوضع الهادئ وعند prefers-reduced-motion.
+--------------------------------------------------------------------------- */
+const PRIDE_CSS = `
+  .md-platform ::selection { background: #147A6A; color: #fff; }
+  .md-platform :is(button, a, [role="button"], [tabindex="0"]):focus-visible { outline: 3px solid #E3C08B; outline-offset: 3px; }
+  .md-platform :is(.md-chip, .md-unit-card, .md-lesson-card, .md-login-btn, .md-org-trigger, .md-recent-card, .md-gp-stage):active:not([aria-disabled="true"]) { transform: translateY(2px) scale(0.98); transition-duration: 0.06s; }
+  /* —— الصف الحالي: أخضر بدل الأصفر، والكلام أبيض (ثابت، بدون حركة) —— */
+  .md-platform .md-ctx-grade {
+    display: inline-flex; align-items: center; justify-content: center; gap: 0.55rem; padding: 0.42rem 1.1rem;
+    direction: rtl !important; text-align: center; width: fit-content !important; max-width: 100%; flex: 0 0 auto !important;
+    border-radius: 999px; border: 0 !important;
+    background: linear-gradient(135deg, #1A8F7C 0%, #0E5348 100%) !important;
+    box-shadow: 0 4px 0 #0A3F36, 0 12px 20px -14px rgba(14, 83, 72, 0.7) !important;
+  }
+  .md-platform .md-ctx-grade::before { content: ""; flex: none; width: 0.5rem; height: 0.5rem; border-radius: 50%; background: #fff; box-shadow: 0 0 0 3px rgba(255, 255, 255, 0.28); }
+  .md-platform .md-ctx-grade .md-ctx-grade-text, .md-platform .md-ctx-grade-text { display: block; direction: rtl; text-align: center; unicode-bidi: isolate; color: #fff !important; font-weight: 900; font-size: 0.92rem; letter-spacing: 0; text-shadow: none; }
+  .md-platform.is-dark .md-ctx-grade, html[data-theme="dark"] .md-ctx-grade { background: linear-gradient(135deg, #1F7F6D 0%, #0E5348 100%) !important; box-shadow: 0 4px 0 #062a24, 0 14px 24px -14px rgba(0, 0, 0, 0.6) !important; }
+  .md-gp-card { animation-fill-mode: backwards !important; }
+  .md-platform .md-context { direction: rtl; }
+
+  /* —— زرار الدرس: كبسولة مع دايرة للسهم —— */
+  .md-platform .md-lesson-cta {
+    display: inline-flex !important; align-items: center; gap: 0.6rem; align-self: flex-start; width: fit-content;
+    margin-top: 0.75rem; padding: 0.3rem; padding-inline-start: 1rem; direction: rtl; border-radius: 999px;
+    background: linear-gradient(135deg, #1A8F7C 0%, #0E5348 100%); color: #fff !important;
+    font-size: 0.84rem; font-weight: 900; line-height: 1.2;
+    box-shadow: 0 4px 0 #0A3F36, 0 12px 18px -12px rgba(14, 83, 72, 0.6);
+  }
+  .md-platform .md-lesson-cta span { display: inline-flex; align-items: center; justify-content: center; width: 1.65rem; height: 1.65rem; border-radius: 50%; background: #fff; color: #0E5348; font-size: 1rem; font-weight: 900; line-height: 1; }
+  .md-platform .md-lesson-locked .md-lesson-cta { padding: 0.42rem 1rem; background: #E6ECE9; color: #6B7A75 !important; box-shadow: 0 3px 0 #CBD5D0; }
+  .md-platform .md-lesson-card[data-kind="ACCESS_LOCK"] .md-lesson-cta { background: linear-gradient(135deg, #EE8F3A 0%, #C9651A 100%); color: #fff !important; box-shadow: 0 4px 0 #9A4A10, 0 12px 18px -12px rgba(154, 74, 16, 0.6); }
+  .md-platform .md-lesson-card[data-kind="ACCESS_LOCK"] .md-lesson-cta span { color: #C9651A; }
+  .md-platform.is-dark .md-lesson-cta, html[data-theme="dark"] .md-lesson-cta { background: linear-gradient(135deg, #1F7F6D 0%, #0E5348 100%); box-shadow: 0 4px 0 #062a24; }
+  .md-platform.is-dark .md-lesson-locked .md-lesson-cta, html[data-theme="dark"] .md-lesson-locked .md-lesson-cta { background: #243530; color: #A5B7AF !important; box-shadow: 0 3px 0 #15201c; }
+
+  /* —— الوحدة المختارة: خلفية داكنة + كلام أبيض واضح دايماً —— */
+  .md-unit-row[data-accent="0"] { --ua: #147A6A; }
+  .md-unit-row[data-accent="1"] { --ua: #2B6CB0; }
+  .md-unit-row[data-accent="2"] { --ua: #7C4DBA; }
+  .md-unit-row[data-accent="3"] { --ua: #C2571A; }
+  .md-unit-row[data-accent="4"] { --ua: #B03A6F; }
+  .md-unit-row[data-accent="5"] { --ua: #5B7F1E; }
+  .md-platform .md-unit-card.selected { background: var(--ua, #147A6A) !important; border-color: var(--ua, #147A6A) !important; color: #fff !important; }
+  .md-platform .md-unit-card.selected .md-unit-card-title, .md-platform .md-unit-card.selected .md-unit-card-count { color: #fff !important; opacity: 1 !important; }
+  .md-platform .md-unit-card.selected .md-unit-card-progress { background: rgba(255, 255, 255, 0.3) !important; }
+  .md-platform .md-unit-card.selected .md-unit-card-progress i { background: #fff !important; }
+
+  @keyframes md-pride-rise { from { opacity: 0; transform: translateY(14px); } to { opacity: 1; transform: none; } }
+  @keyframes md-pride-pop { from { opacity: 0; transform: scale(0.3) rotate(-30deg); } to { opacity: 1; transform: none; } }
+  @keyframes md-pride-sheen { 0%, 55% { transform: translateX(-130%); } 100% { transform: translateX(130%); } }
+  @keyframes md-pride-wiggle { 0%, 100% { transform: rotate(0); } 25% { transform: rotate(-10deg) scale(1.08); } 60% { transform: rotate(8deg) scale(1.08); } }
+
+  /* كل التفاصيل التالية للأجهزة اللي فيها ماوس فقط — الموبايل والتابلت يفضلوا خفيفين */
+  @media (hover: hover) and (pointer: fine) {
+    .md-platform { --pr-spring: cubic-bezier(0.34, 1.56, 0.64, 1); --pr-ease: cubic-bezier(0.22, 1, 0.36, 1); scrollbar-color: #9ED8CB transparent; }
+    .md-platform *::-webkit-scrollbar { width: 9px; height: 9px; }
+    .md-platform *::-webkit-scrollbar-thumb { background: #B7DDD3; border-radius: 999px; }
+    .md-platform *::-webkit-scrollbar-thumb:hover { background: #147A6A; }
+    .md-platform .md-ctx-grade { transition: transform 0.2s var(--pr-spring), box-shadow 0.2s ease; }
+    .md-platform .md-ctx-grade:hover { transform: translateY(-2px); box-shadow: 0 6px 0 #0A3F36, 0 16px 26px -14px rgba(14, 83, 72, 0.75) !important; }
+    /* —— تلميحات صغيرة عند الوقوف بالماوس —— */
+    .md-platform [data-tip] { position: relative; }
+    .md-platform [data-tip]::after {
+      content: attr(data-tip); position: absolute; z-index: 60; top: calc(100% + 9px); left: 50%;
+      transform: translate(-50%, -4px); padding: 0.35rem 0.75rem; border-radius: 0.7rem; white-space: nowrap;
+      background: #0E5348; color: #fff; font-size: 0.74rem; font-weight: 800; line-height: 1.4;
+      box-shadow: 0 10px 20px -10px rgba(14, 83, 72, 0.7); opacity: 0; pointer-events: none;
+      transition: opacity 0.16s ease, transform 0.16s var(--pr-ease);
+    }
+    .md-platform [data-tip]:hover::after, .md-platform [data-tip]:focus-visible::after { opacity: 1; transform: translate(-50%, 0); transition-delay: 0.3s; }
+    .md-platform .md-org-trigger[data-tip]::after { left: auto; right: 0; transform: translateY(-4px); }
+    .md-platform .md-org-trigger[data-tip]:hover::after, .md-platform .md-org-trigger[data-tip]:focus-visible::after { transform: none; }
+    .md-platform .md-login-btn[data-tip]::after { left: 0; transform: translateY(-4px); }
+    .md-platform .md-login-btn[data-tip]:hover::after, .md-platform .md-login-btn[data-tip]:focus-visible::after { transform: none; }
+
+    /* —— الشريط العلوي —— */
+    .md-topbar2 { box-shadow: 0 10px 26px -22px rgba(14, 83, 72, 0.5); }
+    .md-logo-img { transition: transform 0.25s var(--pr-spring), filter 0.25s ease; }
+    .md-logo:hover .md-logo-img { transform: scale(1.07) rotate(-2deg); filter: drop-shadow(0 6px 10px rgba(14, 83, 72, 0.25)); }
+    .md-org-trigger { transition: transform 0.2s var(--pr-spring), background 0.15s ease, color 0.15s ease, box-shadow 0.15s ease; }
+    .md-org-trigger:hover { transform: translateY(-2px); box-shadow: 0 4px 0 var(--duo-line, #E5E7EB); }
+    .md-org-trigger svg { transition: transform 0.25s var(--pr-spring); }
+    .md-org-trigger:hover svg { transform: scale(1.15); }
+    .md-login-btn { box-shadow: 0 3px 0 #0E5348; transition: transform 0.2s var(--pr-spring), box-shadow 0.15s ease, filter 0.15s ease; }
+    .md-login-btn:hover { transform: translateY(-2px); filter: brightness(1.07); box-shadow: 0 5px 0 #0E5348; }
+
+    /* —— الهيرو —— */
+    .md-hero2 { animation: md-pride-rise 0.6s var(--pr-ease) backwards; }
+    .md-hero2::after { content: ""; position: absolute; inset: 0; z-index: 0; pointer-events: none; background: linear-gradient(110deg, transparent 38%, rgba(255, 255, 255, 0.11) 50%, transparent 62%); transform: translateX(-130%); animation: md-pride-sheen 2.4s ease-in-out 1s 1 both; }
+    .md-hero2-pill { transition: transform 0.2s var(--pr-spring), background 0.15s ease; cursor: default; }
+    .md-hero2-pill:hover { transform: translateY(-2px); background: rgba(255, 255, 255, 0.28); }
+    .md-hero2-link { transition: color 0.15s ease, text-underline-offset 0.2s ease, transform 0.2s var(--pr-spring); }
+    .md-hero2-link:hover { text-underline-offset: 6px; transform: translateX(-2px); }
+    .md-resume { position: relative; overflow: hidden; }
+    .md-resume::after { content: ""; position: absolute; inset: 0; pointer-events: none; background: linear-gradient(110deg, transparent 35%, rgba(20, 122, 106, 0.12) 50%, transparent 65%); transform: translateX(130%); transition: transform 0.7s var(--pr-ease); }
+    .md-resume:hover::after { transform: translateX(-130%); }
+    .md-resume-play { transition: transform 0.22s var(--pr-spring), box-shadow 0.22s ease; }
+    .md-resume:hover .md-resume-play { transform: scale(1.12) rotate(-6deg); box-shadow: 0 0 0 7px rgba(20, 122, 106, 0.16), 0 10px 18px -8px rgba(14, 83, 72, 0.75); }
+
+    /* —— اختيار الصف —— */
+    .md-gp-head { animation: md-pride-rise 0.55s var(--pr-ease) backwards; }
+    .md-gp-card::after { content: ""; position: absolute; inset: 0; z-index: 0; pointer-events: none; background: linear-gradient(115deg, transparent 35%, rgba(255, 255, 255, 0.22) 50%, transparent 65%); transform: translateX(130%); transition: transform 0.8s var(--pr-ease); }
+    .md-gp-card:hover:not(:disabled)::after { transform: translateX(-130%); }
+    .md-gp-body { position: relative; z-index: 1; }
+    .md-gp-num { transition: transform 0.4s var(--pr-ease), color 0.3s ease; }
+    .md-gp-card:hover .md-gp-num { transform: scale(1.1) translateY(6px); color: rgba(255, 255, 255, 0.32); }
+    .md-gp-check { animation: md-pride-pop 0.5s var(--pr-spring) backwards; }
+    .md-gp-stage { transition: transform 0.18s var(--pr-spring), background 0.15s ease, color 0.15s ease, border-color 0.15s ease, box-shadow 0.15s ease; }
+    .md-gp-cancel { transition: transform 0.18s var(--pr-spring), border-color 0.15s ease, color 0.15s ease; }
+    .md-gp-cancel:hover:not(:disabled) { transform: translateY(-2px); }
+
+    /* —— الفصل والوحدات —— */
+    .md-context { animation: md-pride-rise 0.5s var(--pr-ease) 0.08s backwards; }
+    .md-chip { transition: transform 0.18s var(--pr-spring), box-shadow 0.18s ease, background 0.15s ease, border-color 0.15s ease, color 0.15s ease; }
+    .md-chip:hover:not(.selected) { transform: translateY(-2px); border-color: #147A6A; box-shadow: 0 8px 16px -10px rgba(14, 83, 72, 0.55); }
+    .md-chip.selected { box-shadow: 0 8px 16px -8px rgba(14, 83, 72, 0.7); }
+    .md-rail-label { letter-spacing: 0; }
+    .md-units-grid > .md-unit-row { animation: md-pride-rise 0.5s var(--pr-ease) backwards; }
+    .md-unit-card { position: relative; transition: transform 0.2s var(--pr-spring), box-shadow 0.2s ease, border-color 0.15s ease, background 0.15s ease; }
+    .md-unit-card:hover { transform: translateY(-3px); box-shadow: 0 16px 28px -18px rgba(14, 83, 72, 0.55); }
+    .md-unit-card-progress i { transition: width 0.8s var(--pr-ease); }
+    .md-unit-preview li { transition: transform 0.18s var(--pr-ease), color 0.15s ease; }
+    .md-unit-preview li:hover { transform: translateX(-4px); color: #0E5348; }
+
+    /* —— الدروس —— */
+    .md-lessons-header { animation: md-pride-rise 0.4s var(--pr-ease) backwards; }
+    .md-count { transition: transform 0.2s var(--pr-spring); }
+    .md-count:hover { transform: scale(1.08); }
+    .md-lessons-grid > .md-lesson-card { animation: md-pride-rise 0.5s var(--pr-ease) backwards; }
+    .md-lesson-card:not(.md-lesson-locked) { transition: transform 0.22s var(--pr-spring), box-shadow 0.22s ease, border-color 0.18s ease; }
+    .md-lesson-card:not(.md-lesson-locked):hover { transform: translateY(-5px); border-color: #147A6A; box-shadow: 0 22px 36px -24px rgba(14, 83, 72, 0.6); }
+    .md-lesson-cta { transition: transform 0.2s var(--pr-spring), box-shadow 0.2s ease; }
+    .md-lesson-cta span { transition: transform 0.22s var(--pr-spring); }
+    .md-lesson-card:not(.md-lesson-locked):hover .md-lesson-cta { transform: translateY(-1px); box-shadow: 0 6px 0 #0A3F36, 0 16px 22px -12px rgba(14, 83, 72, 0.65); }
+    .md-lesson-card[data-kind="ACCESS_LOCK"]:hover .md-lesson-cta { box-shadow: 0 6px 0 #9A4A10, 0 16px 22px -12px rgba(154, 74, 16, 0.65); }
+    .md-lesson-card:not(.md-lesson-locked):hover .md-lesson-cta span { transform: translateX(-3px) scale(1.06); }
+    .md-lesson-locked .md-lesson-body span[aria-hidden="true"] { display: inline-block; transition: transform 0.25s var(--pr-spring); }
+    .md-lesson-locked:hover .md-lesson-body span[aria-hidden="true"] { transform: scale(1.3) rotate(-10deg); }
+
+    /* —— لوحة التقدم —— */
+    .md-dash-card, .md-recent-card { position: relative; transition: transform 0.22s var(--pr-spring), box-shadow 0.22s ease, border-color 0.18s ease; animation: md-pride-rise 0.55s var(--pr-ease) backwards; }
+    .md-dash-card:hover { transform: translateY(-3px); border-color: #9ED8CB; box-shadow: 0 24px 40px -26px rgba(14, 83, 72, 0.5); }
+    .md-dash-card:hover, .md-recent-card:hover { background-image: radial-gradient(280px circle at var(--mx, 50%) var(--my, 0%), rgba(20, 122, 106, 0.08), transparent 70%); }
+    .md-dash-card:hover .md-dash-card-ico { animation: md-pride-wiggle 0.6s ease; }
+    .md-ring { transition: transform 0.3s var(--pr-spring); }
+    .md-dash-card:hover .md-ring { transform: scale(1.05) rotate(-3deg); }
+    .md-prog-unit { transition: background 0.15s ease, transform 0.18s var(--pr-ease); }
+    .md-prog-unit:hover { background: color-mix(in srgb, var(--u) 10%, transparent); transform: translateX(-3px); }
+    .md-prog-unit-bar { transition: transform 0.2s ease; }
+    .md-prog-unit:hover .md-prog-unit-bar { transform: scaleY(1.35); }
+    .md-recent-grid > .md-recent-card:nth-child(2) { animation-delay: 0.08s; }
+    .md-recent-grid > .md-recent-card:nth-child(3) { animation-delay: 0.16s; }
+    .md-recent-ico { transition: transform 0.22s var(--pr-spring); }
+    .md-recent-card:hover .md-recent-ico { transform: scale(1.12) rotate(-6deg); }
+    .md-recent-go { transition: transform 0.2s var(--pr-spring); }
+    .md-recent-card:hover .md-recent-go { transform: translateX(-5px); }
+
+    /* —— القائمة الجانبية —— */
+    .md-sb-sec { animation: md-pride-rise 0.45s var(--pr-ease) backwards; }
+    .md-sb-sec:nth-child(2) { animation-delay: 0.06s; }
+    .md-sb-sec:nth-child(3) { animation-delay: 0.12s; }
+    .md-sb-sec:nth-child(4) { animation-delay: 0.18s; }
+    .md-sb-close { transition: transform 0.25s var(--pr-spring), background 0.15s ease; }
+    .md-sb-close:hover { transform: rotate(90deg) scale(1.08); }
+    .md-sb-avatar { transition: transform 0.25s var(--pr-spring); }
+    .md-sb-me:hover .md-sb-avatar { transform: scale(1.08) rotate(-5deg); }
+    .md-sb-me-btn { transition: background 0.15s ease, transform 0.2s var(--pr-spring); }
+    .md-sb-me-btn:hover { transform: translateY(-2px); }
+    .md-sb-seg-btn { transition: background 0.15s ease, color 0.15s ease, transform 0.18s var(--pr-spring); }
+    .md-sb-seg-btn:hover:not(.is-on) { transform: translateY(-1px); background: rgba(20, 122, 106, 0.1); }
+    .md-sb-link, .md-sb-switch, .md-sb-unit { transition: background 0.15s ease, transform 0.2s var(--pr-ease), border-color 0.15s ease; }
+    .md-sb-link:hover, .md-sb-switch:hover, .md-sb-unit:hover { transform: translateX(-3px); }
+    .md-sb-link-ico, .md-sb-unit-num { transition: transform 0.22s var(--pr-spring), background 0.15s ease; }
+    .md-sb-link:hover .md-sb-link-ico, .md-sb-switch:hover .md-sb-link-ico { transform: scale(1.12) rotate(-6deg); }
+    .md-sb-unit:hover .md-sb-unit-num { transform: scale(1.12); }
+    .md-sb-login button { transition: transform 0.2s var(--pr-spring), filter 0.15s ease, box-shadow 0.15s ease; }
+    .md-sb-login button:hover { transform: translateY(-2px); box-shadow: 0 6px 0 #0E5348; }
+    .md-sb-legal a { transition: color 0.15s ease; }
+
+    /* —— وضع ليلي —— */
+    .md-platform.is-dark [data-tip]::after, html[data-theme="dark"] [data-tip]::after { background: #E3F4EF; color: #0A3F36; }
+    .md-platform.is-dark .md-dash-card:hover, .md-platform.is-dark .md-recent-card:hover,
+    html[data-theme="dark"] .md-dash-card:hover, html[data-theme="dark"] .md-recent-card:hover { background-image: radial-gradient(280px circle at var(--mx, 50%) var(--my, 0%), rgba(158, 216, 203, 0.08), transparent 70%); }
+    .md-platform.is-dark .md-unit-preview li:hover, html[data-theme="dark"] .md-unit-preview li:hover { color: #9ED8CB; }
+
+    /* —— الحركات —— */
+    ${[1, 2, 3, 4, 5, 6, 7, 8, 9, 10].map((n) => `.md-units-grid > .md-unit-row:nth-child(${n}) { animation-delay: ${(n - 1) * 60}ms; } .md-lessons-grid > .md-lesson-card:nth-child(${n}) { animation-delay: ${(n - 1) * 70}ms; }`).join("\n  ")}
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    .md-platform *, .md-platform *::before, .md-platform *::after { animation: none !important; transition: none !important; }
+  }
+`;
 
 /* ---------------------------------------------------------------------------
    Floating scatter cards — positions use left/top % of parent (not translate %),
@@ -301,6 +530,38 @@ export default function StudentPlatform() {
       .catch(() => setError("تعذر تحميل الدروس ."));
   }, []);
 
+  // Soft spotlight that follows the pointer inside dashboard / recent cards.
+  // Mouse devices only — nothing is attached on phones / tablets.
+  useEffect(() => {
+    if (typeof window === "undefined" || !window.matchMedia("(hover: hover) and (pointer: fine)").matches) return undefined;
+    let raf = 0;
+    const onMove = (e) => {
+      if (raf) return;
+      const { target, clientX, clientY } = e;
+      raf = requestAnimationFrame(() => {
+        raf = 0;
+        const el = target && target.closest ? target.closest(".md-dash-card, .md-recent-card") : null;
+        if (!el) return;
+        const r = el.getBoundingClientRect();
+        el.style.setProperty("--mx", `${clientX - r.left}px`);
+        el.style.setProperty("--my", `${clientY - r.top}px`);
+      });
+    };
+    document.addEventListener("pointermove", onMove, { passive: true });
+    return () => {
+      document.removeEventListener("pointermove", onMove);
+      if (raf) cancelAnimationFrame(raf);
+    };
+  }, []);
+
+  // Teacher's curriculum tree — used only for ORDER. If it fails to load, the old order is kept.
+  const [curriculumNodes, setCurriculumNodes] = useState([]);
+  useEffect(() => {
+    listCurriculumNodes()
+      .then((n) => setCurriculumNodes(Array.isArray(n) ? n : []))
+      .catch(() => setCurriculumNodes([]));
+  }, []);
+
   useEffect(() => {
     let cancelled = false;
     async function loadGrade() {
@@ -393,20 +654,26 @@ export default function StudentPlatform() {
 
   const availableStages = useMemo(() => {
     if (!lessons) return [];
-    return Array.from(new Set(lessons.map((l) => l.stage).filter(Boolean)));
-  }, [lessons]);
+    const names = Array.from(new Set(lessons.map((l) => l.stage).filter(Boolean)));
+    return sortByCurriculum(names, curriculumNodes, "stage", null);
+  }, [lessons, curriculumNodes]);
 
   const availableGrades = useMemo(() => {
     if (!lessons) return [];
     let list = lessons;
     if (selectedStage) list = list.filter((l) => l.stage === selectedStage);
-    return Array.from(new Set(list.map((l) => l.grade).filter(Boolean)));
-  }, [lessons, selectedStage]);
+    const names = Array.from(new Set(list.map((l) => l.grade).filter(Boolean)));
+    const stageIds = curriculumIdsOf(curriculumNodes, "stage", selectedStage, null);
+    return sortByCurriculum(names, curriculumNodes, "grade", stageIds);
+  }, [lessons, selectedStage, curriculumNodes]);
 
   const availableTerms = useMemo(() => {
     if (!gradeScopedLessons.length) return [];
-    return Array.from(new Set(gradeScopedLessons.map((l) => l.term).filter(Boolean)));
-  }, [gradeScopedLessons]);
+    const names = Array.from(new Set(gradeScopedLessons.map((l) => l.term).filter(Boolean)));
+    const stageIds = curriculumIdsOf(curriculumNodes, "stage", selectedStage, null);
+    const gradeIds = curriculumIdsOf(curriculumNodes, "grade", selectedGrade, stageIds);
+    return sortByCurriculum(names, curriculumNodes, "term", gradeIds);
+  }, [gradeScopedLessons, curriculumNodes, selectedStage, selectedGrade]);
 
   // Auto-select first available term for the current grade (field: lesson.term)
   useEffect(() => {
@@ -438,13 +705,21 @@ export default function StudentPlatform() {
       if (!cur) firstSeen.set(l.subject, { created });
       else if (created && (!cur.created || created < cur.created)) cur.created = created;
     }
+    const stageIds = curriculumIdsOf(curriculumNodes, "stage", selectedStage, null);
+    const gradeIds = curriculumIdsOf(curriculumNodes, "grade", selectedGrade, stageIds);
+    const termIds = curriculumIdsOf(curriculumNodes, "term", selectedTerm, gradeIds);
     return Array.from(firstSeen.keys()).sort((a, b) => {
+      // 1) the teacher's tree order (Settings → المنهج)
+      const ra = curriculumRank(curriculumNodes, "subject", a, termIds);
+      const rb = curriculumRank(curriculumNodes, "subject", b, termIds);
+      if (ra !== rb) return ra - rb;
+      // 2) fallback for units not in the tree: order they were added
       const A = firstSeen.get(a);
       const B = firstSeen.get(b);
       if (A.created !== B.created) return A.created.localeCompare(B.created);
       return a.localeCompare(b, "ar");
     });
-  }, [termScopedLessons]);
+  }, [termScopedLessons, curriculumNodes, selectedStage, selectedGrade, selectedTerm]);
 
   // Per-unit ("subject") lesson list — used for the plain-text preview shown
   // next to a unit card before the student opens it. Sorted with the same
@@ -699,7 +974,7 @@ export default function StudentPlatform() {
     <div className={`md-platform${isDark ? " is-dark" : ""}`} data-calm={calm ? "1" : undefined}>
       <header className="md-topbar md-topbar2">
         <div className="md-topbar2-start">
-          <button type="button" className="md-org-trigger" aria-label="فتح قائمة المنصة" aria-expanded={orgNavOpen} onClick={() => setOrgNavOpen(true)}>
+          <button type="button" className="md-org-trigger" data-tip="القائمة والإعدادات" aria-label="فتح قائمة المنصة" aria-expanded={orgNavOpen} onClick={() => setOrgNavOpen(true)}>
             <svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" aria-hidden="true">
               <path d="M4 7h16M4 12h16M4 17h16" />
             </svg>
@@ -712,7 +987,7 @@ export default function StudentPlatform() {
           {session === undefined ? null : session ? (
             <StudentAccountMenu session={session} name={studentName} stage={selectedStage} grade={selectedGrade} onChangeGrade={openChangeGrade} />
           ) : (
-            <button type="button" onClick={() => setAuthOpen(true)} className="md-login-btn text-xs font-bold px-3 py-1.5 rounded-xl text-white" style={{ background: "var(--duo-green)" }}>تسجيل الدخول</button>
+            <button type="button" onClick={() => setAuthOpen(true)} className="md-login-btn text-xs font-bold px-3 py-1.5 rounded-xl text-white" data-tip="سجّل دخولك لحفظ تقدمك" style={{ background: "var(--duo-green)" }}>تسجيل الدخول</button>
           )}
         </div>
       </header>
@@ -1008,6 +1283,7 @@ export default function StudentPlatform() {
                       type="button"
                       className={`md-chip ${selectedTerm === t ? "selected" : ""}`}
                       aria-pressed={selectedTerm === t}
+                      data-tip={selectedTerm === t ? "الفصل المعروض حالياً" : `اعرض وحدات ${t}`}
                       onClick={() => {
                         setSelectedTerm(t);
                         setSelectedSubject("");
@@ -1139,7 +1415,7 @@ export default function StudentPlatform() {
                           <p>{l.description || "درس تعليمي شامل مع خريطة ذهنية وأسئلة تفاعلية."}</p>
                           <div className="md-lesson-cta" style={lockedSeq ? { color: "var(--duo-muted)" } : lockedAccess ? { color: "var(--duo-orange-ink)" } : undefined}>
                             {ui.cta}
-                            {!lockedSeq ? <span>→</span> : null}
+                            {!lockedSeq ? <span aria-hidden="true">←</span> : null}
                           </div>
                         </div>
                       </article>
@@ -1593,6 +1869,7 @@ export default function StudentPlatform() {
         .md-platform.is-dark .md-sb-backdrop, html[data-theme="dark"] .md-sb-backdrop { background: rgba(0, 0, 0, 0.6); }
 
       `}</style>
+      <style>{PRIDE_CSS}</style>
     </div>
   );
 }
