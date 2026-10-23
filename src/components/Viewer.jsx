@@ -734,6 +734,20 @@ html[data-theme="dark"] .md-jr .md-jr-hero { background: linear-gradient(125deg,
 .md-jr .md-jr-chip[aria-disabled="true"] { cursor: not-allowed; }
 .md-jr .md-jr-chip:hover:not([aria-disabled="true"]):not([data-state="current"]):not([aria-current="step"]) { border-color: var(--jr-teal); }
 .md-jr .md-jr-curtitle { display: none; }
+/* زر + قائمة منسدلة بدل الشريط الأفقي (الموبايل) */
+.md-jr .md-jr-navtoggle {
+  width: 100%; margin-top: 0.35rem; min-height: 44px; display: flex; align-items: center; justify-content: space-between; gap: 0.6rem;
+  padding: 0.35rem 0.8rem; border-radius: 0.9rem; text-align: right; cursor: pointer;
+  background: var(--jr-surface); border: 1.5px solid var(--jr-teal); color: var(--jr-text); font-size: 0.85rem; font-weight: 800; line-height: 1.4;
+}
+.md-jr .md-jr-navtoggle-title { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.md-jr .md-jr-navtoggle-cta { flex: none; display: inline-flex; align-items: center; gap: 0.3rem; padding: 0.2rem 0.6rem; border-radius: 999px; background: var(--jr-btn); color: #fff; font-size: 0.74rem; font-weight: 900; }
+.md-jr .md-jr-navpanel {
+  position: absolute; inset-inline: 0; top: 100%; z-index: 40; padding: 0.5rem; background: var(--jr-surface);
+  border: 1px solid var(--jr-line); border-top: 0; border-radius: 0 0 1.1rem 1.1rem; box-shadow: 0 18px 30px -18px rgba(0, 0, 0, 0.45);
+}
+.md-jr .md-jr-list--panel { max-height: min(60vh, 26rem); }
+.md-jr .md-jr-list--panel .md-jr-item { font-size: 0.86rem; }
 
 /* ---- layout ---- */
 .md-jr .md-jr-grid { display: block; margin-top: 1rem; }
@@ -743,7 +757,7 @@ html[data-theme="dark"] .md-jr .md-jr-hero { background: linear-gradient(125deg,
 @media (min-width: 1024px) {
   .md-jr .md-jr-grid { display: grid; grid-template-columns: 17.5rem minmax(0, 1fr); gap: 1.6rem; align-items: start; }
   .md-jr .md-jr-side { display: block; position: sticky; top: calc(var(--jr-top, 0px) + 4.6rem); }
-  .md-jr .md-jr-chips, .md-jr .md-jr-curtitle { display: none; }
+  .md-jr .md-jr-chips, .md-jr .md-jr-curtitle, .md-jr .md-jr-navtoggle, .md-jr .md-jr-navpanel { display: none; }
 }
 .md-jr .md-jr-sidecard { background: var(--jr-surface); border: 1px solid var(--jr-line); border-radius: 1.3rem; box-shadow: var(--jr-shadow); padding: 0.9rem; }
 .md-jr .md-jr-sidehead { margin: 0 0 0.6rem; padding-inline: 0.35rem; font-size: 0.82rem; font-weight: 900; color: var(--jr-muted); }
@@ -1125,6 +1139,7 @@ function JourneyLesson({ ctx }) {
   const mainRef = useRef(null);
   const [tool, setTool] = useState(null); // null | "mindmap" | "timeline"
   const [answered, setAnswered] = useState({});
+  const [navOpen, setNavOpen] = useState(false); // قائمة العناوين المنسدلة (موبايل)
 
   const completedList = Array.isArray(journey.completedScenes) ? journey.completedScenes : [];
   const doneCount = completedList.length;
@@ -1215,7 +1230,7 @@ function JourneyLesson({ ctx }) {
       aria-disabled={it.disabled ? "true" : undefined}
       aria-label={it.label}
       title={it.label}
-      onClick={() => { if (!it.disabled) tryOpenScene(it.i); }}
+      onClick={() => { if (!it.disabled) { tryOpenScene(it.i); setNavOpen(false); } }}
     >
       {variant === "chip" ? (
         <>
@@ -1231,10 +1246,14 @@ function JourneyLesson({ ctx }) {
     </button>
   );
 
+  // اقفل القائمة المنسدلة عند تغيير العنوان أو الضغط على Esc
+  useEffect(() => { setNavOpen(false); }, [sceneIndex]);
   useEffect(() => {
-    const chip = navRef.current && navRef.current.querySelector('.md-jr-chip[aria-current="step"]');
-    if (chip && chip.scrollIntoView) chip.scrollIntoView({ inline: "center", block: "nearest", behavior: "smooth" });
-  }, [sceneIndex]);
+    if (!navOpen) return undefined;
+    const onKey = (e) => { if (e.key === "Escape") setNavOpen(false); };
+    document.addEventListener("keydown", onKey);
+    return () => document.removeEventListener("keydown", onKey);
+  }, [navOpen]);
 
   return (
     <div className="md-jr" ref={rootRef} dir="rtl">
@@ -1261,11 +1280,31 @@ function JourneyLesson({ ctx }) {
           <div className="md-jr-track" role="progressbar" aria-label="تقدّم الدرس" aria-valuemin={0} aria-valuemax={100} aria-valuenow={pct}>
             <div className="md-jr-fill" style={{ width: `${pct}%` }} />
           </div>
-          <ol className="md-jr-chips">
-            {items.map((it) => <li key={it.s.id || `jr-chip-${it.i}`}>{renderNavButton(it, "chip")}</li>)}
-            {reviewItem ? <li>{renderNavButton(reviewItem, "chip")}</li> : null}
-          </ol>
-          {!isFinalReview && !isCompletionStep && scene ? <p className="md-jr-curtitle">{scene.title}</p> : null}
+          <button
+            type="button"
+            className="md-jr-navtoggle"
+            aria-expanded={navOpen}
+            aria-controls="md-jr-navpanel"
+            onClick={() => setNavOpen((v) => !v)}
+          >
+            <span className="md-jr-navtoggle-title">
+              {!isFinalReview && !isCompletionStep && scene && scene.title ? scene.title : navLabel}
+            </span>
+            <span className="md-jr-navtoggle-cta">
+              {navOpen ? "إغلاق" : "كل العناوين"}
+              <svg viewBox="0 0 20 20" width="14" height="14" aria-hidden="true" style={{ transform: navOpen ? "rotate(180deg)" : "none", transition: "transform .2s" }}>
+                <path d="M5 7.5l5 5 5-5" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round" />
+              </svg>
+            </span>
+          </button>
+          {navOpen ? (
+            <div className="md-jr-navpanel" id="md-jr-navpanel">
+              <ol className="md-jr-list md-jr-list--panel">
+                {items.map((it) => <li key={it.s.id || `jr-pan-${it.i}`}>{renderNavButton(it, "item")}</li>)}
+                {reviewItem ? <li>{renderNavButton(reviewItem, "item")}</li> : null}
+              </ol>
+            </div>
+          ) : null}
         </nav>
 
         <div className="md-jr-grid">
