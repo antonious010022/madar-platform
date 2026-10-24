@@ -181,7 +181,7 @@ export function RegistrationGate({ open, onClose, onRequestAuth, featureLabel })
   );
 }
 
-export function GuestWelcomeBanner({ session }) {
+export function GuestWelcomeBanner({ session, lift = false }) {
   const [visible, setVisible] = useState(false);
   useEffect(() => {
     if (session === undefined) return;
@@ -197,7 +197,7 @@ export function GuestWelcomeBanner({ session }) {
     try { sessionStorage.setItem("madar_guest_banner_dismissed", "1"); } catch (_) {}
   };
   return (
-    <div className="duo-banner fixed bottom-4 left-4 right-4 sm:left-auto sm:right-6 sm:max-w-sm z-[80] rounded-2xl p-4 dir-rtl text-right"
+    <div className={`duo-banner${lift ? " md-banner-lift" : ""} fixed bottom-4 left-4 right-4 sm:left-auto sm:right-6 sm:max-w-sm z-[80] rounded-2xl p-4 dir-rtl text-right`}
       style={{ background: "#FFFFFF", border: "2px solid var(--duo-line)" }} role="status">
       <div className="flex justify-between gap-2 items-start">
         <p className="text-sm font-bold" style={{ color: "var(--duo-ink)" }}>سجّل حسابك واستمتع بكل مميزات مَدَار مجانًا بالكامل.</p>

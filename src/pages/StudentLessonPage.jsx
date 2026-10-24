@@ -9,6 +9,7 @@ import AuthModal, { GuestWelcomeBanner } from "../components/AuthModal";
 import StudentAccountMenu from "../components/StudentAccountMenu";
 import LessonActions from "../components/LessonActions";
 import { slugify } from "../lib/slugify";
+import MadarGuide, { GuideHelpButton, useMadarGuide, LESSON_STEPS } from "../components/MadarGuide";
 
 // Same origin already used for canonical links elsewhere in this project.
 const SITE_ORIGIN = "https://madar-platform-five.vercel.app";
@@ -43,8 +44,87 @@ function resolveSeo(lesson) {
   return { title, description: description || null, language };
 }
 
+/**
+ * شريط علوي ذكي: يختفي لما الطالب ينزل بالسكرول (عشان المذاكرة)، ويظهر أول ما يطلع لفوق
+ * أو يوصل لأول الصفحة. يرجع true لو لازم الشريط يكون مخفي.
+ */
+function useAutoHideTopbar() {
+  const [hidden, setHidden] = useState(false);
+  useEffect(() => {
+    let lastY = window.scrollY || 0;
+    let ticking = false;
+    const onScroll = () => {
+      if (ticking) return;
+      ticking = true;
+      window.requestAnimationFrame(() => {
+        ticking = false;
+        const y = Math.max(0, window.scrollY || 0);
+        const dy = y - lastY;
+        if (y < 80) {
+          setHidden(false);
+          lastY = y;
+        } else if (dy > 10) {
+          setHidden(true);
+          lastY = y;
+        } else if (dy < -10) {
+          setHidden(false);
+          lastY = y;
+        }
+      });
+    };
+    window.addEventListener("scroll", onScroll, { passive: true });
+    return () => window.removeEventListener("scroll", onScroll);
+  }, []);
+  return [hidden, setHidden];
+}
+
+/** الدرجات: { scenes: { [sceneId]: Score }, final: Score | null } حيث Score = { last, best, attempts, at } */
+function emptyQuiz() {
+  return { scenes: {}, final: null };
+}
+
+function cleanScore(x) {
+  if (!x || typeof x !== "object") return null;
+  const num = (v) => (Number.isFinite(Number(v)) ? Number(v) : null);
+  const one = (r) => {
+    if (!r || typeof r !== "object") return null;
+    const correct = num(r.correct);
+    const total = num(r.total);
+    const pct = num(r.pct);
+    if (correct === null || total === null || pct === null) return null;
+    return { correct, total, pct };
+  };
+  const last = one(x.last);
+  const best = one(x.best) || last;
+  if (!last || !best) return null;
+  return { last, best, attempts: Math.max(1, Number(x.attempts) || 1), at: Number(x.at) || 0 };
+}
+
+/** يضمن شكل سليم للدرجات المحفوظة (حتى لو التقدم القديم ما فيهوش درجات). */
+function normalizeQuiz(raw) {
+  const q = emptyQuiz();
+  if (!raw || typeof raw !== "object") return q;
+  if (raw.scenes && typeof raw.scenes === "object") {
+    for (const [k, v] of Object.entries(raw.scenes)) {
+      const c = cleanScore(v);
+      if (c) q.scenes[k] = c;
+    }
+  }
+  q.final = cleanScore(raw.final);
+  return q;
+}
+
+/** يدمج محاولة جديدة مع المحفوظ: last = الأخيرة، best = الأعلى نسبة، attempts = عدد المحاولات. */
+function mergeScore(old, { correct, total }) {
+  const pct = total > 0 ? Math.round((correct / total) * 100) : 0;
+  const cur = { correct, total, pct };
+  const best = old && old.best && Number(old.best.pct) >= pct ? old.best : cur;
+  return { last: cur, best, attempts: (Number(old && old.attempts) || 0) + 1, at: Date.now() };
+}
+
 function defaultProgress() {
   return {
+    quiz: emptyQuiz(),
     currentScene: 0,
     completedScenes: [],
     unlockedScenes: [0],
@@ -68,6 +148,7 @@ function normalizeProgress(saved, sceneCount) {
       // v1 had no completion list: scenes before the reached one count as passed
       p.completedScenes = Array.from({ length: p.currentScene }, (_, i) => i);
     }
+    p.quiz = normalizeQuiz(p.quiz);
     p.completedScenes = (p.completedScenes || []).filter((i) => i >= 0 && i < sceneCount);
     // unlockedScenes is kept only as a mirror of completedScenes (+ next scene)
     p.unlockedScenes = Array.from(
@@ -100,6 +181,7 @@ export default function StudentLessonPage() {
   const session = useAuth();
   const [lesson, setLesson] = useState(null);
   const [authOpen, setAuthOpen] = useState(false);
+  const [topbarHidden, setTopbarHidden] = useAutoHideTopbar();
   const [progress, setProgress] = useState(defaultProgress);
   // progressOwner: user id | null (guest) | undefined (auth loading). Save/load via db.js (Supabase or guestStorage).
   const progressOwner = session === undefined ? undefined : session?.user?.id || null;
@@ -418,6 +500,23 @@ export default function StudentLessonPage() {
     });
   }, [sceneCount]);
 
+  // درجة عنوان واحد (تتسجل أول ما الطالب يخلّص أسئلة العنوان)
+  const recordSceneScore = useCallback((sceneId, { correct, total }) => {
+    if (sceneId === undefined || sceneId === null || !(total > 0)) return;
+    const key = String(sceneId);
+    setProgress((prev) => {
+      const q = normalizeQuiz(prev.quiz);
+      return { ...prev, quiz: { ...q, scenes: { ...q.scenes, [key]: mergeScore(q.scenes[key], { correct, total }) } } };
+    });
+  }, []);
+  // درجة الاختبار النهائي (بعد «أنهِ الاختبار»)
+  const recordFinalScore = useCallback(({ correct, total }) => {
+    if (!(total > 0)) return;
+    setProgress((prev) => {
+      const q = normalizeQuiz(prev.quiz);
+      return { ...prev, quiz: { ...q, final: mergeScore(q.final, { correct, total }) } };
+    });
+  }, []);
   const completeFinalReview = useCallback(() => {
     setProgress((prev) => ({
       ...prev,
@@ -439,6 +538,8 @@ export default function StudentLessonPage() {
       completeScene,
       openFinalReview,
       completeFinalReview,
+      recordSceneScore,
+      recordFinalScore,
       dismissCompletion: () =>
         setProgress((prev) => {
           const nextIdx = (prev.currentScene ?? 0) + 1;
@@ -464,7 +565,7 @@ export default function StudentLessonPage() {
           };
         }),
     }),
-    [progress, sceneCount, setCurrentScene, completeScene, openFinalReview, completeFinalReview]
+    [progress, sceneCount, setCurrentScene, completeScene, openFinalReview, completeFinalReview, recordSceneScore, recordFinalScore]
   );
 
   // Wait for progress load (account or guest) so the lesson never flashes a blank/locked state.
@@ -472,6 +573,14 @@ export default function StudentLessonPage() {
     !!lesson &&
     (progressOwner === undefined ||
       progressLoadedKey !== `${progressOwner || "guest"}:${id}`);
+
+  // دليل الدرس: أول درس يفتحه الطالب بس، وزرار «؟ دليل» يعيده (لازم قبل أي return مبكّر)
+  const guideReady =
+    !!lesson &&
+    !progressLoading &&
+    !(lesson.comingSoon || lesson.journeyConfig?.comingSoon) &&
+    !(isLessonMembersOnly(lesson) && session === null);
+  const guide = useMadarGuide("lesson", { autoStart: guideReady });
 
   if (lesson === null || progressLoading) {
     // نفس ارتفاع/بنية الهيدر الموجود في العرض النهائي (سطر lesson.title لاحقًا) حتى لا تقفز
@@ -513,14 +622,6 @@ export default function StudentLessonPage() {
   }
 
   const name = displayName(session);
-  const doneCount = (progress.completedScenes || []).length;
-  const progressLabel =
-    progress.lessonCompleted
-      ? "مكتمل"
-      : progress.view === "final"
-        ? "المراجعة النهائية"
-        : `العنوان ${Math.min(progress.currentScene + 1, sceneCount)} من ${sceneCount}`;
-
   // Lesson-level Access Lock: exclusive lesson + guest → login required (not sequence message)
   const lessonAccessLocked =
     !!lesson &&
@@ -619,10 +720,11 @@ export default function StudentLessonPage() {
   }
 
   return (
-    <div className="min-h-screen flex flex-col md-lesson-page" style={{ background: "#FFFFFF" }}>
+    <div className="min-h-screen flex flex-col md-lesson-page" style={{ background: "#FFFFFF" }} data-topbar={topbarHidden ? "hidden" : "shown"}>
       <div
         className="md-lv-topbar bg-white px-4 sm:px-6 py-3 border-b flex justify-between items-center gap-2 flex-wrap"
         style={{ borderColor: "var(--duo-line)" }}
+        onFocusCapture={() => setTopbarHidden(false)}
       >
         <button onClick={() => navigate("/student")} className="md-lv-back text-sm font-bold" style={{ color: "var(--duo-green-ink)" }}>
           ← العودة لقائمة الدروس
@@ -650,13 +752,6 @@ export default function StudentLessonPage() {
         </div>
       </div>
 
-      {sceneCount > 0 && (
-        <div className="md-lv-progress px-4 py-2 text-center text-xs font-bold" style={{ background: "var(--duo-green-s)", color: "var(--duo-green-ink)" }}>
-          التقدّم : {progressLabel}
-          {sceneCount > 0 && !progress.lessonCompleted ? ` · عناوين مكتملة ${doneCount}/${sceneCount}` : ""}
-        </div>
-      )}
-
       <StudentView
         lesson={lesson}
         requireAuthForTools
@@ -667,8 +762,10 @@ export default function StudentLessonPage() {
         }
       />
 
+      <GuideHelpButton onClick={guide.start} hidden={guide.open} />
+      <MadarGuide open={guide.open} steps={LESSON_STEPS} onClose={guide.close} topSafe={150} />
       <Footer />
-      <GuestWelcomeBanner session={session} />
+      <GuestWelcomeBanner session={session} lift />
       <AuthModal open={authOpen} onClose={() => setAuthOpen(false)} />
     </div>
   );

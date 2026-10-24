@@ -709,7 +709,7 @@ html[data-theme="dark"] .md-jr .md-jr-hero { background: linear-gradient(125deg,
 
 /* ---- sticky navigation ---- */
 .md-jr .md-jr-nav {
-  position: sticky; top: var(--jr-top, 0px); z-index: 30; margin-top: 0.75rem; padding: 0.3rem 0 0.35rem;
+  position: sticky; top: var(--jr-top, 0px); z-index: 30; margin-top: 0.75rem; padding: 0.3rem 0 0.35rem; transition: top 0.28s ease;
   background: color-mix(in srgb, var(--jr-bg) 93%, transparent); -webkit-backdrop-filter: blur(10px); backdrop-filter: blur(10px);
   border-bottom: 1px solid var(--jr-line);
 }
@@ -779,6 +779,18 @@ html[data-theme="dark"] .md-jr .md-jr-hero { background: linear-gradient(125deg,
 .md-jr .md-jr-item[data-state="done"] .md-jr-dot { background: var(--jr-ok-soft); border-color: var(--jr-teal); color: var(--jr-teal-deep); }
 .md-jr .md-jr-item[data-state="sequence"] .md-jr-dot { border-style: dashed; }
 .md-jr .md-jr-legend { margin: 0.7rem 0 0; padding-inline: 0.35rem; font-size: 0.72rem; line-height: 1.9; font-weight: 600; color: var(--jr-muted); }
+/* ---- العنوان الحالي واضح في القائمة الجانبية وفي الشريط (حتى لو العنوان مكتمل) ---- */
+.md-jr .md-jr-item[aria-current="step"] { background: var(--jr-btn); border-color: var(--jr-btn); color: #fff; font-weight: 900; box-shadow: 0 10px 22px -14px rgba(20, 122, 106, 0.8); }
+.md-jr .md-jr-item[aria-current="step"] .md-jr-dot { background: #fff; border-color: #fff; color: var(--jr-teal-deep); }
+.md-jr .md-jr-item[aria-current="step"]::after { content: "أنت هنا"; flex: none; margin-inline-start: auto; padding: 0.1rem 0.55rem; border-radius: 999px; background: rgba(255, 255, 255, 0.22); font-size: 0.68rem; font-weight: 900; }
+.md-jr .md-jr-list--panel .md-jr-item[aria-current="step"]::after { content: "أنت هنا"; }
+/* ---- الشريط الأفقي للعناوين (تابلت وموبايل): كلهم جنب بعض + الحالي مميّز ---- */
+.md-jr .md-jr-chips { margin-top: 0.4rem; padding: 0.2rem 0.15rem 0.3rem; gap: 0.4rem; }
+.md-jr .md-jr-chip { min-height: 40px; padding: 0.2rem 0.8rem 0.2rem 0.65rem; font-size: 0.8rem; }
+.md-jr .md-jr-chip-title { display: block; max-width: 9rem; overflow: hidden; text-overflow: ellipsis; }
+.md-jr .md-jr-chip[aria-current="step"] { background: var(--jr-btn); border-color: var(--jr-btn); color: #fff; box-shadow: 0 0 0 3px var(--jr-teal-soft), 0 8px 16px -10px rgba(20, 122, 106, 0.8); }
+.md-jr .md-jr-chip[aria-current="step"] .md-jr-chip-title { max-width: 15rem; }
+.md-jr .md-jr-chip[aria-current="step"] .md-jr-chip-mark { background: rgba(255, 255, 255, 0.25); }
 
 /* ---- cards & sections ---- */
 .md-jr .md-jr-card { background: var(--jr-surface); border: 1px solid var(--jr-line); border-radius: 1.3rem; box-shadow: var(--jr-shadow); padding: clamp(1rem, 3.4vw, 1.7rem); margin-bottom: 1rem; overflow: visible; }
@@ -922,6 +934,83 @@ html[data-theme="dark"] .md-jr .ts-richtext-content .ts-hotword-highlight::after
 .md-jr .md-jr-btn--block { width: 100%; flex: none; }
 .md-jr button:focus-visible, .md-jr a:focus-visible, .md-jr [tabindex="-1"]:focus-visible { outline: 2px solid var(--jr-gold); outline-offset: 3px; }
 .md-jr .md-jr-main:focus { outline: none; }
+/* ---- quiz: gate + score + final quiz ---- */
+.md-jr .md-jr-quizcard, .md-jr .md-jr-finalquiz, .md-jr .md-jr-score { scroll-margin-top: 9.5rem; }
+.md-jr .md-jr-quizcard[data-nudge="true"] { border-color: var(--jr-gold); box-shadow: 0 0 0 4px var(--jr-gold-soft), var(--jr-shadow); animation: md-jr-nudge 0.55s ease; }
+.md-jr .md-jr-finalquiz[data-nudge="true"] { border-radius: 1.2rem; box-shadow: 0 0 0 4px var(--jr-gold-soft); animation: md-jr-nudge 0.55s ease; }
+@keyframes md-jr-nudge { 0%, 100% { transform: translateX(0); } 20% { transform: translateX(-7px); } 40% { transform: translateX(7px); } 60% { transform: translateX(-4px); } 80% { transform: translateX(4px); } }
+@keyframes md-jr-rise { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: none; } }
+@keyframes md-jr-ringfill { from { stroke-dashoffset: var(--c); } }
+.md-jr .md-jr-quizhint { margin: 0 0 0.9rem; padding: 0.6rem 0.85rem; border-radius: 0.95rem; font-size: 0.86rem; font-weight: 700; line-height: 1.9; color: var(--jr-text); background: var(--jr-gold-soft); border: 1px dashed var(--jr-gold); }
+.md-jr .md-jr-quizhint[data-ok="true"] { background: var(--jr-ok-soft); border: 1px solid var(--jr-teal); color: var(--jr-teal-deep); }
+.md-jr .md-jr-best { display: inline-flex; align-items: center; gap: 0.3rem; margin-inline-start: 0.5rem; padding: 0.1rem 0.6rem; border-radius: 999px; font-size: 0.74rem; font-weight: 800; background: var(--jr-gold-soft); color: var(--jr-text); border: 1px solid var(--jr-gold); }
+.md-jr .md-jr-qnote { display: block; margin: -0.35rem 0 0.7rem; font-size: 0.78rem; font-weight: 700; color: var(--jr-muted); }
+.md-jr .md-jr-gate { display: flex; align-items: flex-start; gap: 0.8rem; margin-top: 0.9rem; padding: 0.9rem 1rem; border-radius: 1.1rem; background: var(--jr-gold-soft); border: 1.5px solid var(--jr-gold); animation: md-jr-rise 0.3s ease both; }
+.md-jr .md-jr-gate-ico { flex: none; font-size: 1.6rem; line-height: 1.4; }
+.md-jr .md-jr-gate strong { display: block; font-size: 0.98rem; font-weight: 900; color: var(--jr-text); }
+.md-jr .md-jr-gate p { margin: 0.15rem 0 0; font-size: 0.88rem; line-height: 1.95; font-weight: 600; color: var(--jr-text); }
+.md-jr .md-jr-gate .md-jr-linkbtn { margin-top: 0.1rem; min-height: 40px; padding-inline: 0; }
+.md-jr .md-jr-btn[aria-disabled="true"] { opacity: 0.78; }
+.md-jr .md-jr-finish { margin-top: 1rem; }
+.md-jr .md-jr-finish-note { margin: 0.5rem 0 0; text-align: center; }
+.md-jr .md-jr-score { margin-top: 1.1rem; padding: 1.2rem 1rem 1.1rem; border-radius: 1.3rem; text-align: center; background: var(--jr-ok-soft); border: 1.5px solid var(--jr-teal); animation: md-jr-rise 0.45s ease both; }
+.md-jr .md-jr-score[data-tier="mid"], .md-jr .md-jr-score[data-tier="low"] { background: var(--jr-gold-soft); border-color: var(--jr-gold); }
+.md-jr .md-jr-score:focus { outline: none; }
+.md-jr .md-jr-score-kicker { margin: 0; font-size: 0.82rem; font-weight: 900; color: var(--jr-muted); }
+.md-jr .md-jr-ringwrap { position: relative; width: 8.2rem; height: 8.2rem; margin: 0.6rem auto 0.3rem; }
+.md-jr .md-jr-ring { display: block; width: 100%; height: 100%; }
+.md-jr .md-jr-ring-bg { fill: none; stroke: var(--jr-line); stroke-width: 10; }
+.md-jr .md-jr-ring-fg { fill: none; stroke: var(--jr-teal); stroke-width: 10; stroke-linecap: round; animation: md-jr-ringfill 0.9s ease-out both; }
+.md-jr .md-jr-score[data-tier="mid"] .md-jr-ring-fg, .md-jr .md-jr-score[data-tier="low"] .md-jr-ring-fg { stroke: var(--jr-gold); }
+.md-jr .md-jr-ring-pct { position: absolute; inset: 0; display: flex; align-items: center; justify-content: center; font-size: 1.9rem; font-weight: 900; color: var(--jr-text); direction: ltr; unicode-bidi: isolate; }
+.md-jr .md-jr-score-title { margin: 0.2rem 0 0; font-size: 1.25rem; font-weight: 900; color: var(--jr-text); }
+.md-jr .md-jr-score-msg { margin: 0.3rem auto 0; max-width: 30rem; font-size: 0.92rem; line-height: 1.95; font-weight: 600; color: var(--jr-muted); }
+.md-jr .md-jr-stats { display: flex; flex-wrap: wrap; justify-content: center; gap: 0.5rem; margin-top: 0.85rem; }
+.md-jr .md-jr-stat { padding: 0.3rem 0.85rem; border-radius: 999px; font-size: 0.82rem; font-weight: 800; background: var(--jr-surface); border: 1px solid var(--jr-line); color: var(--jr-text); }
+.md-jr .md-jr-stat b { margin-inline-end: 0.3rem; font-size: 1rem; font-weight: 900; }
+.md-jr .md-jr-stat[data-kind="ok"] { border-color: var(--jr-teal); color: var(--jr-teal-deep); }
+.md-jr .md-jr-stat[data-kind="bad"] { border-color: var(--jr-bad); color: var(--jr-bad); }
+.md-jr .md-jr-score-best { margin: 0.8rem 0 0; font-size: 0.84rem; font-weight: 700; color: var(--jr-muted); }
+.md-jr .md-jr-score-best b { color: var(--jr-text); }
+.md-jr .md-jr-score-actions { display: flex; flex-wrap: wrap; justify-content: center; gap: 0.6rem; margin-top: 1rem; }
+.md-jr .md-jr-score-actions .md-jr-btn { flex: none; }
+.md-jr .md-jr-bd-head { margin: 1.1rem 0 0.5rem; font-size: 0.82rem; font-weight: 900; color: var(--jr-muted); text-align: right; }
+.md-jr .md-jr-bd { margin: 0; padding: 0; list-style: none; display: flex; flex-direction: column; gap: 0.5rem; text-align: right; }
+.md-jr .md-jr-bd li { display: grid; grid-template-columns: minmax(0, 1fr) auto; align-items: center; gap: 0.25rem 0.7rem; padding: 0.6rem 0.8rem; border-radius: 0.95rem; background: var(--jr-surface); border: 1px solid var(--jr-line); }
+.md-jr .md-jr-bd li[data-low="true"] { border-color: var(--jr-gold); }
+.md-jr .md-jr-bd-title { min-width: 0; font-size: 0.88rem; font-weight: 800; line-height: 1.7; color: var(--jr-text); }
+.md-jr .md-jr-bd-pct { font-size: 0.8rem; font-weight: 900; color: var(--jr-teal-deep); white-space: nowrap; }
+.md-jr .md-jr-bd-bar { grid-column: 1 / -1; height: 6px; border-radius: 999px; background: var(--jr-line); overflow: hidden; }
+.md-jr .md-jr-bd-bar i { display: block; height: 100%; border-radius: 999px; background: var(--jr-teal); }
+.md-jr .md-jr-bd li[data-low="true"] .md-jr-bd-bar i { background: var(--jr-gold); }
+.md-jr .md-jr-bd .md-jr-linkbtn { grid-column: 1 / -1; justify-self: start; margin-top: 0; min-height: 36px; padding: 0; font-size: 0.8rem; }
+.md-jr .md-jr-donescore { margin: -0.4rem 0 1rem; font-size: 0.9rem; font-weight: 800; color: var(--jr-text); }
+.md-jr .md-jr-donescore b { color: var(--jr-teal-deep); }
+/* ---- ترتيب وتنسيق الدرس: هيرو مضغوط + فيديو مرتب + خطوات واضحة + شريط إجراءات ثابت ---- */
+.md-jr .md-jr-hero { padding: clamp(0.9rem, 3vw, 1.35rem); border-radius: 1.3rem; }
+.md-jr .md-jr-h1 { margin-top: 0.5rem; font-size: clamp(1.25rem, 3.8vw, 1.75rem); line-height: 1.5; }
+.md-jr .md-jr-desc { margin-top: 0.35rem; font-size: 0.88rem; line-height: 1.8; }
+.md-jr .md-jr-hero-actions .md-lv-actions { margin-top: 0.7rem; gap: 8px; }
+.md-jr .md-jr-hero-actions .md-lv-act { min-height: 0; padding: 0.4rem 1rem; font-size: 0.84rem; }
+.md-jr .md-jr-hero-actions .md-lv-act svg { width: 17px; height: 17px; }
+.md-jr .md-jr-video-head { padding: 0.65rem 1rem 0.5rem; }
+.md-jr .md-jr-video-title { font-size: 0.95rem; }
+.md-jr .md-jr-video-head .md-jr-tool { min-height: 38px; padding: 0.25rem 0.8rem; font-size: 0.8rem; flex: none; }
+.md-jr .md-jr-video-note { margin: 0; padding: 0 1rem 0.6rem; font-size: 0.82rem; line-height: 1.85; font-weight: 600; color: var(--jr-muted); }
+.md-jr .md-jr-video-body .md-jr-frame { max-width: 38rem; margin-inline: auto; }
+.md-jr .md-jr-stepno { flex: none; display: inline-flex; align-items: center; justify-content: center; width: 1.45rem; height: 1.45rem; border-radius: 999px; background: var(--jr-teal-soft); color: var(--jr-teal-deep); border: 1px solid var(--jr-teal); font-size: 0.74rem; font-weight: 900; line-height: 1; }
+.md-jr .md-jr-eyebrow--n::before { display: none; }
+.md-jr .md-jr-steps { display: flex; flex-wrap: wrap; gap: 0.4rem; margin: -0.2rem 0 0.9rem; }
+.md-jr .md-jr-step { flex: none; display: inline-flex; align-items: center; gap: 0.4rem; min-height: 36px; padding: 0.15rem 0.75rem 0.15rem 0.6rem; border-radius: 999px; border: 1px solid var(--jr-line); background: var(--jr-surface); color: var(--jr-teal-deep); font-size: 0.8rem; font-weight: 800; transition: border-color 0.15s ease, background-color 0.15s ease; }
+.md-jr .md-jr-step:hover { border-color: var(--jr-teal); background: var(--jr-teal-soft); }
+.md-jr [id^="md-jr-sec-"] { scroll-margin-top: 9.5rem; }
+.md-jr .md-jr-recall-head strong { display: inline-flex; align-items: center; gap: 0.5rem; }
+@media (max-width: 1023.98px) {
+  .md-jr .md-jr-bar { margin-inline: calc(var(--jr-pad) * -1); padding: 0.55rem var(--jr-pad) calc(0.55rem + env(safe-area-inset-bottom, 0px)); background: color-mix(in srgb, var(--jr-bg) 94%, transparent); -webkit-backdrop-filter: blur(12px); backdrop-filter: blur(12px); border-top: 1px solid var(--jr-line); pointer-events: auto; }
+  .md-jr .md-jr-bar .md-jr-btn { min-height: 44px; font-size: 0.92rem; box-shadow: none; }
+  .md-jr .md-jr-bar .md-jr-btn--primary { flex: 1 1 auto; }
+  .md-jr .md-jr-bar .md-jr-btn--ghost { flex: 0 0 auto; background: var(--jr-surface); }
+}
 @media (prefers-reduced-motion: reduce) {
   .md-jr *, .md-jr *::before, .md-jr *::after { transition: none !important; animation: none !important; scroll-behavior: auto !important; }
 }
@@ -954,14 +1043,7 @@ function JrVideo({ videoId, lessonId }) {
   return (
     <section className="md-jr-video" aria-label="فيديو الشرح العام">
       <div className="md-jr-video-head">
-        <div>
-          <h2 className="md-jr-video-title">🎥 شاهد فيديو الدرس</h2>
-          {open ? (
-            <p className="md-jr-video-note">
-              تابع الشرح خطوة بخطوة وركّز في ترتيب الأفكار والأمثلة. خُد وقتك في الفهم قبل الانتقال للجزء التالي، لأن الفيديو هو بداية رحلتك لفهم الدرس بشكل كامل.
-            </p>
-          ) : null}
-        </div>
+        <h2 className="md-jr-video-title">🎥 شاهد فيديو الدرس</h2>
         <button
           type="button"
           className="md-jr-tool"
@@ -973,6 +1055,7 @@ function JrVideo({ videoId, lessonId }) {
           <JrIcon name="down" />
         </button>
       </div>
+      {open ? <p className="md-jr-video-note">تابع الشرح خطوة بخطوة وركّز في ترتيب الأفكار والأمثلة. خُد وقتك في الفهم قبل الانتقال للجزء التالي، لأن الفيديو هو بداية رحلتك لفهم الدرس بشكل كامل.</p> : null}
       {open ? (
         <div className="md-jr-video-body" id={bodyId}>
           <div className="md-jr-frame">
@@ -1000,15 +1083,25 @@ function JrVideo({ videoId, lessonId }) {
 }
 
 /** تذكّر سريع: بطاقة مطوية، كل نقطة تنكشف بالضغط بعد ما الطالب يفكّر. */
-function JrRecall({ items }) {
+/** عنوان قسم داخل العنوان الحالي، برقم الخطوة لو في أكتر من قسم. */
+function JrEyebrow({ no = 0, as: Tag = "h3", children }) {
+  return (
+    <Tag className={`md-jr-eyebrow${no ? " md-jr-eyebrow--n" : ""}`}>
+      {no ? <span className="md-jr-stepno" aria-hidden="true">{no}</span> : null}
+      {children}
+    </Tag>
+  );
+}
+
+function JrRecall({ items, id, no = 0 }) {
   const [open, setOpen] = useState(false);
   const [shown, setShown] = useState({});
   const allShown = items.length > 0 && items.every((_, i) => shown[i]);
   return (
-    <section className="md-jr-card md-jr-recall quick-recall-hidden" aria-label="تذكّر سريع">
+    <section className="md-jr-card md-jr-recall quick-recall-hidden" aria-label="تذكّر سريع" id={id}>
       <button type="button" className="md-jr-recall-head" aria-expanded={open} aria-controls="md-jr-recall-body" onClick={() => setOpen((v) => !v)}>
         <span>
-          <strong>🧠 تذكّر سريع ({items.length})</strong>
+          <strong>{no ? <span className="md-jr-stepno" aria-hidden="true">{no}</span> : null}🧠 تذكّر سريع ({items.length})</strong>
           <span className="md-jr-hint">فكّر الأول في كل نقطة، وبعدها اضغط عليها عشان تتأكد.</span>
         </span>
         <JrIcon name="down" />
@@ -1037,20 +1130,149 @@ function JrRecall({ items }) {
 }
 
 /** سؤال داخل العنوان: تغذية راجعة فورية عند اختيار الإجابة + إبلاغ الأب بأنه أُجيب. */
-function JrQuestion({ q, onAnswered }) {
+// ---------------------------------------------------------------------------
+// Quiz helpers — الدرجات والنسب (واجهة الطالب فقط)
+// ---------------------------------------------------------------------------
+/** أقل عدد أسئلة لازم الطالب يجاوبها في العنوان قبل ما يقدر يضغط «أكمل العنوان». */
+const JR_MIN_ANSWERS = 1;
+
+/** سؤال يُحتسب في الدرجة = اختيار من متعدد له إجابة صحيحة محددة. الأسئلة المقالية للتدريب فقط. */
+const jrIsGraded = (q) =>
+  !!q && q.type === "mcq" && Number.isInteger(q.correctIndex) && Array.isArray(q.options) && q.options.length > 0;
+
+function jrTier(pct) {
+  if (pct >= 90) return { tier: "high", emoji: "🏆", title: "ممتاز", msg: "أنت متمكّن من هذا الجزء. استمر على نفس المستوى!" };
+  if (pct >= 75) return { tier: "high", emoji: "🌟", title: "جيد جدًا", msg: "نتيجة رائعة! راجع ما أخطأت فيه لتصل إلى الدرجة الكاملة." };
+  if (pct >= 50) return { tier: "mid", emoji: "👍", title: "جيد", msg: "أنت في الطريق الصحيح. راجع الشرح ثم أعد المحاولة لتثبّت المعلومات أكثر." };
+  return { tier: "low", emoji: "📚", title: "تحتاج إلى مراجعة", msg: "لا بأس! ارجع إلى الشرح ثم أعد المحاولة — التكرار هو ما يصنع الفهم." };
+}
+
+function jrRemaining(n) {
+  if (n === 1) return "تبقّى سؤال واحد";
+  if (n === 2) return "تبقّى سؤالان";
+  if (n >= 3 && n <= 10) return `تبقّى ${n} أسئلة`;
+  return `تبقّى ${n} سؤالًا`;
+}
+
+function jrScrollTo(el, block = "center") {
+  if (!el || typeof el.scrollIntoView !== "function") return;
+  const reduce = typeof window !== "undefined" && typeof window.matchMedia === "function" && window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+  el.scrollIntoView({ behavior: reduce ? "auto" : "smooth", block });
+}
+
+/** بطاقة النتيجة: دائرة النسبة + الصحيح/الخطأ + أفضل نتيجة + (اختياري) تفصيل كل عنوان + إعادة المحاولة. */
+function JrScoreCard({ variant = "scene", correct, total, best, attempts, onRetry, breakdown, onReviewTitle, cardRef }) {
+  const pct = total > 0 ? Math.round((correct / total) * 100) : 0;
+  const info = jrTier(pct);
+  const wrong = Math.max(0, total - correct);
+  const R = 52;
+  const C = 2 * Math.PI * R;
+  const bestPct = best && Number.isFinite(best.pct) ? best.pct : null;
+  const showBest = bestPct !== null && Number(attempts) > 1;
+  return (
+    <div className="md-jr-score" data-tier={info.tier} data-variant={variant} ref={cardRef} role="status" aria-live="polite" tabIndex={-1}>
+      <p className="md-jr-score-kicker">{variant === "final" ? "نتيجة الاختبار النهائي" : "نتيجتك في هذا العنوان"}</p>
+      <div className="md-jr-ringwrap">
+        <svg viewBox="0 0 120 120" className="md-jr-ring" aria-hidden="true" focusable="false">
+          <circle className="md-jr-ring-bg" cx="60" cy="60" r={R} />
+          <circle
+            className="md-jr-ring-fg" cx="60" cy="60" r={R} transform="rotate(-90 60 60)"
+            style={{ strokeDasharray: C, strokeDashoffset: C * (1 - pct / 100), "--c": C }}
+          />
+        </svg>
+        <span className="md-jr-ring-pct">{pct}%</span>
+      </div>
+      <h4 className="md-jr-score-title"><span aria-hidden="true">{info.emoji}</span> {info.title}</h4>
+      <p className="md-jr-score-msg">{info.msg}</p>
+      <div className="md-jr-stats">
+        <span className="md-jr-stat" data-kind="ok"><b>{correct}</b>صحيحة</span>
+        <span className="md-jr-stat" data-kind="bad"><b>{wrong}</b>خاطئة</span>
+        <span className="md-jr-stat"><b>{total}</b>إجمالي الأسئلة</span>
+      </div>
+      {showBest ? <p className="md-jr-score-best">أفضل نتيجة لك: <b><bdi>{bestPct}%</bdi></b> · المحاولة رقم <bdi>{attempts}</bdi></p> : null}
+      {breakdown && breakdown.length > 1 ? (
+        <>
+          <p className="md-jr-bd-head">نتيجتك في كل عنوان</p>
+          <ul className="md-jr-bd">
+            {breakdown.map((b) => (
+              <li key={b.key} data-low={b.pct < 60 ? "true" : undefined}>
+                <span className="md-jr-bd-title">{b.title}</span>
+                <span className="md-jr-bd-pct"><bdi>{b.correct}/{b.total}</bdi> · <bdi>{b.pct}%</bdi></span>
+                <span className="md-jr-bd-bar" aria-hidden="true"><i style={{ width: `${b.pct}%` }} /></span>
+                {b.pct < 100 && onReviewTitle ? (
+                  <button type="button" className="md-jr-linkbtn" onClick={() => onReviewTitle(b.idx)}>راجع هذا العنوان ↗</button>
+                ) : null}
+              </li>
+            ))}
+          </ul>
+        </>
+      ) : null}
+      <div className="md-jr-score-actions">
+        <button type="button" className={`md-jr-btn ${pct < 100 ? "md-jr-btn--primary" : "md-jr-btn--ghost"}`} onClick={onRetry}>
+          🔄 إعادة المحاولة
+        </button>
+      </div>
+    </div>
+  );
+}
+
+/** رسالة التنبيه اللطيفة لما الطالب يحاول يكمل من غير ما يحل الأسئلة. */
+function JrGate({ kind, onGo }) {
+  const isFinal = kind === "final";
+  return (
+    <div className="md-jr-gate" role="alert">
+      <span className="md-jr-gate-ico" aria-hidden="true">{isFinal ? "🏁" : "📝"}</span>
+      <div>
+        <strong>{isFinal ? "أنهِ الاختبار النهائي أولًا" : "راجع الأسئلة الموجودة في هذا العنوان أولًا"}</strong>
+        <p>
+          {isFinal
+            ? "أجب عن الأسئلة ثم اضغط «أنهِ الاختبار واعرض نتيجتي» لتكمل الدرس."
+            : "حلّ ولو سؤالًا واحدًا على الأقل قبل الانتقال للجزء التالي — فحلّ الأسئلة هو ما يثبّت المعلومة في ذاكرتك أكثر."}
+        </p>
+        <button type="button" className="md-jr-linkbtn" onClick={onGo}>انتقل إلى الأسئلة ↓</button>
+      </div>
+    </div>
+  );
+}
+
+/** ملخص الدرجات في إشعار إكمال الدرس: مجموع أفضل نتائج العناوين + أفضل نتيجة في الاختبار النهائي. */
+function JrDoneScore({ quiz }) {
+  let c = 0;
+  let t = 0;
+  for (const x of Object.values((quiz && quiz.scenes) || {})) {
+    if (x && x.best && x.best.total > 0) { c += x.best.correct; t += x.best.total; }
+  }
+  const f = quiz && quiz.final;
+  const finalPct = f && f.best && Number.isFinite(f.best.pct) ? f.best.pct : null;
+  if (t === 0 && finalPct === null) return null;
+  return (
+    <>
+      {t > 0 ? (
+        <p className="md-jr-donescore">📊 أفضل نتائجك في أسئلة العناوين: <b><bdi>{c} من {t}</bdi></b> (<bdi>{Math.round((c / t) * 100)}%</bdi>)</p>
+      ) : null}
+      {finalPct !== null ? (
+        <p className="md-jr-donescore">🏅 أفضل نتيجة لك في الاختبار النهائي: <b><bdi>{finalPct}%</bdi></b></p>
+      ) : null}
+    </>
+  );
+}
+
+function JrQuestion({ q, onAnswered, scored = false }) {
   const [picked, setPicked] = useState(null);
   const [revealed, setRevealed] = useState(false);
   const [essay, setEssay] = useState("");
   const isMcq = q.type === "mcq";
+  const graded = jrIsGraded(q);
   const answered = isMcq ? picked !== null : revealed;
-  const pick = (i) => { if (picked !== null) return; setPicked(i); onAnswered?.(); };
-  const reveal = () => { setRevealed(true); onAnswered?.(); };
+  const pick = (i) => { if (picked !== null) return; setPicked(i); onAnswered?.({ graded, correct: graded && i === q.correctIndex }); };
+  const reveal = () => { if (revealed) return; setRevealed(true); onAnswered?.({ graded: false, correct: false }); };
   return (
     <div className="md-jr-q">
       <div className="md-jr-qtop">
         <p className="md-jr-qprompt">{q.prompt}</p>
         <span className="md-jr-qtag" data-done={answered ? "true" : "false"}>{answered ? "تمت الإجابة" : "لم تُجب بعد"}</span>
       </div>
+      {scored && !graded ? <span className="md-jr-qnote">سؤال تدريبي — لا يدخل في الدرجة</span> : null}
       {isMcq ? (
         <>
           <div className="md-jr-opts" role="group" aria-label="الاختيارات">
@@ -1089,10 +1311,12 @@ function JrQuestion({ q, onAnswered }) {
 }
 
 /** المراجعة النهائية المجمّعة — نفس المحتوى القديم (خريطة + خط زمني + أسئلة) بشكل متسق. */
-function JrAggregatedReview({ fullMindMap, fullTimeline, fullQuestions, selectedMindNode, setSelectedMindNode }) {
+function JrAggregatedReview({ fullMindMap, fullTimeline, fullQuestions, selectedMindNode, setSelectedMindNode, quiz }) {
   const hasMap = !!(fullMindMap && fullMindMap.label);
   const hasTl = Array.isArray(fullTimeline) && fullTimeline.length > 0;
   const hasQs = Array.isArray(fullQuestions) && fullQuestions.length > 0;
+  const q = quiz || null;
+  const scored = !!(q && q.scored);
   return (
     <div data-kind="review" className="md-jr-card">
       <h3 className="md-jr-eyebrow">المراجعة النهائية</h3>
@@ -1110,13 +1334,48 @@ function JrAggregatedReview({ fullMindMap, fullTimeline, fullQuestions, selected
         </div>
       )}
       {hasQs && (
-        <div>
-          <p className="md-jr-eyebrow">❓ أسئلة المراجعة</p>
-          <div style={{ display: "flex", flexDirection: "column", gap: "0.8rem" }}>
-            {fullQuestions.map((q, idx) => (
-              <QuestionItem key={q.id || `jr-fq-${idx}`} q={q} />
+        <div className="md-jr-finalquiz" ref={q ? q.quizRef : undefined} data-nudge={q && q.nudge ? "true" : undefined}>
+          <div className="md-jr-quizhead">
+            <p className="md-jr-eyebrow">❓ {scored ? "الاختبار النهائي" : "أسئلة المراجعة"}</p>
+            {q ? <span className="md-jr-count" aria-live="polite">أجبت عن {q.answeredCount} من {fullQuestions.length}</span> : null}
+          </div>
+          {scored && !q.showResult ? (
+            <p className="md-jr-quizhint">أجب عن الأسئلة ثم اضغط «أنهِ الاختبار» لتعرف نتيجتك ونسبتك المئوية.</p>
+          ) : null}
+          <div>
+            {fullQuestions.map((qq, idx) => (
+              <JrQuestion
+                key={`${q ? q.keyOf(qq) : `jr-fq-${idx}`}:${q ? q.run : 0}`}
+                q={qq}
+                scored={scored}
+                onAnswered={(info) => q?.onAnswered(qq, info)}
+              />
             ))}
           </div>
+          {scored ? (
+            q.showResult ? (
+              <JrScoreCard
+                variant="final"
+                correct={q.correct}
+                total={q.gradedTotal}
+                best={q.saved?.best}
+                attempts={q.saved?.attempts}
+                breakdown={q.breakdown}
+                onReviewTitle={q.onReviewTitle}
+                onRetry={q.onRetry}
+                cardRef={q.scoreRef}
+              />
+            ) : (
+              <div className="md-jr-finish">
+                <button type="button" className="md-jr-btn md-jr-btn--primary md-jr-btn--block" disabled={!q.allGradedDone} onClick={q.onFinish}>
+                  🏁 أنهِ الاختبار واعرض نتيجتي
+                </button>
+                {!q.allGradedDone ? (
+                  <p className="md-jr-muted md-jr-finish-note">{jrRemaining(q.gradedTotal - q.gradedDone)} من الاختيار من متعدد لتعرض نتيجتك.</p>
+                ) : null}
+              </div>
+            )
+          ) : null}
         </div>
       )}
       {!hasMap && !hasTl && !hasQs && (
@@ -1136,9 +1395,23 @@ function JourneyLesson({ ctx }) {
 
   const rootRef = useRef(null);
   const navRef = useRef(null);
+  const chipsRef = useRef(null);
+  const sideListRef = useRef(null);
   const mainRef = useRef(null);
   const [tool, setTool] = useState(null); // null | "mindmap" | "timeline"
-  const [answered, setAnswered] = useState({});
+  const [answered, setAnswered] = useState({}); // { "<sceneKey>|<qk>": { graded, correct } } — إجابات العنوان الحالي
+  const [qRun, setQRun] = useState(0); // رقم المحاولة (إعادة المحاولة تعيد بناء الأسئلة)
+  const [fAnswers, setFAnswers] = useState({}); // إجابات الاختبار النهائي
+  const [fRun, setFRun] = useState(0);
+  const [fShow, setFShow] = useState(false); // نتيجة الاختبار النهائي ظاهرة
+  const [gate, setGate] = useState(null); // null | "scene" | "final" — رسالة «راجع الأسئلة أولًا»
+  const [nudge, setNudge] = useState(false);
+  const quizRef = useRef(null);
+  const fQuizRef = useRef(null);
+  const sceneScoreRef = useRef(null);
+  const finalScoreRef = useRef(null);
+  const recordedRef = useRef(new Set());
+  const nudgeTimer = useRef(null);
   const [navOpen, setNavOpen] = useState(false); // قائمة العناوين المنسدلة (موبايل)
 
   const completedList = Array.isArray(journey.completedScenes) ? journey.completedScenes : [];
@@ -1164,6 +1437,10 @@ function JourneyLesson({ ctx }) {
   useEffect(() => {
     setTool(null);
     setAnswered({});
+    setFAnswers({});
+    setFShow(false);
+    setGate(null);
+    recordedRef.current = new Set();
     if (firstRun.current) { firstRun.current = false; return; }
     const el = mainRef.current;
     if (!el) return;
@@ -1199,7 +1476,127 @@ function JourneyLesson({ ctx }) {
   const hasQuestions = !!(scene && !isFinalReviewScene && Array.isArray(scene.questions) && scene.questions.length > 0);
   const showRecall = !!(scene && isQuickRecallVisible && quickRecallItems.length > 0);
   const completed = scene ? isSceneCompleted(sceneIndex) : false;
-  const answeredCount = Object.keys(answered).length;
+
+  // ---- أسئلة العنوان الحالي: إجابات، درجة، وشرط الانتقال ----
+  const sceneKey = scene ? String(scene.id ?? sceneIndex) : `idx-${sceneIndex}`;
+  const sceneQs = hasQuestions ? scene.questions : [];
+  const sceneInfos = sceneQs.map((q, idx) => {
+    const key = `${sceneKey}|${q.id || `jr-q-${idx}`}`;
+    return { q, idx, key, info: answered[key] };
+  });
+  const answeredCount = sceneInfos.filter((x) => x.info).length;
+  const gradedTotal = sceneQs.filter(jrIsGraded).length;
+  const gradedDone = sceneInfos.filter((x) => x.info && x.info.graded).length;
+  const gradedCorrect = sceneInfos.filter((x) => x.info && x.info.graded && x.info.correct).length;
+  const sceneResultReady = gradedTotal > 0 && gradedDone === gradedTotal;
+  const minNeeded = Math.min(JR_MIN_ANSWERS, sceneQs.length);
+  const sceneGateBlocked = hasQuestions && !completed && answeredCount < minNeeded;
+  const savedScene = scene && scene.id != null ? journey.quiz?.scenes?.[String(scene.id)] || null : null;
+
+  // ---- الاختبار النهائي (أسئلة كل العناوين) ----
+  const fQs = Array.isArray(fullQuestions) ? fullQuestions : [];
+  const fKey = (q) => `final|${q.id || `${q.prompt}|${q.type}`}`;
+  const fInfos = fQs.map((q) => ({ q, key: fKey(q), info: fAnswers[fKey(q)] }));
+  const fAnsweredCount = fInfos.filter((x) => x.info).length;
+  const fGradedTotal = fQs.filter(jrIsGraded).length;
+  const fGradedDone = fInfos.filter((x) => x.info && x.info.graded).length;
+  const fCorrect = fInfos.filter((x) => x.info && x.info.graded && x.info.correct).length;
+  const fAllGradedDone = fGradedTotal > 0 && fGradedDone === fGradedTotal;
+  const savedFinal = journey.quiz?.final || null;
+  const finalSubmitted = fShow || !!savedFinal; // أنهى الاختبار الآن أو في جلسة سابقة
+  const finalGateBlocked = fGradedTotal > 0 && !finalSubmitted;
+  const fBreakdown = fShow
+    ? lesson.scenes
+        .map((sc, idx) => {
+          let c = 0;
+          let t = 0;
+          for (const q of sc.questions || []) {
+            if (!jrIsGraded(q)) continue;
+            const inf = fAnswers[fKey(q)];
+            if (!inf) continue;
+            t += 1;
+            if (inf.correct) c += 1;
+          }
+          if (!t) return null;
+          return { key: sc.id || `bd-${idx}`, idx, title: sc.title || `العنوان ${idx + 1}`, correct: c, total: t, pct: Math.round((c / t) * 100) };
+        })
+        .filter(Boolean)
+    : [];
+
+  // ---- تسجيل درجة العنوان مرة واحدة لكل محاولة ----
+  const recordSceneScore = journey.recordSceneScore;
+  useEffect(() => {
+    if (!sceneResultReady || !scene || scene.id == null) return;
+    const k = `${sceneKey}:${qRun}`;
+    if (recordedRef.current.has(k)) return;
+    recordedRef.current.add(k);
+    recordSceneScore?.(scene.id, { correct: gradedCorrect, total: gradedTotal });
+  }, [sceneResultReady, gradedCorrect, gradedTotal, sceneKey, qRun, scene, recordSceneScore]);
+
+  // لما تظهر النتيجة نتأكد إنها داخل الشاشة
+  useEffect(() => { if (sceneResultReady) jrScrollTo(sceneScoreRef.current, "nearest"); }, [sceneResultReady, qRun]);
+  useEffect(() => { if (fShow) jrScrollTo(finalScoreRef.current, "start"); }, [fShow, fRun]);
+
+  // الرسالة تختفي أول ما الشرط يتحقق
+  useEffect(() => {
+    if (gate === "scene" && !sceneGateBlocked) setGate(null);
+    if (gate === "final" && !finalGateBlocked) setGate(null);
+  }, [gate, sceneGateBlocked, finalGateBlocked]);
+  useEffect(() => () => { if (nudgeTimer.current) clearTimeout(nudgeTimer.current); }, []);
+
+  const pulseQuiz = () => {
+    setNudge(true);
+    if (nudgeTimer.current) clearTimeout(nudgeTimer.current);
+    nudgeTimer.current = setTimeout(() => setNudge(false), 1100);
+  };
+  const blockWith = (kind) => {
+    setGate(kind);
+    pulseQuiz();
+    jrScrollTo(kind === "final" ? fQuizRef.current : quizRef.current, "start");
+  };
+
+  const retryScene = () => {
+    setAnswered((m) => {
+      const n = { ...m };
+      for (const x of sceneInfos) delete n[x.key];
+      return n;
+    });
+    setQRun((r) => r + 1);
+    jrScrollTo(quizRef.current, "start");
+  };
+  const retryFinal = () => {
+    setFAnswers({});
+    setFShow(false);
+    setFRun((r) => r + 1);
+    jrScrollTo(fQuizRef.current, "start");
+  };
+
+  const finalQuiz = {
+    questions: fQs,
+    scored: fGradedTotal > 0,
+    keyOf: fKey,
+    run: fRun,
+    nudge,
+    quizRef: fQuizRef,
+    scoreRef: finalScoreRef,
+    answeredCount: fAnsweredCount,
+    gradedTotal: fGradedTotal,
+    gradedDone: fGradedDone,
+    allGradedDone: fAllGradedDone,
+    correct: fCorrect,
+    showResult: fShow,
+    saved: savedFinal,
+    breakdown: fBreakdown,
+    onAnswered: (q, info) => setFAnswers((m) => { const k = fKey(q); return m[k] ? m : { ...m, [k]: info }; }),
+    onFinish: () => {
+      if (!fAllGradedDone) return;
+      setFShow(true);
+      setGate(null);
+      journey.recordFinalScore?.({ correct: fCorrect, total: fGradedTotal });
+    },
+    onRetry: retryFinal,
+    onReviewTitle: (idx) => tryOpenScene(idx),
+  };
 
   // ---- action bar handlers (نفس منطق الأزرار القديمة بالحرف) ----
   const onComplete = () => {
@@ -1208,8 +1605,25 @@ function JourneyLesson({ ctx }) {
       else if (showAggregatedReviewFlow) tryOpenScene(sceneCount);
       return;
     }
+    // لازم يحلّ ولو سؤال لو في أسئلة على العنوان
+    if (sceneGateBlocked) { blockWith("scene"); return; }
+    // مشهد «المراجعة النهائية»: لازم ينهي الاختبار ويشوف نتيجته
+    if (isFinalReviewScene && finalGateBlocked) { blockWith("final"); return; }
     journey.completeScene?.(sceneIndex);
   };
+  const onFinishLesson = () => {
+    if (finalGateBlocked) { blockWith("final"); return; }
+    journey.completeFinalReview?.();
+  };
+  const completeBlocked = !completed && (sceneGateBlocked || (isFinalReviewScene && finalGateBlocked));
+  // خطوات العنوان الحالي (للأرقام وقائمة «في هذا العنوان»)
+  const steps = [
+    showRecall && { id: "recall", label: "تذكّر سريع" },
+    hasText && { id: "text", label: "الشرح" },
+    (hasMind || hasTimeline) && { id: "tools", label: "أدوات الفهم" },
+    hasQuestions && { id: "quiz", label: "اختبر نفسك" },
+  ].filter(Boolean);
+  const stepNo = (id) => (steps.length >= 2 ? steps.findIndex((x) => x.id === id) + 1 : 0);
   const nextOpen = sceneIndex + 1 < sceneCount ? isSceneUnlocked(sceneIndex + 1) : showAggregatedReviewFlow && finalOpenable;
   const onSkipNext = () => {
     if (sceneIndex + 1 >= sceneCount) { if (showAggregatedReviewFlow) tryOpenScene(sceneCount); return; }
@@ -1248,6 +1662,22 @@ function JourneyLesson({ ctx }) {
 
   // اقفل القائمة المنسدلة عند تغيير العنوان أو الضغط على Esc
   useEffect(() => { setNavOpen(false); }, [sceneIndex]);
+  // العنوان الحالي دايمًا باين: نوسّطه في الشريط الأفقي وفي القائمة الجانبية لما يتغيّر
+  useEffect(() => {
+    const reduce = typeof window.matchMedia === "function" && window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+    const center = (box, axis) => {
+      const cur = box && box.querySelector('[aria-current="step"]');
+      if (!cur || !box.clientWidth) return;
+      const a = cur.getBoundingClientRect();
+      const b = box.getBoundingClientRect();
+      const behavior = reduce ? "auto" : "smooth";
+      if (axis === "x") box.scrollBy({ left: (a.left + a.width / 2) - (b.left + b.width / 2), behavior });
+      else box.scrollBy({ top: (a.top + a.height / 2) - (b.top + b.height / 2), behavior });
+    };
+    const t = setTimeout(() => { center(chipsRef.current, "x"); center(sideListRef.current, "y"); }, 60);
+    return () => clearTimeout(t);
+  }, [sceneIndex, isFinalReview, isCompletionStep, sceneCount]);
+
   useEffect(() => {
     if (!navOpen) return undefined;
     const onKey = (e) => { if (e.key === "Escape") setNavOpen(false); };
@@ -1280,38 +1710,17 @@ function JourneyLesson({ ctx }) {
           <div className="md-jr-track" role="progressbar" aria-label="تقدّم الدرس" aria-valuemin={0} aria-valuemax={100} aria-valuenow={pct}>
             <div className="md-jr-fill" style={{ width: `${pct}%` }} />
           </div>
-          <button
-            type="button"
-            className="md-jr-navtoggle"
-            aria-expanded={navOpen}
-            aria-controls="md-jr-navpanel"
-            onClick={() => setNavOpen((v) => !v)}
-          >
-            <span className="md-jr-navtoggle-title">
-              {!isFinalReview && !isCompletionStep && scene && scene.title ? scene.title : navLabel}
-            </span>
-            <span className="md-jr-navtoggle-cta">
-              {navOpen ? "إغلاق" : "كل العناوين"}
-              <svg viewBox="0 0 20 20" width="14" height="14" aria-hidden="true" style={{ transform: navOpen ? "rotate(180deg)" : "none", transition: "transform .2s" }}>
-                <path d="M5 7.5l5 5 5-5" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round" />
-              </svg>
-            </span>
-          </button>
-          {navOpen ? (
-            <div className="md-jr-navpanel" id="md-jr-navpanel">
-              <ol className="md-jr-list md-jr-list--panel">
-                {items.map((it) => <li key={it.s.id || `jr-pan-${it.i}`}>{renderNavButton(it, "item")}</li>)}
-                {reviewItem ? <li>{renderNavButton(reviewItem, "item")}</li> : null}
-              </ol>
-            </div>
-          ) : null}
+          <ol className="md-jr-chips" aria-label="عناوين الدرس" ref={chipsRef}>
+            {items.map((it) => <li key={it.s.id || `jr-chip-${it.i}`}>{renderNavButton(it, "chip")}</li>)}
+            {reviewItem ? <li>{renderNavButton(reviewItem, "chip")}</li> : null}
+          </ol>
         </nav>
 
         <div className="md-jr-grid">
           <aside className="md-jr-side" aria-label="قائمة عناوين الدرس">
             <div className="md-jr-sidecard">
               <p className="md-jr-sidehead">عناوين الدرس</p>
-              <ol className="md-jr-list">
+              <ol className="md-jr-list" ref={sideListRef}>
                 {items.map((it) => <li key={it.s.id || `jr-side-${it.i}`}>{renderNavButton(it, "item")}</li>)}
                 {reviewItem ? <li>{renderNavButton(reviewItem, "item")}</li> : null}
               </ol>
@@ -1351,26 +1760,42 @@ function JourneyLesson({ ctx }) {
                     <span className="md-jr-emoji" aria-hidden="true">🎉</span>
                     <h3>تم إكمال الدرس</h3>
                     <p>أحسنت — أنهيت رحلة هذا الدرس على مَدَار.</p>
+                    <JrDoneScore quiz={journey.quiz} />
                   </section>
                 )}
 
                 <div className="md-jr-head">
-                  <p className="md-jr-scene-no">
-                    العنوان {sceneIndex + 1} من {sceneCount}
-                    {completed ? <span className="md-jr-badge"><JrIcon name="check" /> مكتمل</span> : null}
-                  </p>
+                  {completed ? (
+                    <p className="md-jr-scene-no"><span className="md-jr-badge"><JrIcon name="check" /> مكتمل</span></p>
+                  ) : null}
                   <h2 className="md-jr-title" style={{ fontFamily: scene.titleFont || undefined }}>{scene.title}</h2>
                 </div>
 
+                {steps.length >= 2 ? (
+                  <nav className="md-jr-steps" aria-label="محتوى هذا العنوان">
+                    {steps.map((st, i) => (
+                      <button
+                        key={st.id}
+                        type="button"
+                        className="md-jr-step"
+                        onClick={() => jrScrollTo(document.getElementById(`md-jr-sec-${st.id}`), "start")}
+                      >
+                        <span className="md-jr-stepno" aria-hidden="true">{i + 1}</span>
+                        {st.label}
+                      </button>
+                    ))}
+                  </nav>
+                ) : null}
+
                 {/* أ) تذكّر سريع */}
                 {showRecall && (
-                  <JrRecall items={quickRecallItems} />
+                  <JrRecall items={quickRecallItems} id="md-jr-sec-recall" no={stepNo("recall")} />
                 )}
 
                 {/* ب) الشرح */}
                 {hasText && (
-                  <section className="md-jr-card" data-kind="text" aria-label="الشرح">
-                    <h3 className="md-jr-eyebrow">الشرح</h3>
+                  <section className="md-jr-card" data-kind="text" aria-label="الشرح" id="md-jr-sec-text">
+                    <JrEyebrow no={stepNo("text")}>الشرح</JrEyebrow>
                     <HotwordRenderer
                       text={scene.text}
                       hotwords={scene.hotwords}
@@ -1386,14 +1811,14 @@ function JourneyLesson({ ctx }) {
                 {isFinalReviewScene && (
                   <JrAggregatedReview
                     fullMindMap={fullMindMap} fullTimeline={fullTimeline} fullQuestions={fullQuestions}
-                    selectedMindNode={selectedMindNode} setSelectedMindNode={setSelectedMindNode}
+                    selectedMindNode={selectedMindNode} setSelectedMindNode={setSelectedMindNode} quiz={finalQuiz}
                   />
                 )}
 
                 {/* ج) أدوات الفهم */}
                 {(hasMind || hasTimeline) && (
-                  <section className="md-jr-card" aria-label="أدوات الفهم">
-                    <h3 className="md-jr-eyebrow">أدوات الفهم</h3>
+                  <section className="md-jr-card" aria-label="أدوات الفهم" id="md-jr-sec-tools">
+                    <JrEyebrow no={stepNo("tools")}>أدوات الفهم</JrEyebrow>
                     <div className="md-jr-tools">
                       {hasMind && (
                         <button type="button" className="md-jr-tool" aria-expanded={tool === "mindmap"} aria-controls="md-jr-panel-mindmap"
@@ -1442,17 +1867,45 @@ function JourneyLesson({ ctx }) {
 
                 {/* د) اختبر نفسك */}
                 {hasQuestions && (
-                  <section className="md-jr-card" data-kind="questions" aria-label="اختبر نفسك">
+                  <section
+                    className="md-jr-card md-jr-quizcard" data-kind="questions" aria-label="اختبر نفسك"
+                    ref={quizRef} id="md-jr-sec-quiz" data-nudge={nudge && gate === "scene" ? "true" : undefined}
+                  >
                     <div className="md-jr-quizhead">
-                      <h3 className="md-jr-eyebrow">❓ اختبر نفسك</h3>
-                      <span className="md-jr-count" aria-live="polite">أجبت عن {answeredCount} من {scene.questions.length}</span>
+                      <JrEyebrow no={stepNo("quiz")}>❓ اختبر نفسك</JrEyebrow>
+                      <span className="md-jr-count" aria-live="polite">
+                        أجبت عن {answeredCount} من {sceneQs.length}
+                        {savedScene && savedScene.best ? <span className="md-jr-best">🏅 أفضل نتيجة <bdi>{savedScene.best.pct}%</bdi></span> : null}
+                      </span>
                     </div>
+                    {!completed ? (
+                      <p id="md-jr-quizhint" className="md-jr-quizhint" data-ok={sceneGateBlocked ? undefined : "true"}>
+                        {sceneGateBlocked
+                          ? "حلّ ولو سؤالًا واحدًا على الأقل لتنتقل للجزء التالي — حلّ الأسئلة هو ما يثبّت المعلومة."
+                          : "👏 أحسنت! يمكنك الآن إكمال العنوان، أو أكمل بقية الأسئلة لتعرف نتيجتك."}
+                      </p>
+                    ) : null}
                     <div>
-                      {scene.questions.map((q, idx) => {
-                        const qk = q.id || `jr-q-${idx}`;
-                        return <JrQuestion key={qk} q={q} onAnswered={() => setAnswered((m) => (m[qk] ? m : { ...m, [qk]: true }))} />;
-                      })}
+                      {sceneInfos.map(({ q, idx, key }) => (
+                        <JrQuestion
+                          key={`${key}:${qRun}`}
+                          q={q}
+                          scored={gradedTotal > 0}
+                          onAnswered={(info) => setAnswered((m) => (m[key] ? m : { ...m, [key]: info }))}
+                        />
+                      ))}
                     </div>
+                    {sceneResultReady ? (
+                      <JrScoreCard
+                        variant="scene"
+                        correct={gradedCorrect}
+                        total={gradedTotal}
+                        best={savedScene && savedScene.best}
+                        attempts={savedScene && savedScene.attempts}
+                        onRetry={retryScene}
+                        cardRef={sceneScoreRef}
+                      />
+                    ) : null}
                   </section>
                 )}
               </div>
@@ -1466,13 +1919,19 @@ function JourneyLesson({ ctx }) {
                     <span className="md-jr-emoji" aria-hidden="true">🎉</span>
                     <h3>تم إكمال الدرس</h3>
                     <p>أحسنت — أنهيت رحلة هذا الدرس على مَدَار.</p>
+                    <JrDoneScore quiz={journey.quiz} />
                   </section>
                 )}
                 <JrAggregatedReview
                   fullMindMap={fullMindMap} fullTimeline={fullTimeline} fullQuestions={fullQuestions}
-                  selectedMindNode={selectedMindNode} setSelectedMindNode={setSelectedMindNode}
+                  selectedMindNode={selectedMindNode} setSelectedMindNode={setSelectedMindNode} quiz={finalQuiz}
                 />
               </div>
+            )}
+
+            {/* رسالة «راجع الأسئلة أولًا» */}
+            {gate && !sceneContentLocked && !isCompletionStep && !isLessonDone && (
+              <JrGate kind={gate} onGo={() => jrScrollTo(gate === "final" ? fQuizRef.current : quizRef.current, "start")} />
             )}
 
             {/* شريط الإجراءات */}
@@ -1486,10 +1945,16 @@ function JourneyLesson({ ctx }) {
                     التالي <JrIcon name="next" />
                   </button>
                 )}
-                <button type="button" className={`md-jr-btn md-jr-btn--primary${completed ? " md-jr-btn--done" : ""}`} onClick={onComplete}>
+                <button
+                  type="button"
+                  className={`md-jr-btn md-jr-btn--primary${completed ? " md-jr-btn--done" : ""}`}
+                  onClick={onComplete}
+                  aria-disabled={completeBlocked ? "true" : undefined}
+                  aria-describedby={completeBlocked && hasQuestions ? "md-jr-quizhint" : undefined}
+                >
                   {completed ? <JrIcon name="check" /> : null}
                   {completeLabel}
-                  {!completed ? <JrIcon name="check" /> : null}
+                  {!completed ? (completeBlocked ? <span aria-hidden="true">🔒</span> : <JrIcon name="check" />) : null}
                 </button>
               </div>
             )}
@@ -1499,8 +1964,8 @@ function JourneyLesson({ ctx }) {
                   <JrIcon name="prev" /> آخر عنوان
                 </button>
                 {!isLessonDone && (
-                  <button type="button" className="md-jr-btn md-jr-btn--primary" onClick={() => journey.completeFinalReview?.()}>
-                    إنهاء المراجعة وإكمال الدرس <JrIcon name="check" />
+                  <button type="button" className="md-jr-btn md-jr-btn--primary" onClick={onFinishLesson} aria-disabled={finalGateBlocked ? "true" : undefined}>
+                    إنهاء المراجعة وإكمال الدرس {finalGateBlocked ? <span aria-hidden="true">🔒</span> : <JrIcon name="check" />}
                   </button>
                 )}
               </div>

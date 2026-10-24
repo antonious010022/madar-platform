@@ -11,6 +11,7 @@ import { arabicLessonOrdinal, lessonPath, isLessonComingSoon, lessonDisplayNumbe
 import { gradeNumber } from "./student-platform/uiParts";
 import { Icon } from "../components/MadarIcons";
 import { PLATFORM_CSS } from "./student-platform/platformStyles";
+import MadarGuide, { GuideHelpButton, useMadarGuide, PLATFORM_STEPS } from "../components/MadarGuide";
 
 /* ---------------------------------------------------------------------------
    Curriculum order — the teacher's tree (Settings → المنهج) decides the order of
@@ -969,6 +970,10 @@ export default function StudentPlatform() {
   const greeting = hour >= 5 && hour < 12 ? "صباح الخير ☀️" : hour >= 12 && hour < 18 ? "نهارك سعيد" : "مساء الخير 🌙";
   const showGradeMeta = !!(selectedGrade && !pickingGrade);
   const showResume = !!(lessons && lessons.length > 0 && gradeMetaReady && selectedGrade && !pickingGrade && continueLesson);
+  // دليل الطالب: يشتغل تلقائيًا أول مرة بس (لو عنده تقدّم قبل كده مايتفتحش لوحده)، والزرار «؟ دليل» يفتحه في أي وقت
+  const guide = useMadarGuide("platform", {
+    autoStart: !!(lessons && lessons.length > 0 && gradeMetaReady && session !== undefined && myProgress.length === 0),
+  });
 
   return (
     <div className={`md-platform${isDark ? " is-dark" : ""}`} data-calm={calm ? "1" : undefined}>
@@ -1156,13 +1161,15 @@ export default function StudentPlatform() {
         {lessons && lessons.length > 0 && selectedGrade && !pickingGrade && (
           <section className="md-dashboard mb-6" aria-label="لوحة الطالب">
             {/* هل تعلم؟ — بطاقة مستقلة عن قصد، فوق باقي اللوحة */}
-            <DidYouKnowCard
-              session={session}
-              stage={selectedStage}
-              grade={selectedGrade}
-              ready={gradeMetaReady}
-              onRequireLogin={() => openAuthFor(DYK_AUTH_COPY)}
-            />
+            <div data-guide="dyk">
+              <DidYouKnowCard
+                session={session}
+                stage={selectedStage}
+                grade={selectedGrade}
+                ready={gradeMetaReady}
+                onRequireLogin={() => openAuthFor(DYK_AUTH_COPY)}
+              />
+            </div>
 
             <div className={`md-dash-row${recentLessons.length > 0 ? "" : " md-dash-row--single"}`}>
               <article className="md-dash-card md-dash-progress">
@@ -1442,6 +1449,15 @@ export default function StudentPlatform() {
       <Footer />
       <GuestWelcomeBanner session={session} />
       <AuthModal open={authOpen} onClose={() => { setAuthOpen(false); setAuthCtx(null); }} title={authCtx?.title} subtitle={authCtx?.subtitle} />
+
+      <GuideHelpButton onClick={guide.start} hidden={guide.open} />
+      <MadarGuide
+        open={guide.open}
+        steps={PLATFORM_STEPS}
+        onClose={guide.close}
+        topSafe={76}
+        ctx={{ picking: pickingGrade, grade: selectedGrade, term: selectedTerm, subject: selectedSubject, guest: !session }}
+      />
 
       {/* Global Styles for this page */}
       <style>{PLATFORM_CSS}</style>

@@ -735,6 +735,13 @@ body:has(.duo-veil) .duo-loader:not(.duo-loader-veil) { opacity: 0; }
 .duo-linkbtn { font-family: var(--duo-font-display); font-weight: 800; transition: color 0.15s ease, transform 0.15s var(--duo-spring); }
 .duo-linkbtn:hover { color: var(--duo-blue-d) !important; transform: translateY(-1px); }
 .duo-banner { border-radius: 20px !important; box-shadow: 0 6px 16px -12px rgba(14, 83, 72, 0.2) !important; animation: duo-slide-up 0.5s var(--duo-spring) both; }
+/* صفحة الدرس: الشريط السفلي (أكمل العنوان / السابق) لاصق تحت 1024px، فالبانر يطلع فوقه بدل ما يغطيه */
+/* صفحة الدرس: الشريط العلوي يختفي مع النزول ويرجع مع الطلوع، وشريط العناوين يطلع مكانه */
+.md-lesson-page .md-lv-topbar { transition: transform 0.28s ease; will-change: transform; }
+.md-lesson-page[data-topbar="hidden"] .md-lv-topbar { transform: translateY(-100%); box-shadow: none; }
+.md-lesson-page[data-topbar="hidden"] .md-jr { --jr-top: 0px !important; }
+@media (prefers-reduced-motion: reduce) { .md-lesson-page .md-lv-topbar { transition: none; } }
+@media (max-width: 1023.98px) { .duo-banner.md-banner-lift { bottom: calc(4.9rem + env(safe-area-inset-bottom, 0px)) !important; } }
 @keyframes duo-fade { from { opacity: 0; } to { opacity: 1; } }
 @keyframes duo-slide-up { from { opacity: 0; transform: translateY(40px) scale(0.96); } to { opacity: 1; transform: none; } }
 
