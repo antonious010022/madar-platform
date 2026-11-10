@@ -133,9 +133,14 @@ create policy "staff read own scenes"
     )
   );
 
--- 5) Storage: only staff may upload lesson images (path prefix lesson-images)
--- Keep public read if it already exists; replace write policy if present
+-- 5) Storage: only staff may upload / update / delete lesson images
+-- Keep public read if it already exists; replace ALL write policies.
+-- SECURITY FIX: schema.sql used to create "authenticated update/delete" policies
+-- that let any signed-in user (incl. students) modify or delete lesson images.
+-- Those two were not dropped here before, so they are dropped now.
 drop policy if exists "authenticated upload lesson images" on storage.objects;
+drop policy if exists "authenticated update own lesson images" on storage.objects;
+drop policy if exists "authenticated delete own lesson images" on storage.objects;
 drop policy if exists "owner upload lesson images" on storage.objects;
 drop policy if exists "staff upload lesson images" on storage.objects;
 

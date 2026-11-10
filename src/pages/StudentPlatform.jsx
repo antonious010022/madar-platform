@@ -354,7 +354,7 @@ function StudentOrganizedNav({ open, onClose, session, onLogin, ctx }) {
       <aside className="md-sb" role="dialog" aria-modal="true" aria-label="قائمة المنصة">
         <div className="md-sb-head">
           <Link to="/student" className="md-sb-logo" onClick={onClose} aria-label="مَدَار — الرئيسية">
-            <img src="/photo/0MSCh.png" alt="مَدَار" />
+            <img src="/photo/IevsR.png" alt="مَدَار" />
           </Link>
           <button type="button" className="md-sb-close" onClick={onClose} aria-label="إغلاق">✕</button>
         </div>
@@ -985,7 +985,7 @@ export default function StudentPlatform() {
             </svg>
           </button>
           <Link to="/student" className="md-logo" aria-label="مَدَار — الرئيسية">
-            <img src="/photo/0MSCh.png" alt="مَدَار" className="md-logo-img" />
+            <img src="/photo/IevsR.png" alt="مَدَار" className="md-logo-img" />
           </Link>
         </div>
         <div className="md-topbar2-end">
@@ -1051,7 +1051,8 @@ export default function StudentPlatform() {
             <div className="md-hero2-copy">
               <p className="md-hero2-kicker">{session ? greeting : "مَدَار"}</p>
               <h1 className="md-hero2-title">
-                {session ? `أهلًا بعودتك${studentName ? `، ${studentName}` : ""} 👋` : "أهلًا بك في مَدَار 👋"}
+                {session ? `أهلًا بعودتك${studentName ? `، ${studentName}` : ""}` : "أهلًا بك في مَدَار"}
+                <img src="/photo/He%20hands%20over1.png" alt="" aria-hidden="true" className="md-hero2-wave" />
               </h1>
               <p className="md-hero2-sub">
                 {session
@@ -1668,6 +1669,9 @@ export default function StudentPlatform() {
         .md-hero2-copy { flex: 1 1 18rem; min-width: 0; }
         .md-hero2-kicker { margin: 0 0 0.35rem; font-size: 0.82rem; font-weight: 800; color: rgba(255, 255, 255, 0.8); }
         .md-hero2-title { margin: 0; font-size: clamp(1.4rem, 3.4vw, 2rem); font-weight: 900; line-height: 1.45; color: #fff; }
+        .md-hero2-wave { display: inline-block; height: 1.9em; width: auto; vertical-align: middle; margin-inline-start: 0.35em; transform-origin: 70% 80%; animation: md-wave 2.4s ease-in-out infinite; }
+        @keyframes md-wave { 0%, 60%, 100% { transform: rotate(0deg); } 10%, 30% { transform: rotate(10deg); } 20%, 40% { transform: rotate(-8deg); } 50% { transform: rotate(6deg); } }
+        @media (prefers-reduced-motion: reduce) { .md-hero2-wave { animation: none; } }
         .md-hero2-sub { margin: 0.5rem 0 0; max-width: 33rem; font-size: 0.93rem; line-height: 1.8; color: rgba(255, 255, 255, 0.88); }
         .md-hero2-meta { display: flex; flex-wrap: wrap; align-items: center; gap: 0.6rem; margin-top: 0.9rem; }
         .md-hero2-pill { padding: 0.3rem 0.8rem; border-radius: 999px; background: rgba(255, 255, 255, 0.16); border: 1px solid rgba(255, 255, 255, 0.28); font-size: 0.8rem; font-weight: 800; }

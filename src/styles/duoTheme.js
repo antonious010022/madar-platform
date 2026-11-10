@@ -741,7 +741,10 @@ body:has(.duo-veil) .duo-loader:not(.duo-loader-veil) { opacity: 0; }
 .md-lesson-page[data-topbar="hidden"] .md-lv-topbar { transform: translateY(-100%); box-shadow: none; }
 .md-lesson-page[data-topbar="hidden"] .md-jr { --jr-top: 0px !important; }
 @media (prefers-reduced-motion: reduce) { .md-lesson-page .md-lv-topbar { transition: none; } }
-@media (max-width: 1023.98px) { .duo-banner.md-banner-lift { bottom: calc(4.9rem + env(safe-area-inset-bottom, 0px)) !important; } }
+@media (max-width: 1023.98px) {
+  .duo-banner.md-banner-lift { bottom: calc(4rem + env(safe-area-inset-bottom, 0px)) !important; transition: bottom 0.25s ease; }
+  html[data-md-dock="hidden"] .duo-banner.md-banner-lift { bottom: calc(1rem + env(safe-area-inset-bottom, 0px)) !important; }
+}
 @keyframes duo-fade { from { opacity: 0; } to { opacity: 1; } }
 @keyframes duo-slide-up { from { opacity: 0; transform: translateY(40px) scale(0.96); } to { opacity: 1; transform: none; } }
 

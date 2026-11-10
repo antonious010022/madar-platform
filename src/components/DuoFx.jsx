@@ -3,7 +3,7 @@
 import { useEffect, useLayoutEffect, useRef, useState } from "react";
 import { useLocation } from "react-router-dom";
 
-const LOGO_SRC = "/photo/0MSCh.png";
+const LOGO_SRC = "/photo/IevsR.png";
 const THEME_KEY = "madar_theme_v1";
 
 // true  = the splash plays once per browser session (first visit / new tab)

@@ -69,7 +69,7 @@ export default function Footer() {
               aria-label={`${brand.name} — صفحة التعريف`}
             >
               <img
-                src="/photo/0MSCh.png"
+                src="/photo/IevsR.png"
                 alt={brand.name}
                 className="md-footer-logo"
               />

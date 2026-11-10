@@ -85,7 +85,7 @@ export default function SavedLessonsPage() {
             <span aria-hidden="true">→</span> الرئيسية
           </button>
           <Link to="/student" className="md-svp-logo" aria-label="مَدَار — الرئيسية">
-            <img src="/photo/0MSCh.png" alt="مَدَار" />
+            <img src="/photo/IevsR.png" alt="مَدَار" />
           </Link>
         </div>
         <div className="md-svp-end">

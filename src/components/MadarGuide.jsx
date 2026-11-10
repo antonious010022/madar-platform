@@ -41,9 +41,17 @@ export function useMadarGuide(key, { autoStart = false, delay = 1100 } = {}) {
 }
 
 /* ------------------------------------------------------- شخصية المنصة */
-// صورة الشخصية (public/photo/5554.png). بتظهر زي ما هي بنسبتها الأصلية من غير قص ولا إطار.
-export const GUIDE_AVATAR_SRC = "/photo/5554.png";
+// صور الشخصية في public/photo/. كل شعور له صورة. (أسماء الملفات فيها مسافات فبنعمل لها encodeURI)
+// لو حبيت تبدّل صورة: غيّر الاسم هنا بس.
+export const GUIDE_IMAGES = {
+  hi: "/photo/He hands over1.png",   // ترحيب
+  point: "/photo/5554.png",           // بيشاور على الحاجة
+  think: "/photo/Hethinks2.png",   // بيفكّر / مستنيك تعمل حاجة
+  cheer: "/photo/Happy3.png",         // فرحان
+  idea: "/photo/anidea4.png",        // عنده فكرة
+};
 export const GUIDE_NAME = "تونة";
+export const guideSrc = (pose) => encodeURI(GUIDE_IMAGES[pose] || GUIDE_IMAGES.hi);
 
 /* ------------------------------------------------------------ copy: steps */
 // target: selector أو مصفوفة selectors (أول واحد ظاهر هو اللي بيتظلّل). من غير target = كارت في النص.
@@ -66,18 +74,18 @@ export const PLATFORM_STEPS = [
     skipLabel: "كمّل من غير ما أختار",
   },
   {
-    id: "grade-ok", mood: "hi", target: [".md-hero2-meta", ".md-ctx-grade"], when: (c) => !c.picking && !!c.grade,
+    id: "grade-ok", mood: "point", target: [".md-hero2-meta", ".md-ctx-grade"], when: (c) => !c.picking && !!c.grade,
     title: "ده صفك",
     body: "اتأكد إن الصف مكتوب صح. لو مش صفك، اضغط «تغيير الصف» وهترجع تختار من جديد.",
     nextLabel: "تمام، ده صفي",
   },
   {
-    id: "dyk", mood: "hi", target: '[data-guide="dyk"]', when: (c) => !c.picking,
+    id: "dyk", mood: "idea", target: '[data-guide="dyk"]', when: (c) => !c.picking,
     title: "هل تعلم؟ 💡",
     body: "هنا هتلاقي معلومة جديدة من منهجك كل ما تدخل ابقي بص عليها علشان احنا مش ضايفينها كدا وخلاص لا انا عايزين نثبتلك المعلومات دي في مخك 😉.",
   },
   {
-    id: "progress", mood: "hi", target: ".md-dash-progress", when: (c) => !c.picking,
+    id: "progress", mood: "point", target: ".md-dash-progress", when: (c) => !c.picking,
     title: "رحلتي في التعلّم",
     body: (c) => c.guest
       ? "هنا بتشوف خلّصت كام درس وإنت واقف عند أنهي درس دلوقتي. كل ما تخلّص درس الدايرة بتتملي. لو انت مش مسجل دخول تقدمك بيتحفظ على الجهاز ده بس."
@@ -98,12 +106,12 @@ export const PLATFORM_STEPS = [
     skipLabel: "كمّل من غير ما أختار",
   },
   {
-    id: "lessons", mood: "hi", target: ".md-lessons", when: (c) => !c.picking && !!c.subject,
+    id: "lessons", mood: "point", target: ".md-lessons", when: (c) => !c.picking && !!c.subject,
     title: "الدروس بالترتيب",
     body: "ابدأ من الدرس الأول وامشي ورا بعض. العلامة اللي جنب اسم كل درس بتقولك حالته: مقفول لحد ما تخلّص اللي قبله، أو محتاج تسجيل دخول ، أو «قريبًا» لسه هنزلة. وتحت الاسم وصف صغير عن الدرس.",
   },
   {
-    id: "menu", mood: "hi", target: ".md-org-trigger",
+    id: "menu", mood: "point", target: ".md-org-trigger",
     title: "دروسي المحفوظة ☰",
     body: "دوس على الثلاث شرط دول (☰) وهتلاقي «دروسي المحفوظة»: كل درس حفظته بيظهر هنا وتفتحه مباشرة. وفي نفس القائمة تغيير الصف وتنقّل سريع بين الترمات والوحدات.",
   },
@@ -133,12 +141,12 @@ export const LESSON_STEPS = [
     nextLabel: "وريني",
   },
   {
-    id: "hero", mood: "hi", target: ".md-jr-hero",
+    id: "hero", mood: "point", target: ".md-jr-hero",
     title: "ده اسم الدرس",
     body: "فوق الاسم سطر صغير بيقولك إنت فين: المرحلة · الصف · الترم · الوحدة. وتحته وصف مختصر عن الدرس.",
   },
   {
-    id: "save", mood: "cheer", targetFn: heroAction(["حفظ", "احفظ", "المحفوظ"]),
+    id: "save", mood: "point", targetFn: heroAction(["حفظ", "احفظ", "المحفوظ"]),
     title: "احفظ الدرس 🔖",
     body: "لو الدرس عجبك أو عايز ترجعله بسرعة، اضغط «حفظ». مش لازم تسجّل حساب، الدرس بيتحفظ على تليفونك أنت وبيتضاف لـ«دروسي المحفوظة».",
   },
@@ -154,17 +162,17 @@ export const LESSON_STEPS = [
     body: "اضغط «مشاركة» وابعت لينك الدرس لصحابك على واتساب أو أي تطبيق. ذاكروا سوا وكل واحد فيكم يفتح الدرس من اللينك.",
   },
   {
-    id: "video", mood: "hi", target: ".md-jr-video",
+    id: "video", mood: "point", target: ".md-jr-video",
     title: "فيديو الدرس 🎥",
     body: "الدرس ده ليه فيديو شرح عام. اضغط زرار التشغيل وشوفه قبل ما تبدأ العناوين، فتاخد فكرة كاملة عن الدرس. وتقدر تطويه وتعيد مشاهدته أي وقت.",
   },
   {
-    id: "nav", mood: "hi", target: ".md-jr-nav",
+    id: "nav", mood: "point", target: ".md-jr-nav",
     title: "عناوين الدرس وتقدّمك",
     body: "الدرس مقسوم لعناوين، وإنت بتخلّصهم واحد ورا التاني. هنا بتشوف كل العناوين جنب بعض، والعنوان اللي إنت فيه ملوّن بلون غامق. اسحب الشريط يمين وشمال تشوف الباقي، واضغط على أي عنوان تنتقل له. وتحتهم شريط تقدّمك.",
   },
   {
-    id: "side", mood: "hi", target: ".md-jr-side",
+    id: "side", mood: "point", target: ".md-jr-side",
     title: "قائمة العناوين",
     body: "كل عنوان ليه رقم، والعنوان اللي إنت فيه ملوّن بلون غامق ومكتوب عليه «أنت هنا». ✓ يعني خلّصته، 🔒 يعني لازم تخلّص اللي قبله، 🔐 يعني محتاج تسجّل دخول. تقدر ترجع لأي عنوان خلّصته.",
   },
@@ -174,7 +182,7 @@ export const LESSON_STEPS = [
     body: "نقط من اللي فات. فكّر الأول في إجابتك، وبعدين اضغط على النقطة تتأكد.",
   },
   {
-    id: "text", mood: "hi", target: ".md-jr-main .ts-richtext-content",
+    id: "text", mood: "point", target: ".md-jr-main .ts-richtext-content",
     title: "الشرح",
     body: "ده شرح العنوان و كل عنوان بيبقي ليه الشرح بتاعة.",
   },
@@ -185,12 +193,12 @@ export const LESSON_STEPS = [
     nextLabel: "جرّبتها",
   },
   {
-    id: "mindmap", mood: "hi", target: '[aria-controls="md-jr-panel-mindmap"]',
+    id: "mindmap", mood: "idea", target: '[aria-controls="md-jr-panel-mindmap"]',
     title: "الخريطة الذهنية 🧠",
     body: "بتلخّص العنوان في شكل شجرة: الفكرة الأساسية في النص، وتتفرّع منها التفاصيل. اضغط على الزرار تفتحها، واضغط على أي فرع تقرا شرحه.",
   },
   {
-    id: "timeline", mood: "hi", target: '[aria-controls="md-jr-panel-timeline"]',
+    id: "timeline", mood: "point", target: '[aria-controls="md-jr-panel-timeline"]',
     title: "الخط الزمني 🕒",
     body: "بيرتّب الأحداث بالتاريخ، فتفهم إيه حصل قبل إيه وإيه جه بعده.",
   },
@@ -200,7 +208,7 @@ export const LESSON_STEPS = [
     body: "جاوب على الأسئلة وهتعرف صح ولا غلط على طول. لازم تجاوب على سؤال واحد على الأقل عشان تكمّل للعنوان اللي بعده، ولو غلطت تقدر تعيد المحاولة.",
   },
   {
-    id: "complete", mood: "hi", target: ".md-jr-bar .md-jr-btn--primary",
+    id: "complete", mood: "point", target: ".md-jr-bar .md-jr-btn--primary",
     title: "خلّصت العنوان؟",
     body: "اضغط «أكمل العنوان» والعنوان اللي بعده هيتفتح. «السابق» و«التالي» بيرجّعوك وبيقدّموك براحتك.",
   },
@@ -213,18 +221,28 @@ export const LESSON_STEPS = [
 ];
 
 /* ---------------------------------------------------------------- avatar */
-// صورة الشخصية زي ما هي (من غير قص). لو الصورة مش موجودة بيظهر حرف «م» بدالها.
-export function GuideAvatar({ size = 64 }) {
-  const [broken, setBroken] = useState(false);
+// صورة الشخصية حسب الشعور (pose). لو الصورة مش موجودة بيظهر حرف «م» بدالها.
+export function GuideAvatar({ size = 64, pose = "hi" }) {
+  const [broken, setBroken] = useState({});
+  const bad = !!broken[pose];
   return (
-    <span className="mg-avatar" style={{ height: size, minWidth: broken ? size : undefined }} aria-hidden="true">
-      {broken ? <b>م</b> : <img src={GUIDE_AVATAR_SRC} alt="" style={{ height: size }} onError={() => setBroken(true)} />}
+    <span className="mg-avatar" style={{ height: size, minWidth: bad ? size : undefined }} aria-hidden="true">
+      {bad ? <b>م</b> : <img key={pose} src={guideSrc(pose)} alt="" style={{ height: size }} onError={() => setBroken((p) => ({ ...p, [pose]: true }))} />}
     </span>
   );
 }
 
+// تحميل مسبق لكل الصور عشان تتبدّل من غير وميض
+function usePreloadGuide(active) {
+  useEffect(() => {
+    if (!active || typeof Image === "undefined") return;
+    Object.keys(GUIDE_IMAGES).forEach((k) => { const im = new Image(); im.src = guideSrc(k); });
+  }, [active]);
+}
+
 /* --------------------------------------------------------------- help btn */
 export function GuideHelpButton({ onClick, hidden = false }) {
+  usePreloadGuide(true);
   const [broken, setBroken] = useState(false);
   if (hidden || typeof document === "undefined") return null;
   return createPortal(
@@ -232,7 +250,7 @@ export function GuideHelpButton({ onClick, hidden = false }) {
       <style>{GUIDE_CSS}</style>
       <button type="button" className="mg-ball" onClick={onClick} aria-label="افتح دليل المنصة" title="دليل المنصة">
         <span className="mg-ball-pic">
-          {broken ? <span className="mg-ball-fb" aria-hidden="true">م</span> : <img src={GUIDE_AVATAR_SRC} alt="" onError={() => setBroken(true)} />}
+          {broken ? <span className="mg-ball-fb" aria-hidden="true">م</span> : <img src={guideSrc("hi")} alt="" onError={() => setBroken(true)} />}
           <span className="mg-ball-q" aria-hidden="true">؟</span>
         </span>
       </button>
@@ -278,6 +296,7 @@ const clamp = (v, a, b) => Math.max(a, Math.min(b, v));
 
 /* ------------------------------------------------------------------ guide */
 export default function MadarGuide({ open, steps, ctx = {}, onClose, topSafe = 76 }) {
+  usePreloadGuide(open);
   const [idx, setIdx] = useState(0);
   const [rect, setRect] = useState(null);       // مستطيل العنصر المظلَّل (أو null = كارت في النص)
   const [eligible, setEligible] = useState([]); // أرقام الخطوات اللي هتظهر فعلًا دلوقتي
@@ -453,7 +472,7 @@ export default function MadarGuide({ open, steps, ctx = {}, onClose, topSafe = 7
         key={step.id}
       >
         <div className="mg-head">
-          <GuideAvatar size={isMobile ? 64 : 80} />
+          <GuideAvatar size={isMobile ? 70 : 92} pose={waiting ? "think" : step.mood || "hi"} />
           <div className="mg-headtext">
             <p className="mg-who">{GUIDE_NAME} · دليلك في مَدَار</p>
             <h2 id="mg-title" className="mg-title">{typeof step.title === "function" ? step.title(ctx) : step.title}</h2>
@@ -526,14 +545,14 @@ const GUIDE_CSS = `
 .mg-btn:focus-visible, .mg-x:focus-visible, .mg-skip:focus-visible { outline: 3px solid var(--mg-teal); outline-offset: 2px; }
 
 .mg-avatar { flex: none; display: inline-flex; align-items: center; justify-content: center; }
-.mg-avatar img { width: auto; max-width: 110px; object-fit: contain; display: block; }
+.mg-avatar img { width: auto; max-width: 130px; object-fit: contain; display: block; background: transparent; }
 .mg-avatar b { font-size: 1.4rem; color: var(--mg-deep); font-weight: 900; }
-.mg-ball { position: fixed; left: 16px; bottom: 16px; z-index: 85; display: flex; flex-direction: column; align-items: flex-start; gap: 8px; padding: 0; border: 0; background: transparent; cursor: pointer; font-family: inherit; text-align: right; transition: transform .15s ease; }
-.mg-ball:hover { transform: translateY(-2px); }
+.mg-ball { position: fixed; left: 16px; bottom: 16px; z-index: 85; display: flex; flex-direction: column; align-items: flex-start; gap: 8px; padding: 0; border: 0; background: transparent; cursor: pointer; font-family: inherit; text-align: right; }
 .mg-ball:focus-visible { outline: 3px solid var(--duo-green, #147A6A); outline-offset: 4px; border-radius: 14px; }
-.mg-ball-pic { position: relative; display: block; height: 68px; min-width: 52px; margin-inline-start: 6px; filter: drop-shadow(0 8px 10px rgba(14, 83, 72, .35)); }
-.mg-ball-pic img { height: 100%; width: auto; max-width: 90px; object-fit: contain; display: block; }
+.mg-ball-pic { position: relative; display: block; height: 68px; min-width: 52px; margin-inline-start: 6px; }
+.mg-ball-pic img { height: 100%; width: auto; max-width: 90px; object-fit: contain; display: block; background: transparent; }
 .mg-ball-fb { display: flex; align-items: center; justify-content: center; width: 52px; height: 52px; border-radius: 50%; background: var(--duo-green-s, #E0F1EC); border: 3px solid var(--duo-green, #147A6A); font-weight: 900; font-size: 1.3rem; color: var(--duo-green-ink, #0E5348); }
+/* الصور JPG خلفيتها بيضا: في الوضع الفاتح بتدوب مع الخلفية، وفي الداكن بتتحط على بلاطة بيضا مدوّرة */
 .mg-ball-q { position: absolute; top: -2px; right: -4px; width: 22px; height: 22px; border-radius: 50%; background: var(--duo-green, #147A6A); color: #fff; border: 2px solid #fff; font-size: .8rem; font-weight: 900; display: flex; align-items: center; justify-content: center; line-height: 1; }
 
 @keyframes mg-in { from { opacity: 0; transform: translateY(8px); } to { opacity: 1; transform: none; } }

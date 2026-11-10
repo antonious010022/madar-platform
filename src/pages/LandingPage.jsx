@@ -1,10 +1,45 @@
-import { useEffect, useLayoutEffect, useState, useRef } from "react";
+import { createContext, useContext, useEffect, useLayoutEffect, useState, useRef } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import AuthModal from "../components/AuthModal";
 import Footer from "../components/Footer";
 import { useAuth } from "../lib/hooks";
-import { ArrowLeft, Sparkles, Compass, Menu, X, Sun, Moon, ChevronDown, LogIn } from "lucide-react";
+import { ArrowLeft, ArrowRight, Sparkles, Compass, Menu, X, Sun, Moon, ChevronDown, LogIn } from "lucide-react";
 import { SocialIcon } from "../components/SocialIcons.jsx";
+
+/* ===== اللغة / Language (عربي – English) ===== */
+const LANG_KEY = "madar_lang_v1";
+const LangCtx = createContext("ar");
+const B = (ar, en) => ({ ar, en });
+function makeT(lang) {
+  const fn = (ar, en) => {
+    if (ar && typeof ar === "object" && Object.prototype.hasOwnProperty.call(ar, "ar")) return ar[lang] ?? ar.ar;
+    return lang === "en" && en !== undefined ? en : ar;
+  };
+  fn.lang = lang;
+  return fn;
+}
+function useT() { return makeT(useContext(LangCtx)); }
+function detectLang() {
+  try {
+    const saved = localStorage.getItem(LANG_KEY);
+    if (saved === "ar" || saved === "en") return saved;
+  } catch { /* التخزين غير متاح */ }
+  const nav = typeof navigator !== "undefined" ? (navigator.languages && navigator.languages[0]) || navigator.language || "" : "";
+  return String(nav).toLowerCase().startsWith("ar") ? "ar" : "en";
+}
+function useLang() {
+  const [lang, setLang] = useState(detectLang);
+  useEffect(() => { document.documentElement.setAttribute("lang", lang); }, [lang]);
+  const choose = (next) => {
+    setLang(next);
+    try { localStorage.setItem(LANG_KEY, next); } catch { /* ignore */ }
+  };
+  return [lang, choose];
+}
+function Arrow(props) {
+  const lang = useContext(LangCtx);
+  return lang === "ar" ? <ArrowLeft {...props} /> : <ArrowRight {...props} />;
+}
 const SCATTER = [
   { key: "quiz", title: "أسئلة تفاعلية", sub: "تحقق من فهمك", tone: "rose", x: -42, y: -36, rot: "-6deg", dur: "4.2s", delay: "0s" },
   { key: "mindmap", title: "خريطة ذهنية", sub: "ربط الأفكار", tone: "sky", x: 42, y: -36, rot: "6deg", dur: "4.8s", delay: "0.2s" },
@@ -89,6 +124,15 @@ function ThemeIcon({ dark }) {
 
 /* Components and design styles adapted from the supplied "تعليمات وطريقة التشغيل.txt". */
 const ROTATING_WORDS = ["تفاعلية", "حديثة", "ذكية", "متكاملة", "عربية"];
+const ROTATING_EN = ["Interactive", "Modern", "Smart", "Integrated", "Arabic"];
+const SCATTER_EN = {
+  quiz: ["Interactive quizzes", "Check your understanding"],
+  mindmap: ["Mind map", "Connect ideas"],
+  timeline: ["Timeline", "Order the events"],
+  explain: ["Visual explainer", "Clear content"],
+  recall: ["Quick recall", "Key points"],
+  review: ["Final review", "Lesson summary"],
+};
 /* Floating scatter cards — feature pills around the hero */
 const SCATTER_CARDS = [
   {
@@ -159,6 +203,7 @@ const TONE_BG_DARK = {
   teal: "#13332C", emerald: "#1A2E20", violet: "#241D2E",
 };
 function FloatingScatterCards({ theme }) {
+  const tr = useT();
   return (
     <div className="md-scatter-layer" aria-hidden="true">
       {SCATTER_CARDS.map((c) => {
@@ -182,8 +227,8 @@ function FloatingScatterCards({ theme }) {
                 {c.icon}
               </span>
               <div className="md-scatter-text">
-                <span className="md-scatter-title">{c.title}</span>
-                <span className="md-scatter-sub">{c.sub}</span>
+                <span className="md-scatter-title">{tr(c.title, SCATTER_EN[c.key][0])}</span>
+                <span className="md-scatter-sub">{tr(c.sub, SCATTER_EN[c.key][1])}</span>
               </div>
             </div>
           </div>
@@ -193,6 +238,7 @@ function FloatingScatterCards({ theme }) {
   );
 }
 function RotatingWord({ theme }) {
+  const tr = useT();
   const [idx, setIdx] = useState(0);
   const timerRef = useRef();
   useEffect(() => {
@@ -213,69 +259,87 @@ function RotatingWord({ theme }) {
             key={w}
             className={`hero-rotor-word${i === idx ? " is-active" : ""}`}
           >
-            {w}
+            {tr(w, ROTATING_EN[i])}
           </span>
         ))}
       </span>
-      <span className="hero-rotor-sr">{ROTATING_WORDS[idx]}</span>
+      <span className="hero-rotor-sr">{tr(ROTATING_WORDS[idx], ROTATING_EN[idx])}</span>
     </span>
   );
 }
-function HeroSection({ theme, onStart, onFeatures }) {
+// شخصية المنصة (public/photo/5554.png) — بتظهر أول الصفحة وبتطمّن الطالب
+const GUIDE_IMGS = {
+  hi: encodeURI("/photo/He hands over1.png"),
+  cheer: encodeURI("/photo/Happy3.png"),
+};
+const GUIDE_NAME = "تونة";
+
+function HeroSection({ theme, onStart }) {
+  const tr = useT();
   return (
     <section id="top" className="md-hero md-hero--scatter">
       <style>{HERO_CSS}</style>
+      <div className="lp-hero-glow" aria-hidden="true" />
       <FloatingScatterCards theme={theme} />
       <div className="md-hero-core">
-        {/* Badge with rotating word */}
         <div className="hero-badge-line">
-          <span className="hero-badge-text">منصة تعليمية</span>
+          <span className="hero-badge-text">{tr("منصة تعليمية", "educational platform")}</span>
           <RotatingWord theme={theme} />
         </div>
-        {/* Main headline */}
         <h1 className="hero-headline">
-          <span className="hero-headline-lead">لم نطوّر تجربة التعليم…</span>{" "}
-          <span className="hero-headline-accent">أعدنا بناءها.</span>
+          <span className="hero-headline-lead">{tr("الدراسات الاجتماعية…", "Social Studies…")}</span>
+          <span className="hero-headline-accent">
+            {tr("تفهمها مش تحفظها!", "Understand it, don’t memorize it!")}
+            <svg className="hero-underline" viewBox="0 0 300 14" preserveAspectRatio="none" aria-hidden="true">
+              <path d="M3 9 C 55 2, 110 13, 170 6 S 265 3, 297 8" />
+            </svg>
+          </span>
         </h1>
-        {/* Description */}
         <p className="hero-desc">
-          مَدَار منصة تعليمية عربية تعيد تعريف طريقة دراسة الدراسات الاجتماعية.
-          بدلًا من الاعتماد على الحفظ، نساعد الطالب على{" "}
-          <strong>الفهم الحقيقي</strong> من خلال شرح مرئي، خرائط ذهنية،
-          خطوط زمنية، وأسئلة تفاعلية — كل ما تحتاجه لتفهم الدرس في مكان واحد.
+          {tr.lang === "ar" ? (
+            <>
+              مَدَار منصة تعليمية عربية تعيد تعريف طريقة دراسة الدراسات الاجتماعية.
+              بدلًا من الاعتماد على الحفظ، نساعد الطالب على{" "}
+              <strong>الفهم الحقيقي</strong> من خلال شرح مرئي، خرائط ذهنية،
+              خطوط زمنية، وأسئلة تفاعلية — كل ما تحتاجه لتفهم الدرس في مكان واحد.
+            </>
+          ) : (
+            <>
+              Madar is an Arabic educational platform that rethinks how Social Studies is learned.
+              Instead of relying on memorization, we help students reach{" "}
+              <strong>real understanding</strong> through visual explanations, mind maps,
+              timelines and interactive questions — everything you need to understand a lesson in one place.
+            </>
+          )}
         </p>
-        {/* Buttons */}
         <div className="hero-actions">
           <button type="button" onClick={onStart} className="hero-btn hero-btn-primary">
-            <span>ابدأ التعلّم</span>
-            <ArrowLeft size={18} />
-          </button>
-          <button type="button" onClick={onFeatures} className="hero-btn hero-btn-secondary">
-            <Sparkles size={17} />
-            <span>اكتشف مميزات مَدَار</span>
+            <span>{tr("ابدأ التعلّم", "Start learning")}</span>
+            <Arrow size={18} />
           </button>
         </div>
-        {/* Trust indicators */}
+        <p className="hero-hint">{tr("اختر صفّك وابدأ أول درس الآن.", "Pick your grade and start your first lesson.")}</p>
         <div className="hero-trust">
           <div className="hero-trust-item">
             <Compass size={16} />
-            <span>منهج متكامل</span>
+            <span>{tr("منهج متكامل", "Complete curriculum")}</span>
           </div>
           <div className="hero-trust-dot" />
           <div className="hero-trust-item">
-            <span className="hero-trust-num">٩</span>
-            <span>مميزات تعلّم</span>
+            <span className="hero-trust-num">{tr("٩", "9")}</span>
+            <span>{tr("مميزات تعلّم", "learning features")}</span>
           </div>
           <div className="hero-trust-dot" />
           <div className="hero-trust-item">
-            <span className="hero-trust-num">RTL</span>
-            <span>عربية بالكامل</span>
+            <span className="hero-trust-num">{tr("١٠٠٪", "100%")}</span>
+            <span>{tr("عربية بالكامل", "Arabic-first")}</span>
           </div>
         </div>
       </div>
     </section>
   );
 }
+
 const HERO_CSS = `
 .md-hero--scatter {
   position: relative;
@@ -922,34 +986,36 @@ const D = (ms) => ({ "--d": `${ms}ms` });
 const fs = (n) => ({ fontSize: `calc(${n}px * var(--ts, 1))` });
 
 function SampleChip() {
+  const tr = useT();
   return (
     <g className="msc-rise" style={D(1100)}>
       <rect x="18" y="212" width="74" height="16" rx="8" fill="var(--lp-surface)" stroke="var(--lp-line)" strokeWidth="1.4" />
-      <text x="55" y="223.5" textAnchor="middle" style={fs(9.5)} fontWeight="800" fill="var(--lp-muted)">شكل توضيحي</text>
+      <text x="55" y="223.5" textAnchor="middle" style={fs(9.5)} fontWeight="800" fill="var(--lp-muted)">{tr("شكل توضيحي", "Illustration")}</text>
     </g>
   );
 }
 
 function ProgressArt({ ac }) {
+  const tr = useT();
   const rows = [
-    { y: 40, t: "الوحدة الأولى", w: 120, d: 450 },
-    { y: 78, t: "الوحدة الثانية", w: 72, d: 600 },
-    { y: 116, t: "الوحدة الثالثة", w: 30, d: 750 },
+    { y: 40, t: B("الوحدة الأولى", "Unit 1"), w: 120, d: 450 },
+    { y: 78, t: B("الوحدة الثانية", "Unit 2"), w: 72, d: 600 },
+    { y: 116, t: B("الوحدة الثالثة", "Unit 3"), w: 30, d: 750 },
   ];
   return (
-    <svg className="msc-art" viewBox="0 0 400 230" role="img" aria-label="لوحة الطالب: حلقة تقدّم، وتقدّم كل وحدة، وزر استكمال من حيث توقفت">
+    <svg className="msc-art" viewBox="0 0 400 230" role="img" aria-label={tr("لوحة الطالب: حلقة تقدّم، وتقدّم كل وحدة، وزر استكمال من حيث توقفت", "Student dashboard: a progress ring, progress for each unit, and a continue-where-you-left-off button")}>
       <g className="msc-pop" style={D(0)}>
         <rect x="14" y="12" width="372" height="148" rx="18" fill="var(--lp-surface)" stroke={ac} strokeWidth="2.5" />
       </g>
       <circle cx="84" cy="86" r="40" fill="none" stroke="var(--lp-line)" strokeWidth="11" />
       <path className="msc-draw" pathLength="1" d="M84 46 A40 40 0 1 1 47.75 102.9" fill="none" stroke={ac} strokeWidth="11" strokeLinecap="round" style={D(250)} />
       <g className="msc-pop" style={D(500)}>
-        <text x="84" y="84" textAnchor="middle" style={fs(14)} fontWeight="900" fill="var(--lp-text)">تقدّمي</text>
-        <text x="84" y="101" textAnchor="middle" style={fs(10.5)} fontWeight="700" fill="var(--lp-muted)">في الفصل</text>
+        <text x="84" y="84" textAnchor="middle" style={fs(14)} fontWeight="900" fill="var(--lp-text)">{tr("تقدّمي", "My progress")}</text>
+        <text x="84" y="101" textAnchor="middle" style={fs(10.5)} fontWeight="700" fill="var(--lp-muted)">{tr("في الفصل", "this term")}</text>
       </g>
       {rows.map((r) => (
-        <g key={r.t} className="msc-rise" style={D(r.d)}>
-          <text x="368" y={r.y} textAnchor="start" style={fs(12)} fontWeight="800" fill="var(--lp-text)">{r.t}</text>
+        <g key={tr(r.t)} className="msc-rise" style={D(r.d)}>
+          <text x="368" y={r.y} textAnchor="start" style={fs(12)} fontWeight="800" fill="var(--lp-text)">{tr(r.t)}</text>
           <rect x="176" y={r.y + 8} width="192" height="9" rx="4.5" fill="var(--lp-line)" />
           <rect x={368 - r.w} y={r.y + 8} width={r.w} height="9" rx="4.5" fill={ac} />
         </g>
@@ -958,7 +1024,7 @@ function ProgressArt({ ac }) {
         <rect x="14" y="172" width="372" height="36" rx="18" fill={ac} />
         <circle cx="362" cy="190" r="12" fill="#fff" />
         <path d="M358.5 184.5l9 5.5-9 5.5z" fill={ac} />
-        <text x="340" y="195" textAnchor="start" style={fs(13)} fontWeight="800" fill="#fff">استكمل من حيث توقفت</text>
+        <text x="340" y="195" textAnchor="start" style={fs(13)} fontWeight="800" fill="#fff">{tr("استكمل من حيث توقفت", "Continue learning")}</text>
         <path d="M34 183l-7 7 7 7" fill="none" stroke="#fff" strokeWidth="2.6" strokeLinecap="round" strokeLinejoin="round" />
       </g>
       <SampleChip />
@@ -967,8 +1033,9 @@ function ProgressArt({ ac }) {
 }
 
 function DykArt({ ac }) {
+  const tr = useT();
   return (
-    <svg className="msc-art" viewBox="0 0 400 230" role="img" aria-label="بطاقة هل تعلم؟ تعرض معلومة قصيرة جديدة في كل زيارة">
+    <svg className="msc-art" viewBox="0 0 400 230" role="img" aria-label={tr("بطاقة هل تعلم؟ تعرض معلومة قصيرة جديدة في كل زيارة", "A “Did you know?” card showing a new short fact on every visit")}>
       <g className="msc-pop" style={D(0)}>
         <rect x="40" y="20" width="320" height="156" rx="22" fill="var(--lp-surface)" stroke={ac} strokeWidth="2.5" />
       </g>
@@ -980,13 +1047,13 @@ function DykArt({ ac }) {
           <path d="M12 3a6 6 0 0 0-3.5 10.9V16h7v-2.1A6 6 0 0 0 12 3z" />
         </g>
       </g>
-      <text className="msc-rise" style={{ ...D(350), ...fs(20) }} x="288" y="70" textAnchor="start" fontWeight="900" fill="var(--lp-text)">هل تعلم؟</text>
+      <text className="msc-rise" style={{ ...D(350), ...fs(20) }} x="288" y="70" textAnchor="start" fontWeight="900" fill="var(--lp-text)">{tr("هل تعلم؟", "Did you know?")}</text>
       {[{ y: 100, w: 264 }, { y: 120, w: 232 }, { y: 140, w: 160 }].map((l, i) => (
         <rect key={l.y} className="msc-rise" style={D(550 + i * 140)} x={336 - l.w} y={l.y} width={l.w} height="9" rx="4.5" fill="var(--lp-line)" />
       ))}
       <g className="msc-pop" style={D(1000)}>
         <rect x="104" y="188" width="192" height="30" rx="15" fill={ac} />
-        <text x="200" y="207.5" textAnchor="middle" style={fs(12.5)} fontWeight="800" fill="#fff">معلومة جديدة في كل زيارة</text>
+        <text x="200" y="207.5" textAnchor="middle" style={fs(12.5)} fontWeight="800" fill="#fff">{tr("معلومة جديدة في كل زيارة", "A new fact each visit")}</text>
       </g>
       <circle className="msc-pop" style={D(1150)} cx="56" cy="40" r="4.5" fill={ac} opacity=".55" />
       <circle className="msc-pop" style={D(1250)} cx="350" cy="196" r="4" fill={ac} opacity=".45" />
@@ -995,15 +1062,16 @@ function DykArt({ ac }) {
 }
 
 function ScenesArt({ ac }) {
+  const tr = useT();
   const rows = [
-    { t: "العنوان 1", s: "done" },
-    { t: "العنوان 2", s: "done" },
-    { t: "العنوان 3", s: "current" },
-    { t: "العنوان 4", s: "locked" },
-    { t: "العنوان 5", s: "locked" },
+    { t: B("العنوان 1", "Section 1"), s: "done" },
+    { t: B("العنوان 2", "Section 2"), s: "done" },
+    { t: B("العنوان 3", "Section 3"), s: "current" },
+    { t: B("العنوان 4", "Section 4"), s: "locked" },
+    { t: B("العنوان 5", "Section 5"), s: "locked" },
   ];
   return (
-    <svg className="msc-art" viewBox="0 0 400 230" role="img" aria-label="قائمة عناوين الدرس: مكتمل وحالي ومقفل، مع شريط عدد العناوين المكتملة">
+    <svg className="msc-art" viewBox="0 0 400 230" role="img" aria-label={tr("قائمة عناوين الدرس: مكتمل وحالي ومقفل، مع شريط عدد العناوين المكتملة", "Lesson sections list: completed, current and locked, with a completed-sections bar")}>
       <g className="msc-pop" style={D(0)}>
         <rect x="14" y="12" width="216" height="192" rx="16" fill="var(--lp-surface)" stroke="var(--lp-line)" strokeWidth="2" />
         <rect x="104" y="30" width="110" height="12" rx="6" fill={ac} />
@@ -1011,23 +1079,23 @@ function ScenesArt({ ac }) {
           <rect key={l.y} x={214 - l.w} y={l.y} width={l.w} height="8" rx="4" fill="var(--lp-line)" />
         ))}
         <rect x="26" y="168" width="76" height="26" rx="13" fill={ac} />
-        <text x="64" y="185" textAnchor="middle" style={fs(11.5)} fontWeight="800" fill="#fff">التالي</text>
+        <text x="64" y="185" textAnchor="middle" style={fs(11.5)} fontWeight="800" fill="#fff">{tr("التالي", "Next")}</text>
         <rect x="130" y="168" width="84" height="26" rx="13" fill="var(--lp-surface)" stroke={ac} strokeWidth="1.8" />
-        <text x="172" y="185" textAnchor="middle" style={fs(11.5)} fontWeight="800" fill="var(--lp-text)">السابق</text>
+        <text x="172" y="185" textAnchor="middle" style={fs(11.5)} fontWeight="800" fill="var(--lp-text)">{tr("السابق", "Previous")}</text>
       </g>
 
       <g className="msc-pop" style={D(150)}>
         <rect x="240" y="12" width="146" height="192" rx="16" fill="var(--lp-surface)" stroke={ac} strokeWidth="2.5" />
       </g>
-      <text className="msc-rise" style={{ ...D(250), ...fs(11) }} x="313" y="34" textAnchor="middle" fontWeight="800" fill="var(--lp-muted)">عناوين الدرس</text>
+      <text className="msc-rise" style={{ ...D(250), ...fs(11) }} x="313" y="34" textAnchor="middle" fontWeight="800" fill="var(--lp-muted)">{tr("عناوين الدرس", "Lesson sections")}</text>
       {rows.map((r, i) => {
         const y = 44 + i * 25;
         const cur = r.s === "current";
         const done = r.s === "done";
         return (
-          <g key={r.t} className="msc-rise" style={D(350 + i * 110)}>
+          <g key={tr(r.t)} className="msc-rise" style={D(350 + i * 110)}>
             <rect x="248" y={y} width="130" height="21" rx="10.5" fill={cur ? ac : done ? ac : "var(--lp-surface)"} fillOpacity={cur ? 1 : done ? 0.14 : 1} stroke={r.s === "locked" ? "var(--lp-line)" : "none"} strokeWidth="1.6" strokeDasharray={r.s === "locked" ? "3 3" : undefined} />
-            <text x="368" y={y + 14.5} textAnchor="start" style={fs(11)} fontWeight="800" fill={cur ? "#fff" : "var(--lp-text)"} opacity={r.s === "locked" ? 0.55 : 1}>{r.t}</text>
+            <text x="368" y={y + 14.5} textAnchor="start" style={fs(11)} fontWeight="800" fill={cur ? "#fff" : "var(--lp-text)"} opacity={r.s === "locked" ? 0.55 : 1}>{tr(r.t)}</text>
             {done && (
               <g>
                 <circle cx="260" cy={y + 10.5} r="7" fill={ac} />
@@ -1050,7 +1118,7 @@ function ScenesArt({ ac }) {
         );
       })}
       <g className="msc-rise" style={D(1000)}>
-        <text x="378" y="182" textAnchor="start" style={fs(10)} fontWeight="800" fill="var(--lp-muted)">عناوين مكتملة</text>
+        <text x="378" y="182" textAnchor="start" style={fs(10)} fontWeight="800" fill="var(--lp-muted)">{tr("عناوين مكتملة", "Sections done")}</text>
         <rect x="248" y="190" width="130" height="7" rx="3.5" fill="var(--lp-line)" />
         <rect x="318" y="190" width="60" height="7" rx="3.5" fill={ac} />
       </g>
@@ -1060,8 +1128,9 @@ function ScenesArt({ ac }) {
 }
 
 function WordsArt({ ac }) {
+  const tr = useT();
   return (
-    <svg className="msc-art" viewBox="0 0 400 230" role="img" aria-label="كلمة مظلّلة داخل الشرح تفتح نافذة بتعريف وصورة ورابط إلى المشهد المرتبط">
+    <svg className="msc-art" viewBox="0 0 400 230" role="img" aria-label={tr("كلمة مظلّلة داخل الشرح تفتح نافذة بتعريف وصورة ورابط إلى المشهد المرتبط", "A highlighted word in the explanation opens a popup with a definition, a picture and a link to the related scene")}>
       <g className="msc-pop" style={D(0)}>
         <rect x="14" y="10" width="372" height="116" rx="16" fill="var(--lp-surface)" stroke="var(--lp-line)" strokeWidth="2" />
       </g>
@@ -1085,19 +1154,20 @@ function WordsArt({ ac }) {
         <rect x="138" y="148" width="120" height="8" rx="4" fill="var(--lp-line)" />
         <rect x="128" y="166" width="130" height="8" rx="4" fill="var(--lp-line)" />
         <rect x="114" y="184" width="242" height="24" rx="12" fill={ac} />
-        <text x="235" y="200" textAnchor="middle" style={fs(11)} fontWeight="800" fill="#fff">الانتقال إلى المشهد المرتبط ↗</text>
+        <text x="235" y="200" textAnchor="middle" style={fs(11)} fontWeight="800" fill="#fff">{tr("الانتقال إلى المشهد المرتبط ↗", "Go to related scene ↗")}</text>
       </g>
     </svg>
   );
 }
 
 function VideoArt({ ac }) {
+  const tr = useT();
   return (
-    <svg className="msc-art" viewBox="0 0 400 230" role="img" aria-label="مشغّل فيديو داخل صفحة الدرس، ثم الانتقال إلى الشرح والخرائط والأسئلة">
+    <svg className="msc-art" viewBox="0 0 400 230" role="img" aria-label={tr("مشغّل فيديو داخل صفحة الدرس، ثم الانتقال إلى الشرح والخرائط والأسئلة", "A video player inside the lesson page, then on to the explanation, maps and questions")}>
       <g className="msc-pop" style={D(0)}>
         <rect x="40" y="10" width="320" height="170" rx="18" fill="#263B35" stroke={ac} strokeWidth="2.5" />
       </g>
-      <text className="msc-rise" style={{ ...D(250), ...fs(12) }} x="344" y="36" textAnchor="start" fontWeight="800" fill="#fff">🎥 شاهد فيديو الدرس</text>
+      <text className="msc-rise" style={{ ...D(250), ...fs(12) }} x="344" y="36" textAnchor="start" fontWeight="800" fill="#fff">{tr("🎥 شاهد فيديو الدرس", "🎥 Watch the lesson video")}</text>
       <circle className="msc-pulse" cx="200" cy="96" r="30" fill="none" stroke={ac} strokeWidth="2.4" />
       <g className="msc-pop" style={D(400)}>
         <circle cx="200" cy="96" r="30" fill={ac} />
@@ -1107,10 +1177,10 @@ function VideoArt({ ac }) {
         <rect x="64" y="154" width="272" height="7" rx="3.5" fill="#fff" opacity=".25" />
         <rect className="msc-bar" x="64" y="154" width="272" height="7" rx="3.5" fill={ac} />
       </g>
-      {[{ x: 276, t: "الشرح المكتوب", d: 800 }, { x: 156, t: "الخرائط", d: 950 }, { x: 36, t: "الأسئلة", d: 1100 }].map((c) => (
-        <g key={c.t} className="msc-pop" style={D(c.d)}>
+      {[{ x: 276, t: B("الشرح المكتوب", "Written notes"), d: 800 }, { x: 156, t: B("الخرائط", "Maps"), d: 950 }, { x: 36, t: B("الأسئلة", "Questions"), d: 1100 }].map((c) => (
+        <g key={tr(c.t)} className="msc-pop" style={D(c.d)}>
           <rect x={c.x} y="194" width="88" height="24" rx="12" fill="var(--lp-surface)" stroke={ac} strokeWidth="1.8" />
-          <text x={c.x + 44} y="210" textAnchor="middle" style={fs(11)} fontWeight="800" fill="var(--lp-text)">{c.t}</text>
+          <text x={c.x + 44} y="210" textAnchor="middle" style={fs(11)} fontWeight="800" fill="var(--lp-text)">{tr(c.t)}</text>
         </g>
       ))}
       <path className="msc-flow" d="M270 206h-16" stroke={ac} strokeWidth="2.4" strokeLinecap="round" fill="none" />
@@ -1120,16 +1190,17 @@ function VideoArt({ ac }) {
 }
 
 function MindArt({ ac }) {
+  const tr = useT();
   const nodes = [
-    { x: 39, y: 24, w: 86, t: "الموقع", e: "M170 96 Q140 52 125 41", d: 350 },
-    { x: 275, y: 24, w: 86, t: "المظاهر", e: "M230 96 Q262 52 275 41", d: 480 },
-    { x: 303, y: 100, w: 90, t: "المناخ", e: "M238 115 Q272 115 303 115", d: 610 },
-    { x: 275, y: 176, w: 86, t: "السكان", e: "M230 134 Q262 178 275 191", d: 740 },
-    { x: 39, y: 176, w: 86, t: "الموارد", e: "M170 134 Q140 178 125 191", d: 870 },
-    { x: 3, y: 100, w: 106, t: "السبب والنتيجة", e: "M164 115 Q134 115 106 115", d: 1000 },
+    { x: 39, y: 24, w: 86, t: B("الموقع", "Location"), e: "M170 96 Q140 52 125 41", d: 350 },
+    { x: 275, y: 24, w: 86, t: B("المظاهر", "Features"), e: "M230 96 Q262 52 275 41", d: 480 },
+    { x: 303, y: 100, w: 90, t: B("المناخ", "Climate"), e: "M238 115 Q272 115 303 115", d: 610 },
+    { x: 275, y: 176, w: 86, t: B("السكان", "Population"), e: "M230 134 Q262 178 275 191", d: 740 },
+    { x: 39, y: 176, w: 86, t: B("الموارد", "Resources"), e: "M170 134 Q140 178 125 191", d: 870 },
+    { x: 3, y: 100, w: 106, t: B("السبب والنتيجة", "Cause & effect"), e: "M164 115 Q134 115 106 115", d: 1000 },
   ];
   return (
-    <svg className="msc-art" viewBox="0 0 400 230" role="img" aria-label="خريطة ذهنية: فكرة رئيسية تتفرع منها خمسة أفرع">
+    <svg className="msc-art" viewBox="0 0 400 230" role="img" aria-label={tr("خريطة ذهنية: فكرة رئيسية تتفرع منها خمسة أفرع", "Mind map: a main idea with five branches")}>
       <g className="msc-spin-slow" style={{ transformOrigin: "200px 115px" }}>
         <circle cx="200" cy="115" r="78" fill="none" stroke={ac} strokeWidth="1.4" strokeDasharray="2 8" opacity=".5" />
         <circle cx="278" cy="115" r="4.5" fill={ac} opacity=".7" />
@@ -1140,13 +1211,13 @@ function MindArt({ ac }) {
       <circle className="msc-pulse" cx="200" cy="115" r="38" fill="none" stroke={ac} strokeWidth="2" />
       <g className="msc-pop" style={D(0)}>
         <circle cx="200" cy="115" r="38" fill={ac} />
-        <text x="200" y="111" textAnchor="middle" style={fs(13)} fontWeight="800" fill="#fff">العالم</text>
-        <text x="200" y="128" textAnchor="middle" style={fs(13)} fontWeight="800" fill="#fff">الجديد</text>
+        <text x="200" y="111" textAnchor="middle" style={fs(13)} fontWeight="800" fill="#fff">{tr("العالم", "New")}</text>
+        <text x="200" y="128" textAnchor="middle" style={fs(13)} fontWeight="800" fill="#fff">{tr("الجديد", "World")}</text>
       </g>
       {nodes.map((n) => (
-        <g key={n.t} className="msc-pop" style={D(n.d)}>
+        <g key={tr(n.t)} className="msc-pop" style={D(n.d)}>
           <rect x={n.x} y={n.y} width={n.w} height="32" rx="16" fill="var(--lp-surface)" stroke={ac} strokeWidth="2.2" />
-          <text x={n.x + n.w / 2} y={n.y + 20.5} textAnchor="middle" style={fs(12)} fontWeight="800" fill="var(--lp-text)">{n.t}</text>
+          <text x={n.x + n.w / 2} y={n.y + 20.5} textAnchor="middle" style={fs(12)} fontWeight="800" fill="var(--lp-text)">{tr(n.t)}</text>
         </g>
       ))}
       <circle className="msc-pop" style={D(1150)} cx="26" cy="64" r="5" fill={ac} opacity=".55" />
@@ -1157,14 +1228,15 @@ function MindArt({ ac }) {
 }
 
 function TimelineArt({ ac }) {
+  const tr = useT();
   const ev = [
-    { x: 330, up: true, y: "1492", t: "وصول كولومبس", d: 300 },
-    { x: 240, up: false, y: "1519", t: "رحلة ماجلان", d: 500 },
-    { x: 150, up: true, y: "1607", t: "تأسيس جيمستاون", d: 700 },
-    { x: 60, up: false, y: "1776", t: "إعلان الاستقلال", d: 900 },
+    { x: 330, up: true, y: "1492", t: B("وصول كولومبس", "Columbus arrives"), d: 300 },
+    { x: 240, up: false, y: "1519", t: B("رحلة ماجلان", "Magellan’s voyage"), d: 500 },
+    { x: 150, up: true, y: "1607", t: B("تأسيس جيمستاون", "Jamestown founded"), d: 700 },
+    { x: 60, up: false, y: "1776", t: B("إعلان الاستقلال", "Independence"), d: 900 },
   ];
   return (
-    <svg className="msc-art" viewBox="0 0 400 230" role="img" aria-label="خط زمني بأربعة أحداث مرتبة">
+    <svg className="msc-art" viewBox="0 0 400 230" role="img" aria-label={tr("خط زمني بأربعة أحداث مرتبة", "A timeline of four events in order")}>
       <path className="msc-draw" pathLength="1" d="M388 118H18" stroke={ac} strokeWidth="4" strokeLinecap="round" fill="none" opacity=".35" />
       <path d="M388 118H18" stroke={ac} strokeWidth="2" strokeLinecap="round" strokeDasharray="1 8" fill="none" />
       <path d="M28 108l-12 10 12 10" stroke={ac} strokeWidth="3.4" strokeLinecap="round" strokeLinejoin="round" fill="none" />
@@ -1184,7 +1256,7 @@ function TimelineArt({ ac }) {
             <g className="msc-pop" style={D(e.d + 120)}>
               <rect x={e.x - 56} y={cy} width="112" height="54" rx="14" fill="var(--lp-surface)" stroke={ac} strokeWidth="2" />
               <text x={e.x} y={cy + 24} textAnchor="middle" style={fs(16)} fontWeight="900" fill={ac}>{e.y}</text>
-              <text x={e.x} y={cy + 42} textAnchor="middle" style={fs(11)} fontWeight="800" fill="var(--lp-text)">{e.t}</text>
+              <text x={e.x} y={cy + 42} textAnchor="middle" style={fs(11)} fontWeight="800" fill="var(--lp-text)">{tr(e.t)}</text>
             </g>
           </g>
         );
@@ -1194,23 +1266,24 @@ function TimelineArt({ ac }) {
 }
 
 function QuizArt({ ac }) {
+  const tr = useT();
   const rows = [
-    { y: 84, t: "المحيط الأطلسي", cls: "msc-q-wrong" },
-    { y: 126, t: "المحيط الهادئ", cls: "msc-q-right" },
-    { y: 168, t: "المحيط الهندي", cls: "" },
+    { y: 84, t: B("المحيط الأطلسي", "Atlantic"), cls: "msc-q-wrong" },
+    { y: 126, t: B("المحيط الهادئ", "Pacific"), cls: "msc-q-right" },
+    { y: 168, t: B("المحيط الهندي", "Indian"), cls: "" },
   ];
   return (
-    <svg className="msc-art" viewBox="0 0 400 230" role="img" aria-label="سؤال باختيارات والإجابة الصحيحة تُضيء">
+    <svg className="msc-art" viewBox="0 0 400 230" role="img" aria-label={tr("سؤال باختيارات والإجابة الصحيحة تُضيء", "A multiple-choice question with the correct answer lighting up")}>
       <g className="msc-pop" style={D(0)}>
         <rect x="24" y="12" width="352" height="54" rx="16" fill={ac} />
-        <text x="200" y="35" textAnchor="middle" style={fs(11)} fontWeight="800" fill="#fff" opacity=".85">سؤال ١</text>
-        <text x="200" y="54" textAnchor="middle" style={fs(13.5)} fontWeight="800" fill="#fff">أي المحيطات يقع غرب أمريكا الجنوبية؟</text>
+        <text x="200" y="35" textAnchor="middle" style={fs(11)} fontWeight="800" fill="#fff" opacity=".85">{tr("سؤال ١", "Question 1")}</text>
+        <text x="200" y="54" textAnchor="middle" style={fs(13.5)} fontWeight="800" fill="#fff">{tr("أي المحيطات يقع غرب أمريكا الجنوبية؟", "Which ocean is west of South America?")}</text>
       </g>
       {rows.map((r, i) => (
-        <g key={r.t} className="msc-rise" style={D(250 + i * 140)}>
+        <g key={tr(r.t)} className="msc-rise" style={D(250 + i * 140)}>
           <rect className={r.cls} x="24" y={r.y} width="352" height="36" rx="12" fill="var(--lp-surface)" stroke="var(--lp-line)" strokeWidth="2" />
           <circle cx="352" cy={r.y + 18} r="9" fill="var(--lp-surface)" stroke={ac} strokeWidth="2" />
-          <text x="332" y={r.y + 23} textAnchor="start" style={fs(13)} fontWeight="800" fill="var(--lp-text)">{r.t}</text>
+          <text x="332" y={r.y + 23} textAnchor="start" style={fs(13)} fontWeight="800" fill="var(--lp-text)">{tr(r.t)}</text>
           {r.cls === "msc-q-right" && (
             <g className="msc-q-check">
               <circle cx="352" cy={r.y + 18} r="9" fill={ac} />
@@ -1220,7 +1293,7 @@ function QuizArt({ ac }) {
           {r.cls === "msc-q-right" && (
             <g className="msc-q-chip">
               <rect x="30" y={r.y + 6} width="64" height="24" rx="12" fill={ac} />
-              <text x="62" y={r.y + 22.5} textAnchor="middle" style={fs(11.5)} fontWeight="800" fill="#fff">أحسنت!</text>
+              <text x="62" y={r.y + 22.5} textAnchor="middle" style={fs(11.5)} fontWeight="800" fill="#fff">{tr("أحسنت!", "Well done!")}</text>
             </g>
           )}
         </g>
@@ -1234,34 +1307,35 @@ function QuizArt({ ac }) {
 }
 
 function RecallArt({ ac }) {
+  const tr = useT();
   const rows = [
-    { y: 46, t: "تعريف من درس سابق", s: "shown", d: 250 },
-    { y: 82, t: "معلومة سبق أن درستها", s: "shown", d: 380 },
-    { y: 118, t: "فكرة يبني عليها الدرس", s: "reveal", d: 510 },
+    { y: 46, t: B("تعريف من درس سابق", "Definition from a past lesson"), s: "shown", d: 250 },
+    { y: 82, t: B("معلومة سبق أن درستها", "Something you’ve studied"), s: "shown", d: 380 },
+    { y: 118, t: B("فكرة يبني عليها الدرس", "An idea the lesson builds on"), s: "reveal", d: 510 },
     { y: 154, t: "", s: "hidden", d: 640 },
   ];
   return (
-    <svg className="msc-art" viewBox="0 0 400 230" role="img" aria-label="تذكّر سريع قبل الدرس: نقاط من دروس سابقة، بعضها ظاهر وبعضها يظهر عند الضغط بعد التفكير">
+    <svg className="msc-art" viewBox="0 0 400 230" role="img" aria-label={tr("تذكّر سريع قبل الدرس: نقاط من دروس سابقة، بعضها ظاهر وبعضها يظهر عند الضغط بعد التفكير", "Quick recall before the lesson: points from earlier lessons, some shown and some revealed on tap after thinking")}>
       <g className="msc-pop" style={D(0)}>
         <rect x="14" y="10" width="372" height="188" rx="16" fill="var(--lp-surface)" stroke={ac} strokeWidth="2.4" />
-        <text x="372" y="33" textAnchor="start" style={fs(13)} fontWeight="900" fill={ac}>تذكّر سريع</text>
+        <text x="372" y="33" textAnchor="start" style={fs(13)} fontWeight="900" fill={ac}>{tr("تذكّر سريع", "Quick recall")}</text>
         <rect x="28" y="19" width="84" height="20" rx="10" fill={ac} />
-        <text x="70" y="33" textAnchor="middle" style={fs(10.5)} fontWeight="800" fill="#fff">قبل الدرس</text>
+        <text x="70" y="33" textAnchor="middle" style={fs(10.5)} fontWeight="800" fill="#fff">{tr("قبل الدرس", "Before the lesson")}</text>
       </g>
       {rows.map((r, i) => (
         <g key={i} className="msc-rise" style={D(r.d)}>
           {r.s !== "hidden" && <rect x="28" y={r.y} width="344" height="28" rx="14" fill={ac} opacity=".1" />}
-          {r.s !== "hidden" && <text x="358" y={r.y + 18} textAnchor="start" style={fs(11.5)} fontWeight="800" fill="var(--lp-text)">{r.t}</text>}
+          {r.s !== "hidden" && <text x="358" y={r.y + 18} textAnchor="start" style={fs(11.5)} fontWeight="800" fill="var(--lp-text)">{tr(r.t)}</text>}
           {r.s === "reveal" && (
             <g className="msc-cover">
               <rect x="28" y={r.y} width="344" height="28" rx="14" fill="var(--lp-surface)" stroke={ac} strokeWidth="1.4" strokeDasharray="3 3" />
-              <text x="200" y={r.y + 18} textAnchor="middle" style={fs(10)} fontWeight="800" fill="var(--lp-muted)">نقطة 3 — اضغط لإظهارها بعد ما تفكّر</text>
+              <text x="200" y={r.y + 18} textAnchor="middle" style={fs(10)} fontWeight="800" fill="var(--lp-muted)">{tr("نقطة 3 — اضغط لإظهارها بعد ما تفكّر", "Point 3 — tap to reveal after you think")}</text>
             </g>
           )}
           {r.s === "hidden" && (
             <g>
               <rect x="28" y={r.y} width="344" height="28" rx="14" fill="var(--lp-surface)" stroke={ac} strokeWidth="1.4" strokeDasharray="3 3" />
-              <text x="200" y={r.y + 18} textAnchor="middle" style={fs(10)} fontWeight="800" fill="var(--lp-muted)">نقطة 4 — اضغط لإظهارها بعد ما تفكّر</text>
+              <text x="200" y={r.y + 18} textAnchor="middle" style={fs(10)} fontWeight="800" fill="var(--lp-muted)">{tr("نقطة 4 — اضغط لإظهارها بعد ما تفكّر", "Point 4 — tap to reveal after you think")}</text>
             </g>
           )}
         </g>
@@ -1274,10 +1348,27 @@ function RecallArt({ ac }) {
 const ARTS = { progress: ProgressArt, dyk: DykArt, scenes: ScenesArt, words: WordsArt, video: VideoArt, mind: MindArt, timeline: TimelineArt, quiz: QuizArt, recall: RecallArt };
 
 const PHASES = [
-  { id: "dash", title: "من لوحتك", sub: "أول ما تفتح المنصة", ids: ["progress", "dyk"] },
+  { id: "dash", title: "لوحتك", sub: "أول ما تفتح المنصة", ids: ["progress", "dyk"] },
   { id: "before", title: "قبل الدرس", sub: "استرجع ما سيُبنى عليه الدرس", ids: ["recall"] },
   { id: "lesson", title: "داخل الدرس", sub: "من الفيديو إلى الأسئلة والمراجعة", ids: ["video", "scenes", "words", "mind", "timeline", "quiz"] },
 ];
+
+const FEATURES_EN = {
+  progress: { title: "Track your progress", text: "See how many lessons you’ve finished and how many are left in the term, and continue where you stopped.", tag: "Track", points: ["Your progress percentage and completed lessons", "Progress for each unit separately", "Your progress is saved so you can continue from where you stopped"] },
+  dyk: { title: "Did you know?", text: "A short fact on every visit that sticks in your memory effortlessly.", tag: "Lock it in", points: ["A new fact from your curriculum on every visit", "Tailored to your stage and grade"] },
+  scenes: { title: "Lessons split into sections", text: "Every lesson is split into short sections; finish each one and track your progress inside the lesson.", tag: "Break down", points: ["A list of lesson sections beside the content", "A bar showing completed sections", "The next section unlocks after you finish the previous one"] },
+  words: { title: "Interactive explanation words", text: "Key words in the explanation are highlighted: tap one to see what clarifies its meaning.", tag: "Understand", points: ["A definition or note that explains the word", "A picture that clarifies the word if it isn’t clear"] },
+  video: { title: "Lesson explainer video", text: "Watch the lesson video inside the lesson page itself without leaving the platform.", tag: "Watch", points: ["Video inside the lesson page, no external link", "Press play to start watching", "Then continue with the explanation, maps and questions"] },
+  mind: { title: "Mind maps", text: "Connect ideas together so you remember and understand them easily.", tag: "Connect", points: ["A main idea that branches into details", "Links that show how information relates", "Easier, faster recall"] },
+  timeline: { title: "Timelines", text: "Follow events in their correct order through time.", tag: "Order", points: ["Events in the correct order", "Each event linked to what came before", "See the big picture at once"] },
+  quiz: { title: "Questions & review", text: "Test your understanding as you go and review before moving on.", tag: "Review", points: ["Test your understanding step by step", "Review before moving on", "Lock in what you’ve learned"] },
+  recall: { title: "Quick recall", text: "Before you start the lesson, recall what it builds on.", tag: "Recall", points: ["Definitions and concepts from earlier that the lesson builds on", "Old information you need to remember before starting", "Think about each point, then tap to check"] },
+};
+const PHASES_EN = {
+  dash: { title: "Your dashboard", sub: "As soon as you open the platform" },
+  before: { title: "Before the lesson", sub: "Recall what the lesson builds on" },
+  lesson: { title: "Inside the lesson", sub: "From video to questions and review" },
+};
 
 function useSeen(ref) {
   const [seen, setSeen] = useState(false);
@@ -1293,60 +1384,456 @@ function useSeen(ref) {
   return [seen, live];
 }
 
-function JourneyStep({ f, n, isDark }) {
-  const ref = useRef(null);
-  const [seen, live] = useSeen(ref);
-  const ac = isDark ? f.darkAc : f.ac;
-  const Art = ARTS[f.id];
-  return (
-    <li ref={ref} className={`lp-step${live ? " is-live" : ""}`} style={{ "--ac": ac, "--soft": f.soft }}>
-      <span className="lp-step-node" aria-hidden="true">{n}</span>
-      <div className="lp-step-copy">
-        <h4 className="msc-card is-on" style={{ "--ac": ac, "--soft": f.soft, "--ink": f.ink, "--fd": f.fd, "--dl": f.dl, "--rot": f.rot }}>
-          <span className="msc-card-bar" aria-hidden="true" />
-          <span className="msc-card-icon" aria-hidden="true">{f.icon}</span>
-          <span className="msc-card-body"><b>{f.title}</b><small>{f.text}</small></span>
-          <span className="msc-card-tag">{f.tag}</span>
-        </h4>
-        <ul>{f.points.map((p) => <li key={p}><i aria-hidden="true">✓</i>{p}</li>)}</ul>
-      </div>
-      <div className="lp-step-canvas">{seen && <Art ac={ac} />}</div>
-    </li>
-  );
-}
+const RAIL_ICONS = {
+  progress: ["M3 3v18h18", "M7 15l4-4 3 3 5-6"],
+  dyk: ["M9 18h6", "M10 21h4", "M12 3a6 6 0 0 0-3.5 10.9V16h7v-2.1A6 6 0 0 0 12 3z"],
+  recall: ["M3 12a9 9 0 0 1 15-6.7L21 8", "M21 3v5h-5", "M21 12a9 9 0 0 1-15 6.7L3 16", "M3 21v-5h5"],
+  video: "M15 10l4.553-2.276A1 1 0 0121 8.618v6.764a1 1 0 01-1.447.894L15 14M5 18h8a2 2 0 002-2V8a2 2 0 00-2-2H5a2 2 0 00-2 2v8a2 2 0 002 2z",
+  scenes: ["M4 6h16", "M4 12h16", "M4 18h10"],
+  words: "M8 10h.01M12 10h.01M16 10h.01M9 16H5a2 2 0 01-2-2V6a2 2 0 012-2h14a2 2 0 012 2v8a2 2 0 01-2 2h-5l-5 5v-5z",
+  mind: "M11 4a2 2 0 114 0v1a2 2 0 01-2 2 2 2 0 01-2-2V4zm-6 8a2 2 0 114 0v1a2 2 0 01-2 2 2 2 0 01-2-2v-1zm12 0a2 2 0 114 0v1a2 2 0 01-2 2 2 2 0 01-2-2v-1zM4 20h16",
+  timeline: "M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z",
+  quiz: "M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-6 9l2 2 4-4",
+};
+
+const AR_DIGITS = ["٠", "١", "٢", "٣", "٤", "٥", "٦", "٧", "٨", "٩"];
+const numL = (n, lang) => (lang === "ar" ? String(n).replace(/\d/g, (d) => AR_DIGITS[d]) : String(n));
 
 function MadarJourney({ isDark }) {
+  const lang = useContext(LangCtx);
+  const tr = makeT(lang);
   const byId = Object.fromEntries(FEATURES.map((f) => [f.id, f]));
-  let n = 0;
+  const order = PHASES.flatMap((ph) => ph.ids);
+  const phaseOf = {};
+  PHASES.forEach((ph, pi) => ph.ids.forEach((id) => { phaseOf[id] = { ph, pi }; }));
+  const listRef = useRef(null);
+  const [active, setActive] = useState(0);
+  const [shown, setShown] = useState(() => new Set([0]));
+
+  // البطاقات تتراكم فوق بعضها أثناء التمرير: كل بطاقة تصغر قليلًا حين تغطيها التالية
+  useEffect(() => {
+    const list = listRef.current;
+    if (!list) return undefined;
+    let raf = 0;
+    const run = () => {
+      raf = 0;
+      const desk = window.matchMedia?.("(min-width: 900px)").matches;
+      const reduce = window.matchMedia?.("(prefers-reduced-motion: reduce)").matches;
+      const items = Array.from(list.children);
+      // على الموبايل نفعّل التراكم فقط لو أطول كارت يتّسع في الشاشة، وإلا يبقى سكرول عادي
+      let stack = desk;
+      if (!desk) {
+        const tallest = Math.max(0, ...items.map((el) => (el.firstElementChild ? el.firstElementChild.offsetHeight : 0)));
+        stack = tallest > 0 && tallest + 170 <= window.innerHeight;
+      }
+      list.dataset.stack = stack ? "1" : "0";
+      let act = 0;
+      const seenNow = [];
+      items.forEach((el, i) => {
+        const r = el.getBoundingClientRect();
+        if (r.top < window.innerHeight * 0.92) seenNow.push(i);
+        let t = 0;
+        if (stack) {
+          const stickyTop = parseFloat(window.getComputedStyle(el).top) || 0;
+          if (r.top <= stickyTop + 6) act = i;
+          const nxt = items[i + 1];
+          if (nxt && !reduce) {
+            const d = nxt.getBoundingClientRect().top - stickyTop;
+            t = Math.min(1, Math.max(0, 1 - d / el.offsetHeight));
+          }
+        } else if (r.top < window.innerHeight * 0.5) {
+          act = i;
+        }
+        el.style.setProperty("--t", t.toFixed(3));
+        el.dataset.covered = t > 0.55 ? "1" : "0";
+      });
+      setActive((prev) => (prev === act ? prev : act));
+      setShown((prev) => {
+        if (seenNow.every((i) => prev.has(i))) return prev;
+        const next = new Set(prev);
+        seenNow.forEach((i) => next.add(i));
+        return next;
+      });
+    };
+    const onScroll = () => { if (!raf) raf = window.requestAnimationFrame(run); };
+    run();
+    window.addEventListener("scroll", onScroll, { passive: true });
+    window.addEventListener("resize", onScroll);
+    return () => {
+      window.removeEventListener("scroll", onScroll);
+      window.removeEventListener("resize", onScroll);
+      if (raf) window.cancelAnimationFrame(raf);
+    };
+  }, []);
+
+  const go = (i) => {
+    const el = listRef.current?.children[i];
+    if (!el) return;
+    const reduce = window.matchMedia?.("(prefers-reduced-motion: reduce)").matches;
+    el.scrollIntoView({ behavior: reduce ? "auto" : "smooth", block: "start" });
+  };
+
   return (
-    <section id="features" className="lp-journey" aria-labelledby="lp-journey-title">
-      <div className="lp-journey-head">
-        <span className="lp-badge"><span className="lp-badge-dot" />تعلّم بطريقة تفاعلية</span>
-        <h2 id="lp-journey-title">رحلتك على مَدَار خطوة بخطوة</h2>
-        <p>هذه هي المنصة نفسها: كل خطوة هنا ترسم عنصرًا موجودًا فعلًا في واجهة الطالب، بالترتيب الذي ستمر به.</p>
-      </div>
-      {PHASES.map((ph) => (
-        <div key={ph.id} className="lp-phase">
-          <div className="lp-phase-head"><h3>{ph.title}</h3><span>{ph.sub}</span></div>
-          <ol className="lp-steps">
-            {ph.ids.map((id) => <JourneyStep key={id} f={byId[id]} n={++n} isDark={isDark} />)}
-          </ol>
-        </div>
-      ))}
+    <section id="services" className="lp-journey" aria-labelledby="lp-journey-title">
+      <Reveal className="lp-journey-head">
+        <span className="lp-badge"><span className="lp-badge-dot" />{tr("خدماتنا التعليمية", "Our learning services")}</span>
+        <h2 id="lp-journey-title">{tr("رحلتك على مَدَار خطوة بخطوة", "Your Madar journey, step by step")}</h2>
+        <p>{tr("هذه هي المنصة نفسها: كل خطوة هنا ترسم عنصرًا موجودًا فعلًا في واجهة الطالب، بالترتيب الذي ستمر به.", "This is the platform itself: every step here illustrates something that really exists in the student interface, in the order you’ll meet it.")}</p>
+      </Reveal>
+
+      <Reveal as="nav" className="lp-rail" aria-label={tr("مميزات التعلّم التسعة", "The nine learning features")}>
+        <ol>
+          {order.map((id, i) => {
+            const f = byId[id];
+            const fl = lang === "en" ? { ...f, ...FEATURES_EN[id] } : f;
+            return (
+              <li key={id}>
+                <a href={`#feat-${id}`} className={i === active ? "is-active" : ""} onClick={(e) => { e.preventDefault(); go(i); }} style={{ "--ac": isDark ? f.darkAc : f.ac, "--soft": f.soft }}>
+                  <span className="lp-rail-ico"><Ico d={RAIL_ICONS[id]} size={16} /></span>
+                  <b>{fl.title}</b>
+                  <span className="lp-rail-n">{numL(i + 1, lang)}</span>
+                </a>
+              </li>
+            );
+          })}
+        </ol>
+      </Reveal>
+
+      <span id="dashboard" className="lp-anchor" aria-hidden="true" />
+      <ol className="lp-sk" ref={listRef}>
+        {order.map((id, i) => {
+          const base = byId[id];
+          const f = lang === "en" ? { ...base, ...FEATURES_EN[id] } : base;
+          const ac = isDark ? base.darkAc : base.ac;
+          const Art = ARTS[id];
+          const { ph, pi } = phaseOf[id];
+          return (
+            <li key={id} id={`feat-${id}`} className="lp-sk-slide" style={{ "--i": i }}>
+              <article className="lp-sk-card" style={{ "--ac": ac, "--soft": base.soft }}>
+                <span className="lp-sk-n" aria-hidden="true">{numL(i + 1, lang)}</span>
+                <div className="lp-sk-copy">
+                  <span className="lp-sk-phase"><i>{numL(pi + 1, lang)}</i>{tr(ph.title, PHASES_EN[ph.id].title)}</span>
+                  <h4 className="msc-card is-on" style={{ "--ac": ac, "--soft": base.soft, "--ink": base.ink, "--fd": base.fd, "--dl": base.dl, "--rot": base.rot }}>
+                    <span className="msc-card-bar" aria-hidden="true" />
+                    <span className="msc-card-icon" aria-hidden="true">{base.icon}</span>
+                    <span className="msc-card-body"><b>{f.title}</b><small>{f.text}</small></span>
+                    <span className="msc-card-tag">{f.tag}</span>
+                  </h4>
+                  <ul className="lp-sk-points">{f.points.map((pt) => <li key={pt}><i aria-hidden="true">✓</i>{pt}</li>)}</ul>
+                </div>
+                <div className="lp-window lp-sk-art">
+                  <div className="lp-window-bar" aria-hidden="true"><i /><i /><i /><span>{tr("واجهة الطالب", "Student interface")}</span></div>
+                  <div className="lp-step-canvas">{shown.has(i) && <Art ac={ac} />}</div>
+                </div>
+              </article>
+            </li>
+          );
+        })}
+      </ol>
     </section>
   );
 }
 
-/* وجهة زر "تصفّح المناهج": شاشة اختيار الصف (الأول/الثاني/الثالث الإعدادي) داخل المنصة.
-   غيّر القيمة دي لمسار شاشة الصفوف الفعلي عندك. */
-const GRADES_PATH = "/student#grades";
+/* ===== أقسام مدمجة من madar_educational_platform.html ===== */
+function Ico({ d, size = 24 }) {
+  return (
+    <svg viewBox="0 0 24 24" width={size} height={size} fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+      {(Array.isArray(d) ? d : [d]).map((p) => <path key={p} d={p} />)}
+    </svg>
+  );
+}
+const ICON_PATHS = {"home": "M3 11l9-8 9 8M5 10v10h14V10", "info": ["M12 3a9 9 0 1 0 0 18 9 9 0 0 0 0-18z", "M12 11v5M12 8h.01"], "spark": "M12 3l1.9 5.1L19 10l-5.1 1.9L12 17l-1.9-5.1L5 10l5.1-1.9zM19 16l.7 1.8 1.8.7-1.8.7L19 21l-.7-1.8-1.8-.7 1.8-.7z", "phone": "M3 5a2 2 0 012-2h3.28a1 1 0 01.948.684l1.498 4.493a1 1 0 01-.502 1.21l-2.257 1.13a11.042 11.042 0 005.516 5.516l1.13-2.257a1 1 0 011.21-.502l4.493 1.498a1 1 0 01.684.949V19a2 2 0 01-2 2h-1C9.716 21 3 14.284 3 6V5z", "help": ["M12 3a9 9 0 1 0 0 18 9 9 0 0 0 0-18z", "M9.5 9.5a2.5 2.5 0 1 1 3.5 2.3c-.6.3-1 .9-1 1.5M12 17h.01"], "chat": "M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z", "chevron": "M19 9l-7 7-7-7", "pin": ["M12 21s-7-6.2-7-11a7 7 0 1 1 14 0c0 4.8-7 11-7 11z", "M12 12a2 2 0 1 0 0-4 2 2 0 0 0 0 4z"], "wa": "M21 12a9 9 0 01-13.4 7.8L3 21l1.3-4.4A9 9 0 1121 12z", "mail": ["M3 5h18v14H3z", "M3 7l9 6 9-6"], "dash": ["M3 3v18h18", "M7 15l4-4 3 3 5-6"], "cap": ["M22 10 12 5 2 10l10 5 10-5z", "M6 12v5c3 2 9 2 12 0v-5"], "family": ["M17 21v-2a4 4 0 00-4-4H7a4 4 0 00-4 4v2", "M10 11a4 4 0 100-8 4 4 0 000 8z", "M21 21v-2a4 4 0 00-3-3.87", "M16 3.13a4 4 0 010 7.75"], "board": ["M3 4h18v12H3z", "M12 16v4", "M8 20h8"]};
+const NAV = [
+  { id: "top", ar: "الرئيسية", en: "Home", icon: ICON_PATHS.home },
+  { id: "about", ar: "عن المنصة", en: "About", icon: ICON_PATHS.info },
+  { id: "services", ar: "خدماتنا التعليمية", en: "Our services", icon: ICON_PATHS.spark },
+  { id: "dashboard", ar: "لوحتك", en: "Your dashboard", icon: ICON_PATHS.dash },
+  { id: "contact", ar: "تواصل معنا", en: "Contact us", icon: ICON_PATHS.mail },
+  { id: "faq", ar: "الأسئلة الشائعة", en: "FAQ", icon: ICON_PATHS.help },
+];
+const AUDIENCE = [
+  { id: "students", icon: ICON_PATHS.cap, ar: { t: "الطلاب", d: "فهم ممتع لكل درس بدلًا من الحفظ المرهق." }, en: { t: "Students", d: "Enjoyable understanding of every lesson instead of exhausting memorization." } },
+];
+const FAQS = [{"ar": {"q": "ما هي المراحل الدراسية التي تستهدفها منصة مَدَار؟", "a": "تستهدف المنصة بصورة متخصصة طلاب المرحلة الإعدادية في جمهورية مصر العربية (الصف الأول، الثاني، والثالث الإعدادي)، كما تخدم أولياء الأمور الراغبين في متابعة أبنائهم، والمعلمين المهتمين بتطوير أساليب تدريس الدراسات الاجتماعية."}, "en": {"q": "Which grade levels does Madar target?", "a": "The platform specifically targets middle school students in Egypt (1st, 2nd and 3rd Prep), while also supporting parents tracking progress and teachers looking for updated social studies techniques."}}, {"ar": {"q": "كيف تساعد المنصة على الفهم بدلاً من الحفظ الجاف؟", "a": "تعتمد منصة مَدَار على أدوات وشروح مبتكرة تشمل الخرائط الذهنية التفاعلية لتلخيص الدروس، والخطوط الزمنية لترتيب الأحداث التاريخية، والخرائط الجغرافية التوضيحية لربط الأسباب بالنتائج بشكل بصري ممتع."}, "en": {"q": "How does Madar promote understanding over memorization?", "a": "Madar uses interactive mind maps to summarize concepts, timelines to put history in context, and visual maps to link causes with outcomes naturally."}}, {"ar": {"q": "هل المنهج المتاح يطابق المنهج المصري الرسمي؟", "a": "نعم، المحتوى التعليمي منظم تمامًا وفقًا للمناهج الدراسية المصرية الرسمية المعرفية لطلاب المرحلة الإعدادية، ويشمل التدريبات والمراجعات النهائية للعام الدراسي."}, "en": {"q": "Is the content aligned with the official Egyptian curriculum?", "a": "Yes. All educational content is organized according to the official Egyptian Ministry of Education middle school curriculum."}}, {"ar": {"q": "هل الخدمات متاحة في جميع محافظات مصر؟", "a": "نعم، منصة مَدَار هي منصة رقمية متاحة بالكامل عبر الإنترنت في جميع محافظات جمهورية مصر العربية، ويمكن للطلاب الوصول إليها في أي وقت ومن أي مكان عبر الرابط المخصص للطالب."}, "en": {"q": "Is Madar accessible from all Egyptian governorates?", "a": "Yes. Madar is a 100% online platform accessible any time from any governorate in Egypt through the student portal."}}];
+const CONTACT_EMAIL = "aantounyouss@gmail.com";
+
+function Reveal({ as: Tag = "div", className = "", delay = 0, children, ...rest }) {
+  const ref = useRef(null);
+  const [shown, setShown] = useState(false);
+  useEffect(() => {
+    const el = ref.current;
+    const reduce = typeof window !== "undefined" && window.matchMedia?.("(prefers-reduced-motion: reduce)").matches;
+    if (!el || reduce || typeof IntersectionObserver === "undefined") { setShown(true); return undefined; }
+    const io = new IntersectionObserver(([e]) => { if (e.isIntersecting) { setShown(true); io.disconnect(); } }, { threshold: 0.1 });
+    io.observe(el);
+    return () => io.disconnect();
+  }, []);
+  return (
+    <Tag ref={ref} className={`lp-reveal${shown ? " is-in" : ""} ${className}`.trim()} style={{ "--rv": `${delay}ms` }} {...rest}>
+      {children}
+    </Tag>
+  );
+}
+
+function SecHead({ id, badge, title, sub }) {
+  return (
+    <Reveal className="lp-sec-head">
+      <span className="lp-sec-badge">{badge}</span>
+      <h2 id={id} className="lp-sec-title">{title}</h2>
+      {sub && <p className="lp-sec-sub">{sub}</p>}
+    </Reveal>
+  );
+}
+
+function AboutSection() {
+  const tr = useT();
+  const stu = tr(AUDIENCE[0]);
+  const grades = [
+    { n: tr("١", "1"), t: tr("الصف الأول الإعدادي", "1st Prep (Grade 7)") },
+    { n: tr("٢", "2"), t: tr("الصف الثاني الإعدادي", "2nd Prep (Grade 8)") },
+    { n: tr("٣", "3"), t: tr("الصف الثالث الإعدادي", "3rd Prep (Grade 9)") },
+  ];
+  return (
+    <section id="about" className="lp-sec" aria-labelledby="lp-about-title">
+      <Reveal className="lp-about">
+        <div className="lp-about-copy">
+          <span className="lp-sec-badge">{tr("عن المنصة", "About the platform")}</span>
+          <h2 id="lp-about-title" className="lp-about-title">{tr("لمن صُنعت مَدَار؟", "Who is Madar built for?")}</h2>
+          <div className="lp-about-student">
+            <span className="lp-about-ico"><Ico d={AUDIENCE[0].icon} size={26} /></span>
+            <div><h3>{stu.t}</h3><p>{stu.d}</p></div>
+          </div>
+          <p className="lp-about-stage">
+            <b>{tr("مَدَار مخصّصة لطلاب المرحلة الإعدادية.", "Madar is built for middle-school students.")}</b>{" "}
+            {tr("افتح المناهج، اختر صفك الدراسي، وتابع دروسك خطوة بخطوة داخل المنصة.", "Open the curricula, pick your grade, and follow your lessons step by step inside the platform.")}
+          </p>
+        </div>
+        <ol id="curricula" className="lp-path" aria-label={tr("الصفوف الدراسية", "Grades")}>
+          {grades.map((g, i) => (
+            <li key={i} className={`lp-path-item lp-path-${i + 1}`} style={{ "--i": i }}>
+              <span className="lp-path-n" aria-hidden="true">{g.n}</span>
+              <b>{g.t}</b>
+            </li>
+          ))}
+        </ol>
+      </Reveal>
+    </section>
+  );
+}
+
+/* ===== فهم حقيقي لا حفظ: لوحة تتحوّل من معلومات مبعثرة إلى سلسلة أسباب ونتائج ===== */
+const U_CHAIN = [
+  { x: 72, y: 14, sx: 22, sy: 20, rot: -7, ar: "موقع متوسط بين القارات", en: "A central spot between continents" },
+  { x: 57, y: 38, sx: 74, sy: 32, rot: 6, ar: "ممرات مائية مهمة", en: "Key waterways" },
+  { x: 43, y: 62, sx: 30, sy: 60, rot: 4, ar: "مرور حركة التجارة", en: "Trade passes through" },
+  { x: 28, y: 86, sx: 74, sy: 82, rot: -6, ar: "أهمية استراتيجية", en: "Strategic importance" },
+];
+const U_LINKS = [B("لذلك", "so"), B("وبالتالي", "which means"), B("ومن ثَمّ", "hence")];
+const U_MIDS = [[64.5, 26.1], [50, 50], [35.5, 73.9]];
+const uPath = (a, b) => {
+  const x1 = a.x * 4, y1 = a.y * 3.2, x2 = b.x * 4, y2 = b.y * 3.2, my = (y1 + y2) / 2;
+  return `M${x1} ${y1} C ${x1} ${my}, ${x2} ${my}, ${x2} ${y2}`;
+};
+
+function UnderstandSection() {
+  const tr = useT();
+  const [mode, setMode] = useState("memo");
+  const [auto, setAuto] = useState(true);
+  const ref = useRef(null);
+  const [, live] = useSeen(ref);
+  const get = mode === "get";
+  useEffect(() => {
+    if (!auto || !live) return undefined;
+    if (window.matchMedia?.("(prefers-reduced-motion: reduce)").matches) return undefined;
+    const id = window.setTimeout(() => setMode((m) => (m === "memo" ? "get" : "memo")), mode === "memo" ? 2600 : 5600);
+    return () => window.clearTimeout(id);
+  }, [auto, live, mode]);
+  const pick = (m) => { setAuto(false); setMode(m); };
+  return (
+    <Reveal as="section" id="understand" className="lp-und" aria-labelledby="lp-und-title">
+      <div className="lp-und-panel">
+        <div className="lp-und-copy">
+          <span className="lp-und-badge"><i />{tr("فهم حقيقي لا حفظ", "Real understanding, not memorization")}</span>
+          <h2 id="lp-und-title" className="lp-und-title">
+            {tr("افهمها", "Understand it")}
+            <span>{tr("واربط المعلومات ببعضها", "and connect the dots")}</span>
+          </h2>
+          <p className="lp-und-desc">
+            {tr(
+              "مَدَار تساعدك على فهم أحداث التاريخ وأسرار الجغرافيا بطريقة مبسّطة ومرئية، وتربط الأسباب بالنتائج؛ حتى تستوعب الدرس وتستطيع الإجابة عن سؤال: لماذا؟ لا مجرد حفظ الإجابة.",
+              "Madar helps you understand historical events and the secrets of geography in a simple, visual way, linking causes to results — so you grasp the lesson and can answer “why?”, not just memorize the answer.",
+            )}
+          </p>
+          <ul className="lp-und-list">
+            <li><i>✓</i><span>{tr("افهم أسباب الأحداث التاريخية ونتائجها بدل حفظها دون ترابط.", "Understand the causes and results of historical events instead of memorizing them in isolation.")}</span></li>
+            <li><i>✓</i><span>{tr("اربط المعلومات الجغرافية وافهم أهمية المواقع والموارد والممرات المائية.", "Connect geographic facts and understand why locations, resources and waterways matter.")}</span></li>
+            <li><i>✓</i><span>{tr("راجع أفكار الدرس وعلاقاته من خلال الشرح المرئي والخرائط الذهنية والأسئلة، وفقًا للمحتوى المتاح فعلًا في المنصة.", "Review the lesson’s ideas and how they relate through visual explanations, mind maps and questions, based on the content actually available on the platform.")}</span></li>
+          </ul>
+        </div>
+
+        <div className="lp-und-stage">
+          <div className={`lp-und-switch${get ? " is-get" : ""}`} role="radiogroup" aria-label={tr("طريقة الدراسة", "Study style")}>
+            <span className="lp-und-thumb" aria-hidden="true" />
+            <button type="button" role="radio" aria-checked={!get} className={!get ? "is-on" : ""} onClick={() => pick("memo")}>{tr("حفظ", "Memorize")}</button>
+            <button type="button" role="radio" aria-checked={get} className={get ? "is-on" : ""} onClick={() => pick("get")}>{tr("فهم", "Understand")}</button>
+          </div>
+          <div className={`lp-und-board${get ? " is-get" : ""}`} ref={ref} dir="rtl">
+            <svg className="lp-und-lines" viewBox="0 0 400 320" aria-hidden="true">
+              {U_CHAIN.slice(0, -1).map((c, i) => (
+                <path key={i} d={uPath(c, U_CHAIN[i + 1])} pathLength="1" style={{ "--i": i }} />
+              ))}
+            </svg>
+            {U_LINKS.map((l, i) => (
+              <span key={i} className="lp-und-link" style={{ left: `${U_MIDS[i][0]}%`, top: `${U_MIDS[i][1]}%`, "--i": i }}>{tr(l)}</span>
+            ))}
+            {U_CHAIN.map((c, i) => (
+              <span key={i} className="lp-und-chip" style={{ "--x": `${c.x}%`, "--y": `${c.y}%`, "--sx": `${c.sx}%`, "--sy": `${c.sy}%`, "--r": `${c.rot}deg`, "--i": i }}>
+                <i>{tr(["١", "٢", "٣", "٤"][i], String(i + 1))}</i>{tr(c.ar, c.en)}
+              </span>
+            ))}
+          </div>
+          <p className="lp-und-cap" key={mode} aria-live="polite">
+            {get
+              ? tr("حين ترى السبب والنتيجة، تثبت المعلومة في ذهنك.", "When you see cause and effect, the fact sticks.")
+              : tr("معلومات منفصلة… سهلة النسيان.", "Isolated facts… easy to forget.")}
+          </p>
+        </div>
+      </div>
+    </Reveal>
+  );
+}
+
+function MailArt() {
+  return (
+    <svg className="lp-mail-art" viewBox="0 0 200 140" aria-hidden="true">
+      <rect x="20" y="40" width="160" height="90" rx="12" fill="#0A3C34" stroke="rgba(255,255,255,.25)" strokeWidth="2" />
+      <g className="lp-mail-letter">
+        <rect x="42" y="50" width="116" height="76" rx="8" fill="#FFF6E3" />
+        <rect x="58" y="66" width="60" height="7" rx="3.5" fill="#E3C08B" />
+        <rect x="58" y="82" width="84" height="6" rx="3" fill="#C9D8D3" />
+        <rect x="58" y="96" width="64" height="6" rx="3" fill="#C9D8D3" />
+      </g>
+      <path d="M20 56 L100 108 L180 56 V118 a12 12 0 0 1 -12 12 H32 a12 12 0 0 1 -12 -12 Z" fill="#147A6A" />
+      <circle cx="100" cy="106" r="9" fill="#E3C08B" />
+    </svg>
+  );
+}
+
+const WA_NUMBER = "201055706539";
+const WA_DISPLAY = "01055706539";
+
+function ContactSection() {
+  const tr = useT();
+  const [who, setWho] = useState("prep");
+  const whos = [
+    { id: "primary", label: tr("طالب ابتدائي", "Primary student") },
+    { id: "prep", label: tr("طالب إعدادي", "Middle school student") },
+    { id: "secondary", label: tr("طالب ثانوي", "Secondary student") },
+  ];
+  const cur = whos.find((w) => w.id === who) || whos[1];
+  const ar = tr.lang === "ar";
+  const text = ar
+    ? `السلام عليكم منصة مَدَار، أنا ${cur.label} وعندي سؤال: `
+    : `Hello Madar, I am a ${cur.label} and I have a question: `;
+  const wa = `https://wa.me/${WA_NUMBER}?text=${encodeURIComponent(text)}`;
+  return (
+    <section id="contact" className="lp-sec" aria-labelledby="lp-contact-title">
+      <SecHead
+        id="lp-contact-title"
+        badge={tr("تواصل معنا", "Contact us")}
+        title={tr("نحن هنا لدعم رحلتك التعليمية", "We’re here to support your journey")}
+        sub={tr("يسعدنا الإجابة عن استفسارات الطلاب وأولياء الأمور والمعلمين من جميع محافظات مصر.", "We welcome inquiries from students, parents and teachers across all governorates of Egypt.")}
+      />
+      <div className="lp-ct-grid">
+        <div className="lp-ct-info">
+          <div>
+            <h3>{tr("منصة مَدَار الرقمية", "Madar digital platform")}</h3>
+            <p>{tr("خدمات إلكترونية مريحة ومتاحة أونلاين في كافة محافظات جمهورية مصر العربية.", "Convenient online services available across all governorates in Egypt.")}</p>
+            <ul className="lp-ct-list">
+              <li>
+                <span className="lp-ct-ico"><Ico d={ICON_PATHS.phone} size={20} /></span>
+                <div><small>{tr("واتساب", "WhatsApp")}</small><a href={`tel:+${WA_NUMBER}`} dir="ltr">{WA_DISPLAY}</a></div>
+              </li>
+              <li>
+                <span className="lp-ct-ico"><Ico d={ICON_PATHS.mail} size={20} /></span>
+                <div><small>{tr("البريد الإلكتروني", "Email")}</small><a href={`mailto:${CONTACT_EMAIL}`} dir="ltr">{CONTACT_EMAIL}</a></div>
+              </li>
+              <li>
+                <span className="lp-ct-ico"><Ico d={ICON_PATHS.pin} size={20} /></span>
+                <div><small>{tr("نطاق الخدمة", "Service coverage")}</small><span>{tr("جمهورية مصر العربية (أونلاين)", "Arab Republic of Egypt (online)")}</span></div>
+              </li>
+            </ul>
+          </div>
+          <MailArt />
+        </div>
+
+        <div className="lp-ct-form lp-wa">
+          <span className="lp-wa-ico" aria-hidden="true"><Ico d={ICON_PATHS.wa} size={30} /></span>
+          <h3>{tr("عندك سؤال؟ ابعتهولنا على واتساب", "Got a question? Message us on WhatsApp")}</h3>
+          <p>{tr("أي حاجة تحتاجها أو نقطة مش فاهمها في أي مرحلة (ابتدائي، إعدادي، ثانوي)… ابعتها لنا وهنشرحهالك خطوة بخطوة.", "Anything you need or any point you don’t understand, at any stage (primary, middle, secondary)… send it and we’ll explain it step by step.")}</p>
+          <div className="lp-wa-who" role="radiogroup" aria-label={tr("أنا", "I am")}>
+            {whos.map((w) => (
+              <button key={w.id} type="button" role="radio" aria-checked={who === w.id} className={who === w.id ? "is-on" : ""} onClick={() => setWho(w.id)}>{w.label}</button>
+            ))}
+          </div>
+          <a className="lp-svc-btn lp-wa-btn" href={wa} target="_blank" rel="noopener noreferrer">
+            <Ico d={ICON_PATHS.wa} size={22} />
+            <span>{tr("ابعت سؤالك على واتساب", "Send your question on WhatsApp")}</span>
+          </a>
+          <small className="lp-wa-note">{tr("بنرد عليك في أقرب وقت", "We reply as soon as we can .")}</small>
+        </div>
+      </div>
+    </section>
+  );
+}
+
+function FaqSection() {
+  const tr = useT();
+  const [open, setOpen] = useState(0);
+  return (
+    <section id="faq" className="lp-sec" aria-labelledby="lp-faq-title">
+      <div className="lp-faq-split">
+        <Reveal className="lp-faq-side">
+          <span className="lp-sec-badge">{tr("الأسئلة الشائعة", "Frequently asked questions")}</span>
+          <h2 id="lp-faq-title" className="lp-faq-title">{tr("كل ما تريد معرفته عن منصة مَدَار", "Everything you need to know about Madar")}</h2>
+          <p className="lp-sec-sub">{tr("إجابات دقيقة ومباشرة مستندة بالكامل إلى معلومات منصتنا.", "Clear, direct answers based strictly on our platform facts.")}</p>
+          <span className="lp-faq-mark" aria-hidden="true">{tr("؟", "?")}</span>
+        </Reveal>
+        <div className="lp-faq">
+          {FAQS.map((item, i) => {
+            const f = tr(item);
+            return (
+              <div key={i} className={`lp-faq-item${open === i ? " is-open" : ""}`}>
+                <button type="button" className="lp-faq-trigger" aria-expanded={open === i} aria-controls={`lp-faq-panel-${i}`} onClick={() => setOpen(open === i ? -1 : i)}>
+                  <span>{f.q}</span>
+                  <Ico d={ICON_PATHS.chevron} size={20} />
+                </button>
+                <div id={`lp-faq-panel-${i}`} className="lp-faq-panel" role="region">
+                  <div><p>{f.a}</p></div>
+                </div>
+              </div>
+            );
+          })}
+        </div>
+      </div>
+      <div className="lp-faq-soon">
+        <span className="lp-faq-soon-ico"><Ico d={ICON_PATHS.chat} size={28} /></span>
+        <h3>{tr("شاركونا تجربتكم التعليمية قريبًا", "Share your feedback soon")}</h3>
+        <p>{tr("نركّز حاليًا كل جهودنا على تقديم أعلى جودة تعليمية، وسيتم فتح قسم آراء الطلاب وأولياء الأمور بعد نتائج نهاية العام.", "We’re focusing all our efforts on delivering top educational quality. Student and parent reviews will open after the end-of-year results.")}</p>
+      </div>
+    </section>
+  );
+}
 
 export default function LandingPage() {
   const navigate = useNavigate();
   const session = useAuth();
   const [authOpen, setAuthOpen] = useState(false);
   const [dark, toggleDark] = useTheme();
+  const [lang, chooseLang] = useLang();
+  const tr = makeT(lang);
   const [menuOpen, setMenuOpen] = useState(false);
+  const [active, setActive] = useState("top");
   useEffect(() => {
     if (!menuOpen) return undefined;
     const onKey = (ev) => { if (ev.key === "Escape") setMenuOpen(false); };
@@ -1354,44 +1841,61 @@ export default function LandingPage() {
     return () => window.removeEventListener("keydown", onKey);
   }, [menuOpen]);
 
-  // 3D Parallax Tilt Effect for Demo Card
-  const demoCardRef = useRef(null);
-  const handleMouseMove = (e) => {
-    if (window.matchMedia?.("(prefers-reduced-motion: reduce)").matches) return;
-    const card = demoCardRef.current;
-    if (!card) return;
-    const rect = card.getBoundingClientRect();
-    const x = e.clientX - rect.left - rect.width / 2;
-    const y = e.clientY - rect.top - rect.height / 2;
-    const rotateX = (-y / rect.height) * 12;
-    const rotateY = (x / rect.width) * 12;
-    card.style.transform = `perspective(1000px) rotateX(${rotateX}deg) rotateY(${rotateY}deg) translateZ(12px)`;
-  };
-
-  const handleMouseLeave = () => {
-    const card = demoCardRef.current;
-    if (card) {
-      card.style.transform = "perspective(1000px) rotateX(0deg) rotateY(0deg) translateZ(0px)";
-    }
-  };
+  // تمييز القسم الظاهر حاليًا + شريط تقدّم القراءة
+  const barRef = useRef(null);
+  useEffect(() => {
+    let raf = 0;
+    const update = () => {
+      raf = 0;
+      const probe = window.innerHeight * 0.32;
+      let best = null;
+      let bestTop = -Infinity;
+      for (const item of NAV) {
+        const el = document.getElementById(item.id);
+        if (!el) continue;
+        const r = el.getBoundingClientRect();
+        if (r.top <= probe && r.bottom > probe && r.top > bestTop) { best = item.id; bestTop = r.top; }
+      }
+      if (best) setActive(best);
+      const bar = barRef.current;
+      if (bar) {
+        const max = document.documentElement.scrollHeight - window.innerHeight;
+        bar.style.transform = `scaleX(${max > 0 ? Math.min(1, window.scrollY / max) : 0})`;
+      }
+    };
+    const onScroll = () => { if (!raf) raf = window.requestAnimationFrame(update); };
+    update();
+    window.addEventListener("scroll", onScroll, { passive: true });
+    window.addEventListener("resize", onScroll);
+    return () => {
+      window.removeEventListener("scroll", onScroll);
+      window.removeEventListener("resize", onScroll);
+      if (raf) window.cancelAnimationFrame(raf);
+    };
+  }, []);
 
   function startLearning() {
     navigate("/student");
   }
 
-  function scrollToFeatures() {
-    document.getElementById("features")?.scrollIntoView({
-      behavior: window.matchMedia?.("(prefers-reduced-motion: reduce)").matches
-        ? "auto"
-        : "smooth",
-      block: "start",
-    });
+  const behavior = () => (window.matchMedia?.("(prefers-reduced-motion: reduce)").matches ? "auto" : "smooth");
+
+  function goTo(id) {
+    setMenuOpen(false);
+    setActive(id);
+    if (id === "top") {
+      window.scrollTo({ top: 0, behavior: behavior() });
+      return;
+    }
+    document.getElementById(id)?.scrollIntoView({ behavior: behavior(), block: "start" });
   }
 
   return (
+    <LangCtx.Provider value={lang}>
     <div
       className={`lp-root${dark ? " is-dark" : ""}`}
-      dir="rtl"
+      dir={lang === "ar" ? "rtl" : "ltr"}
+      lang={lang}
       data-theme={dark ? "dark" : "light"}
     >
       {/* Dynamic Background Ambient Elements */}
@@ -1402,54 +1906,63 @@ export default function LandingPage() {
       </div>
 
       {menuOpen && (
-        <button type="button" className="lp-menu-overlay" aria-label="إغلاق القائمة" onClick={() => setMenuOpen(false)} />
+        <button type="button" className="lp-menu-overlay" aria-label={tr("إغلاق القائمة", "Close menu")} onClick={() => setMenuOpen(false)} />
       )}
 
       <header className="lp-header">
+        <div className="lp-scroll-bar" ref={barRef} aria-hidden="true" />
         <div className="lp-header-inner">
           <div className="lp-header-start">
-            <Link to="/about" className="lp-logo" aria-label="مَدَار — صفحة التعريف">
+            <button type="button" className="lp-logo" aria-label={tr("مَدَار — أعلى الصفحة", "Madar — back to top")} onClick={() => goTo("top")}>
               <div className="lp-logo-glow" />
-              <img src="/photo/IevsR.png" alt="مَدَار" className="lp-logo-img" />
-            </Link>
+              <img src="/photo/IevsR.png" alt={tr("مَدَار", "Madar")} className="lp-logo-img" />
+            </button>
 
-            <nav className="lp-nav-desk" aria-label="روابط رئيسية">
-              <Link to="/student" className="lp-nav-link">المناهج<span className="lp-nav-pill">إعدادي</span></Link>
-              <a
-                href="#features"
-                className="lp-nav-link"
-                onClick={(event) => {
-                  event.preventDefault();
-                  scrollToFeatures();
-                }}
-              >
-                طريقة التعلُّم
-              </a>
-              <Link to="/student/about" className="lp-nav-link">عن مَدَار</Link>
+            <nav className="lp-nav-desk" aria-label={tr("روابط رئيسية", "Main links")}>
+              {NAV.map((n) => (
+                <a
+                  key={n.id}
+                  href={`#${n.id}`}
+                  className={`lp-nav-link${active === n.id ? " is-active" : ""}`}
+                  aria-current={active === n.id ? "true" : undefined}
+                  onClick={(event) => { event.preventDefault(); goTo(n.id); }}
+                >
+                  {tr(n.ar, n.en)}
+                </a>
+              ))}
             </nav>
           </div>
 
           <div className="lp-header-end">
+            <div className="lp-lang" role="radiogroup" aria-label="Language / اللغة">
+              <button type="button" role="radio" aria-checked={lang === "ar"} lang="ar" className={`lp-lang-btn${lang === "ar" ? " is-active" : ""}`} onClick={() => chooseLang("ar")}>
+                <span className="lp-lang-full">العربية</span><span className="lp-lang-short" aria-hidden="true">ع</span>
+              </button>
+              <button type="button" role="radio" aria-checked={lang === "en"} lang="en" className={`lp-lang-btn${lang === "en" ? " is-active" : ""}`} onClick={() => chooseLang("en")}>
+                <span className="lp-lang-full">English</span><span className="lp-lang-short" aria-hidden="true">EN</span>
+              </button>
+            </div>
+
             <button
               type="button"
               className="lp-icon-btn"
               onClick={toggleDark}
-              aria-label={dark ? "التبديل إلى الوضع الفاتح" : "التبديل إلى الوضع الداكن"}
-              title={dark ? "الوضع الفاتح" : "الوضع الداكن"}
+              aria-label={dark ? tr("التبديل إلى الوضع الفاتح", "Switch to light mode") : tr("التبديل إلى الوضع الداكن", "Switch to dark mode")}
+              title={dark ? tr("الوضع الفاتح", "Light mode") : tr("الوضع الداكن", "Dark mode")}
             >
               <ThemeIcon dark={dark} />
             </button>
 
             {!session && (
               <button type="button" className="lp-btn lp-btn-ghost" onClick={() => setAuthOpen(true)}>
-                تسجيل الدخول
+                {tr("تسجيل الدخول", "Log in")}
               </button>
             )}
 
             <button
               type="button"
               className="lp-menu-btn"
-              aria-label={menuOpen ? "إغلاق القائمة" : "فتح القائمة"}
+              aria-label={menuOpen ? tr("إغلاق القائمة", "Close menu") : tr("فتح القائمة", "Open menu")}
               aria-expanded={menuOpen}
               onClick={() => setMenuOpen((value) => !value)}
             >
@@ -1461,180 +1974,56 @@ export default function LandingPage() {
         </div>
 
         {menuOpen && (
-          <div className="lp-menu-mobile" role="navigation" aria-label="قائمة الموبايل">
-            <Link to="/student" className="lp-menu-item" onClick={() => setMenuOpen(false)}>
-              <span className="lp-menu-ico" aria-hidden="true"><svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M4 5.5A2.5 2.5 0 0 1 6.5 3H20v16H6.5A2.5 2.5 0 0 0 4 21.5z" /><path d="M4 19V5.5" /></svg></span>
-              <span className="lp-menu-txt"><b>المناهج</b><small>للمرحلة الإعدادية</small></span>
-              <ArrowLeft size={16} className="lp-menu-arrow" aria-hidden="true" />
-            </Link>
-            <button type="button" className="lp-menu-item" onClick={() => { setMenuOpen(false); scrollToFeatures(); }}>
-              <span className="lp-menu-ico" aria-hidden="true"><Sparkles size={20} /></span>
-              <span className="lp-menu-txt"><b>طريقة التعلُّم</b><small>رحلتك داخل المنصة</small></span>
-              <ArrowLeft size={16} className="lp-menu-arrow" aria-hidden="true" />
-            </button>
-            <Link to="/student/about" className="lp-menu-item" onClick={() => setMenuOpen(false)}>
-              <span className="lp-menu-ico" aria-hidden="true"><svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="9" /><path d="M12 11v5M12 8h.01" /></svg></span>
-              <span className="lp-menu-txt"><b>عن مَدَار</b></span>
-              <ArrowLeft size={16} className="lp-menu-arrow" aria-hidden="true" />
-            </Link>
+          <div className="lp-menu-mobile" role="navigation" aria-label={tr("قائمة الموبايل", "Mobile menu")}>
+            {NAV.map((n) => (
+              <button key={n.id} type="button" className={`lp-menu-item${active === n.id ? " is-active" : ""}`} onClick={() => goTo(n.id)}>
+                <span className="lp-menu-ico" aria-hidden="true"><Ico d={n.icon} size={20} /></span>
+                <span className="lp-menu-txt"><b>{tr(n.ar, n.en)}</b></span>
+                <Arrow size={16} className="lp-menu-arrow" aria-hidden="true" />
+              </button>
+            ))}
             <Link to="/student/privacy" className="lp-menu-item" onClick={() => setMenuOpen(false)}>
               <span className="lp-menu-ico" aria-hidden="true"><svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M12 3l8 3v6c0 5-3.5 8-8 9-4.5-1-8-4-8-9V6z" /></svg></span>
-              <span className="lp-menu-txt"><b>الخصوصية</b></span>
-              <ArrowLeft size={16} className="lp-menu-arrow" aria-hidden="true" />
+              <span className="lp-menu-txt"><b>{tr("الخصوصية", "Privacy")}</b></span>
+              <Arrow size={16} className="lp-menu-arrow" aria-hidden="true" />
             </Link>
-            <button type="button" className="lp-menu-start" onClick={() => { setMenuOpen(false); startLearning(); }}>
-              <span>ابدأ التعلّم الآن</span>
-              <ArrowLeft size={18} aria-hidden="true" />
-            </button>
           </div>
         )}
       </header>
 
       <main>
-        <HeroSection theme={dark ? "dark" : "light"} onStart={startLearning} onFeatures={scrollToFeatures} />
+        <HeroSection theme={dark ? "dark" : "light"} onStart={startLearning} />
 
-        <section id="curricula" className="lp-stage" aria-labelledby="lp-stage-title">
-          <div className="lp-stage-card">
-            <span className="lp-stage-icon" aria-hidden="true">
-              <svg viewBox="0 0 24 24" width="30" height="30" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                <path d="M22 10 12 5 2 10l10 5 10-5z" />
-                <path d="M6 12v5c3 2 9 2 12 0v-5" />
-              </svg>
-            </span>
-            <div className="lp-stage-copy">
-              <span className="lp-stage-tag">للمرحلة الإعدادية</span>
-              <h2 id="lp-stage-title">مَدَار مخصّصة لطلاب المرحلة الإعدادية</h2>
-              <p>افتح المناهج، اختر صفك الدراسي، وتابع دروسك خطوة بخطوة داخل المنصة.</p>
-              <ul className="lp-stage-grades">
-                <li>الصف الأول الإعدادي</li>
-                <li>الصف الثاني الإعدادي</li>
-                <li>الصف الثالث الإعدادي</li>
-              </ul>
-            </div>
-            <Link to={GRADES_PATH} className="lp-stage-btn">
-              <span>تصفّح المناهج</span>
-              <ArrowLeft size={18} aria-hidden="true" />
-            </Link>
-          </div>
-        </section>
+        <AboutSection />
 
-        <section className="lp-highlight-section" aria-labelledby="lp-highlight-title">
-          <div className="lp-highlight-card">
-            <div className="lp-highlight-glow" aria-hidden="true" />
-
-            <div className="lp-highlight-content">
-              <div className="lp-highlight-copy">
-                <span className="lp-badge">
-                  <span className="lp-badge-dot" />
-                  فهم حقيقي لا حفظ
-                </span>
-
-                <h2 id="lp-highlight-title" className="lp-highlight-title">
-                  <span className="lp-highlight-em">افهمها</span>
-                  {" — واربط المعلومات ببعضها"}
-                </h2>
-
-                <p className="lp-highlight-description">
-                  مَدَار تساعدك على فهم أحداث التاريخ وأسرار الجغرافيا بطريقة
-                  مبسّطة ومرئية، وتربط الأسباب بالنتائج؛ حتى تستوعب الدرس
-                  وتستطيع الإجابة عن سؤال: لماذا؟ لا مجرد حفظ الإجابة.
-                </p>
-
-                <ul className="lp-benefits">
-                  <li>
-                    <span className="lp-check">✓</span>
-                    <span>افهم أسباب الأحداث التاريخية ونتائجها بدل حفظها دون ترابط.</span>
-                  </li>
-                  <li>
-                    <span className="lp-check">✓</span>
-                    <span>اربط المعلومات الجغرافية وافهم أهمية المواقع والموارد والممرات المائية.</span>
-                  </li>
-                  <li>
-                    <span className="lp-check">✓</span>
-                    <span>راجع أفكار الدرس وعلاقاته من خلال الشرح المرئي والخرائط الذهنية والأسئلة، وفقًا للمحتوى المتاح فعلًا في المنصة.</span>
-                  </li>
-                </ul>
-              </div>
-
-              <div className="lp-demo-wrap" dir="rtl">
-                <div className="lp-float-label lp-float-label-top" aria-hidden="true">
-                  <span className="lp-float-icon lp-icon-map">🗺️</span>
-                  <span>فهم الأسباب والنتائج</span>
-                </div>
-
-                <div className="lp-float-label lp-float-label-bottom" aria-hidden="true">
-                  <span className="lp-float-icon lp-icon-link">🔗</span>
-                  <span>ربط المعلومات ببعضها</span>
-                </div>
-
-                <div className="lp-float-label lp-float-label-side" aria-hidden="true">
-                  <span className="lp-float-icon lp-icon-mind">🧠</span>
-                  <span>خرائط ذهنية ومراجعة</span>
-                </div>
-
-                <article
-                  className="lp-demo-card"
-                  ref={demoCardRef}
-                  onMouseMove={handleMouseMove}
-                  onMouseLeave={handleMouseLeave}
-                >
-                  <div className="lp-demo-header">
-                    <span className="lp-demo-logo">📚</span>
-                    <div>
-                      <h3>رحلة الدرس على مَدَار</h3>
-                      <p>عناوين · شرح · خرائط · أسئلة · مراجعة</p>
-                    </div>
-                  </div>
-
-                  <div className="lp-demo-body">
-                    <div className="lp-chat-row">
-                      <span className="lp-chat-icon lp-question-icon">📍</span>
-                      <p className="lp-question-bubble">شرح الدرس بكلمات تفاعلية توضّح معناها بتعريف أو صورة.</p>
-                    </div>
-
-                    <div className="lp-chat-row lp-answer-row">
-                      <span className="lp-chat-icon lp-answer-icon">🧠</span>
-                      <p className="lp-answer-bubble">خريطة ذهنية وخط زمني يربطان الأفكار ببعضها.</p>
-                    </div>
-
-                    <div className="lp-result-card">
-                      <strong>🏁 المراجعة النهائية</strong>
-                      <p>ملخّص من كل عناوين الدرس: خريطة ذهنية وخط زمني وأسئلة.</p>
-                      <small>✨ تقدّمك يُحفظ لتستكمل من حيث توقفت.</small>
-                    </div>
-                  </div>
-                </article>
-              </div>
-            </div>
-          </div>
-        </section>
+        <UnderstandSection />
 
         <MadarJourney isDark={dark} />
 
+        <ContactSection />
 
-        <section className="lp-final-cta" aria-labelledby="lp-final-cta-title">
-          <div className="lp-final-cta-card">
-            <span className="lp-final-cta-cap" aria-hidden="true">
-              <svg viewBox="0 0 24 24" width="28" height="28" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
-                <path d="M22 10v6M2 10l10-5 10 5-10 5z" />
-                <path d="M6 12v5c0 1.1 2.7 2 6 2s6-.9 6-2v-5" />
-              </svg>
-            </span>
-            <h2 id="lp-final-cta-title" className="lp-final-cta-title">جاهز تبدأ رحلتك في التعلّم؟</h2>
-            <p className="lp-final-cta-lead">
-              ادخل إلى واجهة الطالب واختر صفك الدراسي لتبدأ مسارك التعليمي المنظم.
-            </p>
-            <button type="button" className="lp-final-cta-btn" onClick={startLearning}>
-              <span>ابدأ التعلّم الآن</span>
-              <ArrowLeft size={20} aria-hidden="true" />
-            </button>
-            <div className="lp-final-cta-pills" aria-hidden="true">
-              <span><svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" strokeWidth="2"><path d="M9 18h6"/><path d="M10 22h4"/><path d="M12 2a7 7 0 0 0-4 12.7V17h8v-2.3A7 7 0 0 0 12 2z"/></svg> فهم لا حفظ</span>
-              <span><svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" strokeWidth="2"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg> لكل الطلاب</span>
-              <span><svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" strokeWidth="2"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/></svg> منهج متكامل</span>
+        <FaqSection />
+
+        <Reveal as="section" className="lp-final-cta" aria-label={tr("دليل المنصة", "Platform guide")}>
+          <div className="lp-final-card">
+            <div className="lp-final-copy">
+              <span className="lp-final-tag">{tr("أنا تونة دليلك علي المنصة . . . جاهز ؟", "I’m Tuna, your guide to the platform… ready?")}</span>
+              <p className="lp-final-lead">
+                {tr(
+                  "اختار صفك وافتح أي درس. ولو احتجت مساعدة في أي لحظة، دوس عليا تحت على الجنب وهعرفك علي كل حاجة في الصفحة غير مفهومة .",
+                  "Pick your grade and open any lesson. If you need help at any moment, tap me at the bottom of the screen and I’ll explain anything on the page that isn’t clear.",
+                )}
+              </p>
+              <button type="button" onClick={startLearning} className="hero-btn hero-btn-primary lp-final-btn">
+                <span>{tr("ابدأ التعلّم", "Start learning")}</span>
+                <Arrow size={18} />
+              </button>
             </div>
+            <span className="lp-final-pic" aria-hidden="true">
+              <img src={GUIDE_IMGS.cheer} alt="" />
+            </span>
           </div>
-        </section>
+        </Reveal>
 
       </main>
 
@@ -1645,6 +2034,7 @@ export default function LandingPage() {
       <style>{HERO_CSS}</style>
       <style>{LP_CSS}</style>
     </div>
+    </LangCtx.Provider>
   );
 }
 
@@ -2427,23 +2817,12 @@ const LP_CSS = `
 
   /* Video Explainer Section */
 
-  /* ---- المرحلة الإعدادية ---- */
-  .lp-stage { scroll-margin-top: 5rem; max-width: 1140px; margin: 0 auto; padding: 0 1.25rem 3rem; }
-  .lp-stage-card { display: grid; grid-template-columns: auto minmax(0, 1fr) auto; gap: 1.5rem; align-items: center; padding: clamp(1.25rem, 3vw, 2rem) clamp(1.25rem, 3vw, 2.25rem); border-radius: 2rem; border: 1px solid var(--lp-line-strong); background: radial-gradient(circle at 100% 0%, var(--lp-soft-accent), transparent 55%), var(--lp-surface); box-shadow: var(--lp-card-shadow); color: var(--lp-text); }
-  .lp-stage-icon { display: grid; place-items: center; width: 4.25rem; height: 4.25rem; border-radius: 1.3rem; color: #fff; background: linear-gradient(145deg, #0E5348, #1A8F7C); transform: rotate(-4deg); }
-  .lp-stage-tag { display: inline-block; padding: .25rem .8rem; border-radius: 999px; font-size: .78rem; font-weight: 900; color: var(--lp-teal); background: var(--lp-soft-accent); border: 1px solid color-mix(in srgb, var(--lp-teal) 30%, transparent); }
-  .lp-stage-copy h2 { margin: .7rem 0 .4rem; font-size: clamp(1.25rem, 3vw, 1.7rem); font-weight: 900; line-height: 1.45; }
-  .lp-stage-copy p { margin: 0; font-size: .98rem; line-height: 1.85; color: var(--lp-muted); }
-  .lp-stage-grades { list-style: none; margin: 1rem 0 0; padding: 0; display: flex; flex-wrap: wrap; gap: .5rem; }
-  .lp-stage-grades li { padding: .35rem .9rem; border-radius: 999px; font-size: .82rem; font-weight: 800; border: 1px solid var(--lp-line-strong); background: var(--lp-surface); }
-  .lp-stage-btn { display: inline-flex; align-items: center; justify-content: center; gap: .55rem; min-height: 3.1rem; padding: .7rem 1.6rem; border-radius: 999px; color: #fff; font-weight: 900; text-decoration: none; background: linear-gradient(145deg, #0E5348 0%, #147A6A 60%, #1A8F7C 100%); box-shadow: 0 14px 28px -14px rgba(14, 83, 72, .6); transition: transform .15s ease; }
-  .lp-stage-btn:hover { transform: translateY(-2px); }
-  @media (max-width: 760px) {
-    .lp-stage { padding-inline: .85rem; padding-bottom: 2.25rem; }
-    .lp-stage-card { grid-template-columns: minmax(0, 1fr); justify-items: center; text-align: center; border-radius: 1.6rem; gap: 1.1rem; }
-    .lp-stage-grades { justify-content: center; }
-    .lp-stage-btn { width: 100%; }
-  }
+  /* ---- توتو بيشرح الرحلة ---- */
+  .lp-guide-says { display: flex; align-items: center; gap: clamp(.8rem, 2vw, 1.2rem); width: min(100%, 40rem); margin: 1.4rem auto 0; padding: .6rem 1.4rem .6rem .8rem; border-radius: 2rem; border: 1.5px solid var(--lp-line-strong); background: var(--lp-surface); text-align: right; box-shadow: 0 18px 34px -24px rgba(14, 83, 72, .6); }
+  .lp-guide-says img { background: transparent; flex: none; display: block; height: clamp(5rem, 11vw, 6.6rem); width: auto; max-width: 7rem; object-fit: contain; }
+  .lp-guide-says span { font-size: clamp(.95rem, 2.2vw, 1.08rem); line-height: 1.8; font-weight: 700; color: var(--lp-text); }
+  .lp-guide-says b { color: var(--lp-teal); font-weight: 900; }
+  @media (max-width: 640px) { .lp-guide-says { border-radius: 1.6rem; padding: .5rem 1rem .5rem .6rem; } }
 
   /* ---- رحلة الطالب ---- */
   .lp-journey { scroll-margin-top: 5rem; max-width: 1140px; margin: 0 auto; padding: .5rem 1.25rem 3.5rem; color: var(--lp-text); }
@@ -2778,128 +3157,401 @@ html[data-theme="dark"] .lp-trust-num { color: #B5DDD2; }
 /* Final CTA card */
 .lp-final-cta {
   max-width: 1140px;
-  margin: 0 auto 3rem;
+  margin: clamp(2.5rem, 6vw, 4rem) auto 3rem;
   padding: 0 1.25rem;
 }
-.lp-final-cta-card {
+.lp-final-card {
   position: relative;
   isolation: isolate;
   overflow: hidden;
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  text-align: center;
-  padding: clamp(2.5rem, 6vw, 4.25rem) clamp(1.25rem, 5vw, 3rem);
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  align-items: end;
+  gap: clamp(1rem, 4vw, 3rem);
+  padding: clamp(1.75rem, 5vw, 3.25rem) clamp(1.25rem, 5vw, 3.25rem) 0;
   border-radius: 2.25rem;
-  background: linear-gradient(145deg, #0E5348 0%, #147A6A 55%, #1A8F7C 100%);
-  color: #fff;
-  box-shadow: 0 28px 56px -24px rgba(14, 83, 72, 0.55);
+  border: 1px solid var(--lp-line-strong);
+  background:
+    radial-gradient(circle at 100% 0%, rgba(227, 192, 139, 0.35), transparent 45%),
+    linear-gradient(135deg, var(--lp-soft-accent), var(--lp-surface) 70%);
+  box-shadow: 0 28px 56px -34px rgba(14, 83, 72, 0.5);
 }
-.lp-final-cta-card::before {
+.lp-final-card::after {
   content: "";
   position: absolute;
   z-index: -1;
-  width: 22rem;
-  height: 22rem;
-  top: -10rem;
-  inset-inline-end: -6rem;
-  border-radius: 50%;
-  background: rgba(227, 192, 139, 0.28);
-  filter: blur(70px);
+  inset-block: 0;
+  inset-inline-start: 0;
+  width: 0.55rem;
+  background: linear-gradient(180deg, #E3C08B, #147A6A);
 }
-.lp-final-cta-card::after {
-  content: "";
-  position: absolute;
-  z-index: -1;
-  inset: 0;
-  background-image: radial-gradient(rgba(255, 255, 255, 0.16) 1px, transparent 1.4px);
-  background-size: 22px 22px;
-  -webkit-mask-image: radial-gradient(ellipse 70% 80% at 50% 0%, #000 0%, transparent 75%);
-  mask-image: radial-gradient(ellipse 70% 80% at 50% 0%, #000 0%, transparent 75%);
-}
-.lp-final-cta-cap {
-  display: inline-grid;
-  place-items: center;
-  width: 3.75rem;
-  height: 3.75rem;
-  margin-bottom: 1.25rem;
-  border-radius: 50%;
-  background: rgba(255, 255, 255, 0.12);
-  border: 1px solid rgba(255, 255, 255, 0.26);
-  color: #E3C08B;
-}
-.lp-final-cta-title {
-  margin: 0 0 0.9rem;
-  font-size: clamp(1.7rem, 4.2vw, 2.6rem);
+.lp-final-copy { align-self: center; padding-bottom: clamp(1.75rem, 5vw, 3.25rem); }
+.lp-final-tag {
+  display: inline-block;
+  padding: 0.25rem 0.9rem;
+  border-radius: 999px;
+  font-size: 0.8rem;
   font-weight: 900;
-  line-height: 1.4;
   color: #fff;
+  background: var(--lp-teal);
+}
+.lp-final-title {
+  margin: 0.8rem 0 0.7rem;
+  font-size: clamp(1.6rem, 4vw, 2.4rem);
+  font-weight: 900;
+  line-height: 1.45;
+  color: var(--lp-text);
   text-wrap: balance;
 }
-.lp-final-cta-lead {
-  margin: 0 auto 2rem;
-  max-width: 32rem;
+.lp-final-lead {
+  margin: 0;
+  max-width: 34rem;
   font-size: 1.05rem;
   line-height: 1.9;
-  color: rgba(255, 255, 255, 0.9);
-  text-wrap: balance;
+  color: var(--lp-muted);
 }
-.lp-final-cta-btn {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  gap: 0.6rem;
-  min-height: 3.4rem;
-  padding: 0.8rem 2.3rem;
-  border: 0;
-  border-radius: 999px;
-  background: #FFFFFF;
-  color: #0E5348;
-  font-size: 1.1rem;
-  font-weight: 900;
-  cursor: pointer;
-  box-shadow: 0 14px 30px -12px rgba(0, 0, 0, 0.4);
-  transition: transform 0.15s ease, box-shadow 0.15s ease;
+.lp-final-pic { display: block; height: clamp(11rem, 24vw, 16rem); }
+.lp-final-pic img { display: block; height: 100%; width: auto; max-width: 16rem; object-fit: contain; background: transparent; }
+@media (max-width: 720px) {
+  .lp-final-card { grid-template-columns: minmax(0, 1fr); justify-items: center; text-align: center; border-radius: 1.75rem; padding-bottom: 0; }
+  .lp-final-card::after { inset-block: 0 auto; inset-inline: 0; width: auto; height: 0.45rem; }
+  .lp-final-copy { padding-bottom: 0; }
+  .lp-final-pic { height: 11rem; }
 }
-.lp-final-cta-btn:hover {
-  transform: translateY(-2px);
-  box-shadow: 0 18px 34px -12px rgba(0, 0, 0, 0.45);
-}
-.lp-final-cta-btn:active { transform: translateY(1px); }
-.lp-final-cta-btn:focus-visible {
-  outline: 3px solid rgba(227, 192, 139, 0.75);
-  outline-offset: 3px;
-}
-.lp-final-cta-pills {
-  display: flex;
-  flex-wrap: wrap;
-  justify-content: center;
-  gap: 0.6rem;
-  margin-top: 2rem;
-}
-.lp-final-cta-pills span {
-  display: inline-flex;
-  align-items: center;
-  gap: 0.45rem;
-  padding: 0.45rem 1rem;
-  border-radius: 999px;
-  background: rgba(255, 255, 255, 0.12);
-  border: 1px solid rgba(255, 255, 255, 0.22);
-  font-size: 0.88rem;
-  font-weight: 800;
-  color: #fff;
-}
-.lp-final-cta-pills svg { color: #E3C08B; flex: none; }
 @media (max-width: 640px) {
   .lp-final-cta { padding-inline: 0.85rem; }
-  .lp-final-cta-card { border-radius: 1.75rem; }
-  .lp-final-cta-btn { width: 100%; }
-}
-html[data-theme="dark"] .lp-final-cta-card {
-  background: linear-gradient(145deg, #0A3F36 0%, #0E5348 50%, #147A6A 100%);
-}
-@media (prefers-reduced-motion: reduce) {
-  .lp-final-cta-btn { transition: none !important; }
 }
 
+
+/* ===== اللغتان + التنقل + الأقسام المدمجة ===== */
+.lp-root[dir="ltr"] { direction: ltr; }
+.lp-root[dir="ltr"] .msc-art text { unicode-bidi: plaintext; }
+.lp-root[dir="ltr"] .hero-badge-line { padding: 0.6rem 1.6rem 0.6rem 0.7rem; }
+.lp-root[dir="ltr"] .hero-badge-text { order: 2; }
+.lp-root[dir="ltr"] .lp-scatter-txt, .lp-root[dir="ltr"] .md-scatter-text { text-align: left; }
+.lp-root[dir="ltr"] .lp-btn-arrow, .lp-root[dir="ltr"] .lp-btn-primary:hover .lp-btn-arrow { transform: none; }
+.lp-root[dir="ltr"] .lp-btn-primary:hover .lp-btn-arrow { transform: translateX(4px); }
+.lp-root[dir="ltr"] .lp-demo-wrap { direction: ltr; }
+.lp-root[dir="ltr"] .lp-answer-row { flex-direction: row; }
+.lp-root[dir="ltr"] .lp-faq-trigger, .lp-root[dir="ltr"] .lp-ct-label { text-align: left; }
+
+.lp-root #top, .lp-root #features, .lp-sec { scroll-margin-top: 5rem; }
+
+.lp-nav-link.is-active { color: var(--lp-teal); background: var(--lp-soft-accent); }
+.lp-menu-item.is-active { background: var(--lp-soft-accent); }
+.lp-nav-desk { gap: .15rem; }
+.lp-nav-desk .lp-nav-link { white-space: nowrap; padding-inline: .7rem; }
+.lp-menu-item { width: 100%; font: inherit; text-align: start; cursor: pointer; }
+@media (min-width: 860px) and (max-width: 1179px) {
+  .lp-nav-desk { display: none; }
+  .lp-menu-btn { display: inline-flex; }
+  .lp-menu-mobile { display: flex !important; }
+  .lp-menu-overlay { display: block !important; }
+}
+
+.lp-lang { display: inline-flex; padding: 3px; gap: 2px; border-radius: 999px; background: var(--lp-soft-accent); border: 1.5px solid var(--lp-line-strong); }
+.lp-lang-btn { font: inherit; font-size: .8rem; font-weight: 800; line-height: 1; padding: .42rem .75rem; border: 0; border-radius: 999px; cursor: pointer; color: var(--lp-muted); background: transparent; transition: background .2s ease, color .2s ease; }
+.lp-lang-btn:hover { color: var(--lp-text); }
+.lp-lang-btn.is-active { color: #fff; background: var(--lp-teal-deep); }
+.lp-lang-btn:focus-visible { outline: 2px solid var(--lp-teal); outline-offset: 2px; }
+.lp-lang-short { display: none; }
+@media (max-width: 560px) {
+  .lp-lang-full { display: none; }
+  .lp-lang-short { display: inline; }
+  .lp-lang-btn { padding: .42rem .6rem; }
+}
+
+.lp-sec { position: relative; z-index: 1; max-width: 1140px; margin: 0 auto; padding: clamp(2.5rem, 6vw, 4.5rem) 1.25rem 0; }
+.lp-sec-head { text-align: center; max-width: 700px; margin: 0 auto 2.25rem; }
+.lp-sec-badge { display: inline-flex; padding: .35rem .95rem; border-radius: 999px; font-size: .86rem; font-weight: 800; color: var(--lp-gold); background: rgba(185, 121, 31, .12); border: 1.5px solid rgba(185, 121, 31, .3); }
+.lp-sec-title { margin: .6rem 0; font-size: clamp(1.5rem, 4vw, 2.3rem); font-weight: 900; line-height: 1.35; color: var(--lp-teal-deep); text-wrap: balance; }
+.lp-sec-sub { margin: 0; font-size: 1.05rem; line-height: 1.8; color: var(--lp-muted); }
+.lp-root.is-dark .lp-sec-title { color: var(--lp-text); }
+
+
+.lp-svc-btn { display: inline-flex; align-items: center; justify-content: center; gap: .6rem; padding: .85rem 1.7rem; font: inherit; font-size: 1rem; font-weight: 900; color: #fff; cursor: pointer; border: 0; border-radius: 999px; background: var(--lp-teal-deep); box-shadow: 0 10px 22px -12px rgba(14, 83, 72, .8); transition: transform .2s ease, filter .2s ease; }
+.lp-svc-btn:hover { transform: translateY(-2px); filter: brightness(1.08); }
+.lp-svc-btn:focus-visible { outline: 3px solid var(--lp-gold); outline-offset: 3px; }
+
+.lp-ct-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 1.5rem; align-items: stretch; }
+.lp-ct-info { display: flex; flex-direction: column; justify-content: flex-start; gap: 1.5rem; padding: clamp(1.4rem, 4vw, 2.25rem); border-radius: 1.5rem; color: #fff; background: linear-gradient(135deg, #0E5348, #0A3C34); }
+.lp-ct-info h3 { margin: 0 0 .5rem; font-size: 1.6rem; font-weight: 900; }
+.lp-ct-info > div > p { margin: 0; color: rgba(255, 255, 255, .85); line-height: 1.8; }
+.lp-ct-list { display: flex; flex-direction: column; gap: 1rem; margin: 1.5rem 0 0; padding: 0; list-style: none; }
+.lp-ct-list li { display: flex; align-items: center; gap: .9rem; }
+.lp-ct-ico { flex: none; display: grid; place-items: center; width: 2.75rem; height: 2.75rem; border-radius: .9rem; background: rgba(255, 255, 255, .14); }
+.lp-ct-list small { display: block; font-size: .8rem; color: rgba(255, 255, 255, .7); }
+.lp-ct-list a, .lp-ct-list span:not(.lp-ct-ico) { font-weight: 800; color: #fff; text-decoration: none; }
+.lp-ct-list a:hover { text-decoration: underline; }
+
+.lp-ct-form { display: flex; flex-direction: column; padding: clamp(1.4rem, 4vw, 2.25rem); border-radius: 1.5rem; background: var(--lp-surface); border: 2px solid var(--lp-line-strong); box-shadow: var(--lp-card-shadow); }
+.lp-ct-form h3 { margin: 0 0 .4rem; font-size: 1.35rem; font-weight: 900; color: var(--lp-teal-deep); }
+.lp-root.is-dark .lp-ct-form h3 { color: var(--lp-text); }
+.lp-ct-form > p { margin: 0 0 1.1rem; font-size: .92rem; line-height: 1.7; color: var(--lp-muted); }
+.lp-ct-label { margin: .8rem 0 .35rem; font-size: .9rem; font-weight: 800; color: var(--lp-text); }
+.lp-ct-input { width: 100%; padding: .75rem .9rem; font: inherit; color: var(--lp-text); background: var(--lp-bg); border: 2px solid var(--lp-line-strong); border-radius: .85rem; }
+.lp-ct-input:focus { outline: 3px solid color-mix(in srgb, var(--lp-teal) 35%, transparent); border-color: var(--lp-teal); }
+textarea.lp-ct-input { resize: vertical; min-height: 6rem; }
+.lp-ct-send { margin-top: 1.2rem; width: 100%; }
+
+.lp-faq { display: flex; flex-direction: column; gap: .85rem; max-width: 800px; margin: 0 auto; }
+.lp-faq-item { overflow: hidden; border-radius: 1rem; background: var(--lp-surface); border: 2px solid var(--lp-line-strong); transition: border-color .2s ease; }
+.lp-faq-item.is-open { border-color: var(--lp-teal); }
+.lp-faq-trigger { display: flex; align-items: center; justify-content: space-between; gap: 1rem; width: 100%; padding: 1.1rem 1.35rem; font: inherit; font-size: 1.05rem; font-weight: 800; text-align: start; cursor: pointer; color: var(--lp-teal-deep); background: none; border: 0; }
+.lp-root.is-dark .lp-faq-trigger { color: var(--lp-text); }
+.lp-faq-trigger svg { flex: none; transition: transform .25s ease; }
+.lp-faq-item.is-open .lp-faq-trigger svg { transform: rotate(180deg); }
+.lp-faq-panel { display: grid; grid-template-rows: 0fr; padding: 0 1.35rem; transition: grid-template-rows .3s ease; }
+.lp-faq-panel > div { overflow: hidden; }
+.lp-faq-item.is-open .lp-faq-panel { grid-template-rows: 1fr; }
+.lp-faq-panel p { margin: 0 0 1.15rem; line-height: 1.85; color: var(--lp-muted); }
+.lp-faq-soon { max-width: 800px; margin: 2.25rem auto 0; padding: clamp(1.5rem, 4vw, 2.5rem); text-align: center; border-radius: 1.5rem; background: rgba(222, 212, 189, .3); border: 2px dashed var(--lp-line-strong); }
+.lp-faq-soon-ico { display: inline-flex; align-items: center; justify-content: center; width: 3.75rem; height: 3.75rem; margin-bottom: 1rem; border-radius: 50%; color: #fff; background: var(--lp-gold); }
+.lp-faq-soon h3 { margin: 0 0 .5rem; font-size: 1.25rem; font-weight: 900; color: var(--lp-teal-deep); }
+.lp-root.is-dark .lp-faq-soon h3 { color: var(--lp-text); }
+.lp-faq-soon p { max-width: 600px; margin: 0 auto; font-size: .95rem; line-height: 1.8; color: var(--lp-muted); }
+
+@media (max-width: 900px) {
+  .lp-ct-grid { grid-template-columns: 1fr; }
+  .lp-aud { grid-template-columns: 1fr; }
+}
+@media (max-width: 520px) {
+  .lp-sec { padding-inline: .85rem; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .lp-faq-panel, .lp-faq-trigger svg, .lp-svc-btn { transition: none !important; }
+}
+
+
+/* ===== لمسات بصرية: Hero + كشف تدريجي + إطار واجهة الطالب + فهرس المميزات ===== */
+.lp-root .md-hero { position: relative; isolation: isolate; }
+.lp-root .md-hero-core { position: relative; z-index: 2; }
+.lp-hero-glow { position: absolute; inset: -8% 0 auto; height: 78%; z-index: -1; pointer-events: none; filter: blur(14px); background: radial-gradient(38% 48% at 24% 32%, rgba(20, 122, 106, .2), transparent 70%), radial-gradient(34% 44% at 76% 26%, rgba(185, 121, 31, .2), transparent 70%); animation: lp-glow 16s ease-in-out infinite alternate; }
+@keyframes lp-glow { from { transform: translate3d(-2%, 0, 0) scale(1); } to { transform: translate3d(2%, 3%, 0) scale(1.08); } }
+
+.lp-root .hero-headline { white-space: normal; font-size: clamp(2rem, 6.2vw, 3.9rem); line-height: 1.3; letter-spacing: -.01em; text-wrap: balance; }
+.lp-root .hero-headline-lead { display: block; margin-bottom: .1em; }
+.lp-root .md-hero .hero-headline-accent { position: relative; display: inline-block; padding: 0 .06em .14em; border-radius: 0; box-shadow: none; background: linear-gradient(110deg, #B9791F 0%, #E6AE45 45%, #B9791F 90%); background-size: 220% auto; -webkit-background-clip: text; background-clip: text; color: transparent; -webkit-text-fill-color: transparent; animation: lp-gold-shift 7s linear infinite; }
+@keyframes lp-gold-shift { to { background-position: 220% center; } }
+.hero-underline { position: absolute; inset-inline: 0; bottom: -.06em; width: 100%; height: .3em; overflow: visible; }
+.hero-underline path { fill: none; stroke: #B9791F; stroke-width: 5; stroke-linecap: round; vector-effect: non-scaling-stroke; stroke-dasharray: 340; stroke-dashoffset: 340; animation: lp-draw 1.1s .8s cubic-bezier(.22, 1, .36, 1) forwards; }
+@keyframes lp-draw { to { stroke-dashoffset: 0; } }
+.hero-hint { margin: 1.1rem 0 0; font-size: .95rem; font-weight: 700; color: var(--lp-muted); }
+.lp-root .hero-actions { margin-top: .4rem; }
+.lp-root .hero-btn-primary { font-size: 1.12rem; padding: 1rem 2.4rem; }
+.lp-final-btn { margin-top: 1.25rem; }
+
+.lp-scroll-bar { position: absolute; inset-inline: 0; bottom: -1px; height: 3px; z-index: 2; pointer-events: none; transform: scaleX(0); transform-origin: right; background: linear-gradient(90deg, var(--lp-teal), var(--lp-gold)); }
+.lp-root[dir="ltr"] .lp-scroll-bar { transform-origin: left; }
+
+.lp-reveal { opacity: 0; }
+.lp-reveal.is-in { opacity: 1; animation: lp-rise .75s cubic-bezier(.22, 1, .36, 1) var(--rv, 0ms) backwards; }
+@keyframes lp-rise { from { opacity: 0; transform: translate3d(0, 26px, 0); } to { opacity: 1; transform: none; } }
+
+.lp-sec-badge::before { content: ""; display: inline-block; width: .45rem; height: .45rem; margin-inline-end: .5rem; align-self: center; border-radius: 50%; background: currentColor; }
+.lp-sec-title::after { content: ""; display: block; width: 3.5rem; height: 4px; margin: .8rem auto 0; border-radius: 4px; background: linear-gradient(90deg, var(--lp-teal), var(--lp-gold)); }
+
+.lp-aud { display: grid; grid-template-columns: minmax(0, 30rem); justify-content: center; gap: 1.1rem; }
+.lp-aud-card { position: relative; overflow: hidden; padding: 1.8rem 1.5rem; border-radius: 1.6rem; background: var(--lp-surface); border: 2px solid var(--lp-line-strong); box-shadow: var(--lp-card-shadow); transition: transform .25s ease, border-color .25s ease; }
+.lp-aud-card::after { content: ""; position: absolute; inset-inline-end: -2.2rem; top: -2.2rem; width: 8rem; height: 8rem; border-radius: 50%; background: radial-gradient(circle, rgba(185, 121, 31, .18), transparent 70%); pointer-events: none; }
+.lp-aud-card:hover { transform: translateY(-4px); border-color: var(--lp-teal); }
+.lp-aud-ico { display: inline-grid; place-items: center; width: 3.5rem; height: 3.5rem; margin-bottom: 1rem; border-radius: 1.15rem; color: #fff; background: linear-gradient(145deg, #0E5348, #147A6A); box-shadow: 0 14px 24px -14px rgba(14, 83, 72, .8); }
+.lp-aud-card:nth-child(2) .lp-aud-ico { background: linear-gradient(145deg, #9E6517, #C98512); box-shadow: 0 14px 24px -14px rgba(158, 101, 23, .8); }
+.lp-aud-card h3 { margin: 0 0 .4rem; font-size: 1.2rem; font-weight: 900; color: var(--lp-text); }
+.lp-aud-card p { margin: 0; font-size: .96rem; line-height: 1.8; color: var(--lp-muted); }
+
+.lp-rail { margin: 0 auto 2.75rem; max-width: 64rem; }
+.lp-rail ol { display: flex; flex-wrap: wrap; justify-content: center; gap: .6rem; margin: 0; padding: 0; list-style: none; }
+.lp-rail a { display: inline-flex; align-items: center; gap: .55rem; padding: .38rem .5rem .38rem .8rem; font-size: .86rem; color: var(--lp-text); text-decoration: none; border-radius: 999px; background: var(--lp-surface); border: 2px solid var(--lp-line-strong); transition: transform .2s ease, border-color .2s ease, background .2s ease; }
+.lp-rail a:hover { transform: translateY(-2px); border-color: var(--ac); background: var(--soft); }
+.lp-root.is-dark .lp-rail a:hover { background: var(--lp-surface); }
+.lp-rail a:focus-visible { outline: 3px solid var(--ac); outline-offset: 2px; }
+.lp-rail a b { font-weight: 800; white-space: nowrap; }
+.lp-rail-ico { display: grid; place-items: center; width: 1.9rem; height: 1.9rem; border-radius: 50%; color: #fff; background: var(--ac); }
+.lp-rail-n { font-size: .72rem; font-weight: 900; color: var(--ac); opacity: .85; }
+
+.lp-phase { scroll-margin-top: 5.5rem; }
+.lp-phase-head { align-items: center; }
+.lp-phase-head .lp-phase-n { display: inline-grid; place-items: center; width: 2rem; height: 2rem; border-radius: 50%; font-size: .85rem; font-weight: 900; color: #fff; background: var(--lp-teal-deep); }
+.lp-root.is-dark .lp-phase-head .lp-phase-n { background: #147A6A; color: #fff; }
+.lp-steps { padding: 0; padding-inline-start: 3.3rem; }
+@media (max-width: 640px) { .lp-steps { padding-inline-start: 2.1rem; padding-inline-end: 0; } }
+.lp-step { scroll-margin-top: 6rem; }
+
+.lp-window { min-width: 0; overflow: hidden; border-radius: 1.4rem; border: 1px solid var(--lp-line-strong); background: var(--lp-surface); box-shadow: 0 28px 50px -32px rgba(14, 83, 72, .5); }
+.lp-window-bar { display: flex; align-items: center; gap: .4rem; padding: .55rem .9rem; border-bottom: 1px solid var(--lp-line-strong); background: var(--lp-soft-accent); }
+.lp-window-bar i { width: .62rem; height: .62rem; border-radius: 50%; background: #E9B98C; }
+.lp-window-bar i:nth-child(2) { background: #F0D98A; }
+.lp-window-bar i:nth-child(3) { background: #8FD0AC; }
+.lp-window-bar span { margin-inline-start: auto; font-size: .72rem; font-weight: 800; color: var(--lp-muted); }
+.lp-window .lp-step-canvas { border: 0; border-radius: 0; }
+@media (min-width: 900px) { .lp-steps > .lp-step:nth-child(even) .lp-window { order: -1; } }
+
+@media (max-width: 700px) {
+  .lp-rail ol { flex-wrap: nowrap; justify-content: flex-start; overflow-x: auto; padding-bottom: .6rem; scroll-snap-type: x proximity; }
+  .lp-rail li { flex: none; scroll-snap-align: start; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .lp-reveal, .lp-reveal.is-in { opacity: 1; animation: none; }
+  .lp-hero-glow, .lp-root .md-hero .hero-headline-accent { animation: none; }
+  .hero-underline path { animation: none; stroke-dashoffset: 0; }
+}
+
+
+/* ============ About + grades path ============ */
+.lp-about { display: grid; grid-template-columns: minmax(0, 1.05fr) minmax(0, .95fr); gap: clamp(1.5rem, 4vw, 3.5rem); align-items: center; padding: clamp(1.4rem, 4vw, 3rem); border-radius: 2.25rem; border: 1px solid var(--lp-line-strong); background: radial-gradient(60% 70% at 0% 0%, rgba(185, 121, 31, .13), transparent 60%), radial-gradient(60% 70% at 100% 100%, var(--lp-soft-accent), transparent 65%), var(--lp-surface); box-shadow: var(--lp-card-shadow); }
+.lp-about-title { margin: .9rem 0 1.4rem; font-size: clamp(1.8rem, 4.2vw, 2.9rem); font-weight: 900; line-height: 1.3; color: var(--lp-teal-deep); text-wrap: balance; }
+.lp-root.is-dark .lp-about-title { color: var(--lp-text); }
+.lp-about-student { display: flex; align-items: center; gap: 1rem; padding: 1rem 1.2rem; border-radius: 1.2rem; background: var(--lp-soft-accent); border: 1.5px solid color-mix(in srgb, var(--lp-teal) 28%, transparent); }
+.lp-about-ico { flex: none; display: grid; place-items: center; width: 3.3rem; height: 3.3rem; border-radius: 1.05rem; color: #fff; background: linear-gradient(145deg, #0E5348, #1A8F7C); box-shadow: 0 12px 22px -12px rgba(14, 83, 72, .8); }
+.lp-about-student h3 { margin: 0 0 .2rem; font-size: 1.15rem; font-weight: 900; color: var(--lp-text); }
+.lp-about-student p { margin: 0; font-size: .98rem; line-height: 1.8; color: var(--lp-muted); }
+.lp-about-stage { margin: 1.3rem 0 0; font-size: 1.02rem; line-height: 1.95; color: var(--lp-muted); }
+.lp-about-stage b { color: var(--lp-text); font-weight: 900; }
+.lp-path { position: relative; list-style: none; margin: 0; padding: 0; display: grid; gap: 1.1rem; }
+.lp-path::before { content: ""; position: absolute; z-index: 0; inset-block: 2rem; inset-inline-start: calc(2px + 1.1rem + 1.75rem - 1px); border-inline-start: 2px dashed var(--lp-gold); }
+.lp-path-item { position: relative; z-index: 1; display: flex; align-items: center; gap: 1rem; padding: .9rem 1.1rem; border-radius: 1.3rem; background: var(--lp-surface); border: 2px solid var(--lp-line-strong); box-shadow: var(--lp-card-shadow); }
+.lp-path-item b { font-size: 1.1rem; font-weight: 900; line-height: 1.5; color: var(--lp-text); }
+.lp-path-n { flex: none; display: grid; place-items: center; width: 3.5rem; height: 3.5rem; border-radius: 50%; font-size: 1.7rem; font-weight: 900; line-height: 1; }
+.lp-path-1 .lp-path-n { color: var(--lp-teal-deep); background: var(--lp-soft-accent); border: 2px solid var(--lp-teal); }
+.lp-root.is-dark .lp-path-1 .lp-path-n { color: var(--lp-text); }
+.lp-path-2 .lp-path-n { color: #fff; background: linear-gradient(145deg, #1A8F7C, #147A6A); }
+.lp-path-3 { border-color: var(--lp-gold); }
+.lp-path-3 .lp-path-n { color: #fff; background: linear-gradient(145deg, #D69336, #B9791F); box-shadow: 0 0 0 5px rgba(185, 121, 31, .2); }
+.lp-about.is-in .lp-path-item { animation: lp-rise .7s cubic-bezier(.22, 1, .36, 1) calc(var(--i) * 140ms + 250ms) backwards; }
+@media (max-width: 860px) { .lp-about { grid-template-columns: minmax(0, 1fr); } }
+
+/* ============ Understand (dark teal panel) ============ */
+.lp-und { position: relative; z-index: 1; scroll-margin-top: 5rem; max-width: 1140px; margin: 0 auto; padding: clamp(2.5rem, 6vw, 4.5rem) 1.25rem 0; }
+.lp-und-panel { position: relative; isolation: isolate; overflow: hidden; display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1.05fr); gap: clamp(1.5rem, 4vw, 3rem); align-items: center; padding: clamp(1.4rem, 4.5vw, 3.5rem); border-radius: 2.5rem; color: #fff; background: radial-gradient(60% 80% at 100% 0%, rgba(227, 192, 139, .2), transparent 60%), radial-gradient(55% 65% at 0% 100%, rgba(26, 143, 124, .5), transparent 70%), linear-gradient(135deg, #0A3C34, #0E5348); box-shadow: 0 40px 80px -44px rgba(10, 60, 52, .9); }
+.lp-root.is-dark .lp-und-panel { background: radial-gradient(60% 80% at 100% 0%, rgba(227, 192, 139, .12), transparent 60%), radial-gradient(55% 65% at 0% 100%, rgba(26, 143, 124, .35), transparent 70%), linear-gradient(135deg, #071F1B, #0B3029); }
+.lp-und-panel::before { content: ""; position: absolute; inset: 0; z-index: -1; pointer-events: none; background-image: radial-gradient(rgba(255, 255, 255, .1) 1px, transparent 1.2px); background-size: 26px 26px; -webkit-mask-image: linear-gradient(180deg, #000, transparent 80%); mask-image: linear-gradient(180deg, #000, transparent 80%); }
+.lp-und-badge { display: inline-flex; align-items: center; gap: .55rem; padding: .45rem 1rem; border-radius: 999px; font-size: .82rem; font-weight: 800; color: #F0D9AE; background: rgba(227, 192, 139, .14); border: 1px solid rgba(227, 192, 139, .4); }
+.lp-und-badge i { width: .5rem; height: .5rem; border-radius: 50%; background: #E3C08B; box-shadow: 0 0 10px #E3C08B; }
+.lp-und-title { margin: 1.1rem 0 1rem; font-size: clamp(1.9rem, 4vw, 2.9rem); font-weight: 900; line-height: 1.35; color: #fff; }
+.lp-und-title span { display: block; color: #E3C08B; }
+.lp-und-desc { margin: 0; font-size: 1.02rem; line-height: 1.95; color: rgba(255, 255, 255, .82); }
+.lp-und-list { list-style: none; margin: 1.5rem 0 0; padding: 0; display: grid; gap: .8rem; }
+.lp-und-list li { display: flex; gap: .8rem; align-items: flex-start; font-size: .93rem; font-weight: 700; line-height: 1.8; color: rgba(255, 255, 255, .92); }
+.lp-und-list i { flex: none; display: grid; place-items: center; width: 1.45rem; height: 1.45rem; margin-top: .2rem; border-radius: 50%; font-style: normal; font-size: .75rem; font-weight: 900; color: #0A3C34; background: #E3C08B; }
+.lp-und-stage { min-width: 0; display: flex; flex-direction: column; align-items: center; gap: 1rem; }
+.lp-und-switch { position: relative; display: inline-grid; grid-template-columns: 1fr 1fr; padding: 4px; border-radius: 999px; background: rgba(255, 255, 255, .1); border: 1px solid rgba(255, 255, 255, .22); }
+.lp-und-thumb { position: absolute; inset-block: 4px; inset-inline-start: 4px; width: calc(50% - 4px); border-radius: 999px; background: #E3C08B; box-shadow: 0 6px 16px -6px rgba(0, 0, 0, .5); transition: inset-inline-start .45s cubic-bezier(.34, 1.4, .5, 1); }
+.lp-und-switch.is-get .lp-und-thumb { inset-inline-start: 50%; }
+.lp-und-switch button { position: relative; z-index: 1; min-width: 6.5rem; padding: .55rem 1.4rem; font: inherit; font-size: .95rem; font-weight: 900; color: rgba(255, 255, 255, .75); background: none; border: 0; border-radius: 999px; cursor: pointer; transition: color .3s ease; }
+.lp-und-switch button.is-on { color: #0A3C34; }
+.lp-und-switch button:focus-visible { outline: 2px solid #fff; outline-offset: 2px; }
+.lp-und-board { position: relative; width: 100%; max-width: 30rem; aspect-ratio: 5 / 4; border-radius: 1.6rem; background: rgba(255, 255, 255, .05); border: 1px solid rgba(255, 255, 255, .14); }
+.lp-und-lines { position: absolute; inset: 0; width: 100%; height: 100%; overflow: visible; }
+.lp-und-lines path { fill: none; stroke: #E3C08B; stroke-width: 3; stroke-linecap: round; stroke-dasharray: 1; stroke-dashoffset: 1; transition: stroke-dashoffset .2s ease; }
+.lp-und-board.is-get .lp-und-lines path { stroke-dashoffset: 0; transition: stroke-dashoffset .8s ease calc(var(--i) * 300ms + 700ms); }
+.lp-und-chip { position: absolute; left: var(--sx); top: var(--sy); z-index: 2; display: flex; align-items: center; width: max-content; max-width: min(9.6rem, 36%); padding: .55rem .8rem; border-radius: .9rem; font-size: .84rem; font-weight: 800; line-height: 1.45; text-align: start; color: rgba(255, 255, 255, .62); background: rgba(255, 255, 255, .07); border: 1.5px dashed rgba(255, 255, 255, .34); transform: translate(-50%, -50%) rotate(var(--r)); transition: left .95s cubic-bezier(.34, 1.3, .5, 1) calc(var(--i) * 110ms), top .95s cubic-bezier(.34, 1.3, .5, 1) calc(var(--i) * 110ms), transform .95s cubic-bezier(.34, 1.3, .5, 1) calc(var(--i) * 110ms), background .5s ease, color .5s ease, border-color .5s ease, box-shadow .5s ease; }
+.lp-und-chip i { flex: none; display: grid; place-items: center; width: 0; height: 1.4rem; margin: 0; overflow: hidden; opacity: 0; border-radius: 50%; font-style: normal; font-size: .75rem; font-weight: 900; color: #fff; background: #B9791F; transition: width .4s ease, margin .4s ease, opacity .4s ease; }
+.lp-und-board.is-get .lp-und-chip { left: var(--x); top: var(--y); color: #0E5348; background: #FFF6E3; border: 1.5px solid #E3C08B; box-shadow: 0 12px 26px -12px rgba(0, 0, 0, .6); transform: translate(-50%, -50%) rotate(0deg); }
+.lp-und-board.is-get .lp-und-chip i { width: 1.4rem; margin-inline-end: .5rem; opacity: 1; }
+.lp-und-link { position: absolute; z-index: 3; padding: .12rem .6rem; border-radius: 999px; font-size: .7rem; font-weight: 900; color: #fff; background: #B9791F; opacity: 0; transform: translate(-50%, -50%) scale(.5); transition: opacity .3s ease, transform .3s ease; }
+.lp-und-board.is-get .lp-und-link { opacity: 1; transform: translate(-50%, -50%) scale(1); transition: opacity .4s ease calc(var(--i) * 300ms + 1100ms), transform .5s cubic-bezier(.34, 1.56, .64, 1) calc(var(--i) * 300ms + 1100ms); }
+.lp-und-cap { margin: 0; min-height: 1.7em; font-size: .98rem; font-weight: 800; text-align: center; color: #F0D9AE; animation: lp-cap-in .5s ease both; }
+@keyframes lp-cap-in { from { opacity: 0; transform: translateY(6px); } to { opacity: 1; transform: none; } }
+@media (max-width: 900px) { .lp-und-panel { grid-template-columns: minmax(0, 1fr); border-radius: 1.8rem; } }
+@media (max-width: 520px) { .lp-und { padding-inline: .85rem; } .lp-und-chip { font-size: .74rem; padding: .45rem .6rem; } }
+
+/* ============ FAQ split ============ */
+.lp-faq-split { display: grid; grid-template-columns: minmax(0, .85fr) minmax(0, 1.3fr); gap: clamp(1.5rem, 4vw, 3.5rem); align-items: start; }
+.lp-faq-side { position: sticky; top: 6rem; text-align: start; }
+.lp-faq-title { margin: .8rem 0; font-size: clamp(1.6rem, 3.4vw, 2.4rem); font-weight: 900; line-height: 1.4; color: var(--lp-teal-deep); text-wrap: balance; }
+.lp-root.is-dark .lp-faq-title { color: var(--lp-text); }
+.lp-faq-mark { display: block; margin-top: 1.2rem; font-size: clamp(7rem, 16vw, 11rem); font-weight: 900; line-height: .85; color: transparent; -webkit-text-stroke: 3px var(--lp-gold); opacity: .6; transform-origin: 30% 80%; animation: lp-mark-sway 6s ease-in-out infinite; }
+@keyframes lp-mark-sway { 0%, 100% { transform: rotate(-6deg); } 50% { transform: rotate(6deg); } }
+.lp-faq-split .lp-faq { max-width: none; margin: 0; }
+.lp-faq-item { border-inline-start: 6px solid var(--lp-line-strong); }
+.lp-faq-item.is-open { border-inline-start-color: var(--lp-gold); }
+@media (max-width: 860px) { .lp-faq-split { grid-template-columns: minmax(0, 1fr); } .lp-faq-side { position: static; } .lp-faq-mark { display: none; } }
+@media (prefers-reduced-motion: reduce) { .lp-faq-mark { animation: none; } }
+
+/* ============ Contact envelope ============ */
+.lp-mail-art { width: min(100%, 13rem); margin: auto auto 0; padding-top: 1rem; overflow: visible; }
+.lp-mail-letter { animation: lp-letter 5s ease-in-out infinite; }
+@keyframes lp-letter { 0%, 18% { transform: translateY(0); } 42%, 72% { transform: translateY(-30px); } 92%, 100% { transform: translateY(0); } }
+@media (prefers-reduced-motion: reduce) { .lp-mail-letter { animation: none; } }
+
+/* ============ Contact: send fallbacks ============ */
+.lp-ct-sent { margin-top: 1rem; padding: 1rem 1.1rem; border-radius: 1rem; background: var(--lp-soft-accent); border: 1.5px solid color-mix(in srgb, var(--lp-teal) 35%, transparent); }
+.lp-ct-sent b { display: block; font-size: 1rem; font-weight: 900; color: var(--lp-teal-deep); }
+.lp-root.is-dark .lp-ct-sent b { color: var(--lp-text); }
+.lp-ct-sent p { margin: .3rem 0 .8rem; font-size: .88rem; line-height: 1.7; color: var(--lp-muted); }
+.lp-ct-alts { display: flex; flex-wrap: wrap; gap: .5rem; }
+.lp-ct-alt { display: inline-flex; align-items: center; padding: .5rem 1rem; font: inherit; font-size: .85rem; font-weight: 800; text-decoration: none; cursor: pointer; color: var(--lp-teal-deep); background: var(--lp-surface); border: 1.5px solid var(--lp-line-strong); border-radius: 999px; transition: border-color .2s ease, transform .2s ease; }
+.lp-root.is-dark .lp-ct-alt { color: var(--lp-text); }
+.lp-ct-alt:hover { border-color: var(--lp-teal); transform: translateY(-1px); }
+.lp-ct-sent small { display: block; margin-top: .7rem; font-weight: 700; color: var(--lp-muted); }
+
+/* ============ Services: stacking deck ============ */
+.lp-anchor { display: block; height: 0; scroll-margin-top: 6rem; }
+.lp-rail a.is-active { border-color: var(--ac); background: color-mix(in srgb, var(--ac) 16%, var(--lp-surface)); }
+.lp-sk { list-style: none; margin: 0; padding: 0 0 1rem; display: grid; gap: 1.2rem; }
+.lp-sk-slide { --t: 0; position: relative; scroll-margin-top: 6rem; }
+.lp-sk-card { position: relative; overflow: hidden; display: grid; gap: clamp(1rem, 3vw, 2.2rem); padding: clamp(1.1rem, 2.6vw, 2rem); border-radius: 2rem; border: 2px solid var(--lp-line-strong); border-top: 7px solid var(--ac); background: radial-gradient(70% 90% at 100% 0%, var(--soft), transparent 60%), var(--lp-surface); box-shadow: 0 30px 60px -34px rgba(14, 83, 72, .55); transform-origin: 50% 0; transform: scale(calc(1 - var(--t) * .06)); filter: brightness(calc(1 - var(--t) * .1)); will-change: transform; --msc-svg-soft: var(--soft); }
+.lp-sk-n { position: absolute; z-index: 0; inset-block-end: -1.6rem; inset-inline-start: 1.2rem; font-size: clamp(6rem, 14vw, 10rem); font-weight: 900; line-height: 1; color: transparent; -webkit-text-stroke: 2px var(--ac); opacity: .22; pointer-events: none; }
+.lp-sk-copy { position: relative; z-index: 1; display: flex; flex-direction: column; gap: 1rem; min-width: 0; }
+.lp-sk-art { position: relative; z-index: 1; align-self: center; min-width: 0; }
+.lp-sk-phase { align-self: flex-start; display: inline-flex; align-items: center; gap: .5rem; padding: .25rem .8rem .25rem .3rem; border-radius: 999px; font-size: .78rem; font-weight: 800; color: var(--lp-muted); background: var(--lp-surface-soft); border: 1px solid var(--lp-line-strong); }
+.lp-sk-phase i { display: grid; place-items: center; width: 1.4rem; height: 1.4rem; border-radius: 50%; font-style: normal; font-size: .72rem; font-weight: 900; color: #fff; background: var(--ac); }
+.lp-sk-card h4.msc-card { margin: 0; cursor: default; }
+.lp-sk-points { list-style: none; margin: 0; padding: 0; display: grid; gap: .55rem; }
+.lp-sk-points li { display: flex; gap: .6rem; align-items: flex-start; font-size: .92rem; font-weight: 700; line-height: 1.7; }
+.lp-sk-points li i { flex: none; display: grid; place-items: center; width: 1.3rem; height: 1.3rem; margin-top: .15rem; border-radius: 50%; background: var(--ac); color: #fff; font-size: .72rem; font-style: normal; }
+.lp-sk-slide[data-covered="1"] .msc-art *, .lp-sk-slide[data-covered="1"] .msc-card { animation-play-state: paused !important; }
+@media (min-width: 900px) {
+  .lp-sk { display: block; padding-bottom: 2rem; }
+  .lp-sk-slide { position: sticky; top: calc(5.5rem + var(--i) * .9rem); margin-bottom: clamp(2.5rem, 9vh, 5rem); scroll-margin-top: calc(5.5rem + var(--i) * .9rem); }
+  .lp-sk-slide:last-child { margin-bottom: 0; }
+  .lp-sk-card { grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); align-items: center; }
+  .lp-sk-slide:nth-child(even) .lp-sk-art { order: -1; }
+}
+@media (prefers-reduced-motion: reduce) { .lp-sk-card { transform: none; filter: none; } }
+
+/* ============ Services: polish ============ */
+.lp-journey { padding-top: clamp(4rem, 9vw, 7rem); position: relative; }
+.lp-journey::before { content: ""; position: absolute; inset-inline: 0; top: 0; height: 26rem; z-index: -1; pointer-events: none; background: radial-gradient(50% 60% at 50% 0%, var(--lp-soft-accent), transparent 70%); }
+.lp-journey-head { margin-bottom: clamp(2rem, 5vw, 3.2rem); }
+.lp-journey-head h2 { font-size: clamp(1.8rem, 4.4vw, 2.8rem); color: var(--lp-teal-deep); }
+.lp-root.is-dark .lp-journey-head h2 { color: var(--lp-text); }
+.lp-journey-head h2::after { content: ""; display: block; width: 4rem; height: 4px; margin: .9rem auto 0; border-radius: 4px; background: linear-gradient(90deg, var(--lp-teal), var(--lp-gold)); }
+.lp-rail a { box-shadow: 0 6px 16px -10px rgba(14, 83, 72, .35); }
+.lp-rail a.is-active { transform: translateY(-2px) scale(1.04); box-shadow: 0 12px 22px -12px var(--ac); }
+.lp-sk-card { border-radius: 2.2rem; box-shadow: 0 40px 70px -40px color-mix(in srgb, var(--ac) 60%, transparent), 0 2px 0 rgba(255, 255, 255, .55) inset, 0 -1px 0 color-mix(in srgb, var(--ac) 14%, transparent) inset; }
+.lp-sk-card::before { content: ""; position: absolute; inset: 0; z-index: 0; pointer-events: none; background-image: radial-gradient(color-mix(in srgb, var(--ac) 22%, transparent) 1px, transparent 1.3px); background-size: 22px 22px; -webkit-mask-image: linear-gradient(200deg, #000, transparent 55%); mask-image: linear-gradient(200deg, #000, transparent 55%); opacity: .55; }
+.lp-sk-card::after { content: ""; position: absolute; z-index: 0; inset-block-start: -30%; inset-inline-end: -12%; width: 55%; aspect-ratio: 1; border-radius: 50%; pointer-events: none; background: radial-gradient(circle, color-mix(in srgb, var(--ac) 24%, transparent), transparent 68%); filter: blur(10px); }
+.lp-sk-points li { padding: .45rem .7rem; border-radius: .9rem; background: color-mix(in srgb, var(--ac) 8%, var(--lp-surface)); border: 1px solid color-mix(in srgb, var(--ac) 18%, transparent); }
+.lp-sk-points li i { margin-top: .2rem; }
+.lp-sk-art .lp-window, .lp-sk-art.lp-window { box-shadow: 0 30px 50px -30px color-mix(in srgb, var(--ac) 55%, transparent), 0 0 0 5px color-mix(in srgb, var(--ac) 10%, transparent); }
+@media (min-width: 900px) { .lp-sk-slide:nth-child(even) .lp-sk-card::after { inset-inline-end: auto; inset-inline-start: -12%; } }
+@media (max-width: 899px) {
+  .lp-journey-head p { font-size: .96rem; }
+  .lp-sk-card { padding: 1rem; border-radius: 1.6rem; gap: .9rem; }
+  .lp-sk-n { font-size: 5rem; inset-block-end: -1rem; }
+  .lp-sk-points { gap: .4rem; }
+  .lp-sk-points li { font-size: .84rem; line-height: 1.55; padding: .35rem .6rem; }
+  .lp-sk[data-stack="1"] { display: block; padding-bottom: 1rem; }
+  .lp-sk[data-stack="1"] .lp-sk-slide { position: sticky; top: calc(4.8rem + var(--i) * .5rem); margin-bottom: clamp(1.4rem, 6vh, 2.6rem); scroll-margin-top: calc(4.8rem + var(--i) * .5rem); }
+  .lp-sk[data-stack="1"] .lp-sk-slide:last-child { margin-bottom: 0; }
+}
+
+/* ============ Contact: WhatsApp ============ */
+.lp-wa { position: relative; overflow: hidden; justify-content: center; gap: .2rem; }
+.lp-wa::after { content: ""; position: absolute; inset-block-start: -35%; inset-inline-end: -20%; width: 60%; aspect-ratio: 1; border-radius: 50%; pointer-events: none; background: radial-gradient(circle, rgba(37, 211, 102, .16), transparent 68%); }
+.lp-wa > * { position: relative; z-index: 1; }
+.lp-wa-ico { display: grid; place-items: center; width: 3.6rem; height: 3.6rem; margin-bottom: .8rem; border-radius: 1.1rem; color: #fff; background: linear-gradient(135deg, #25D366, #128C7E); box-shadow: 0 14px 26px -12px rgba(18, 140, 126, .8); }
+.lp-wa h3 { font-size: clamp(1.25rem, 2.6vw, 1.6rem); line-height: 1.5; }
+.lp-wa-who { display: flex; flex-wrap: wrap; gap: .45rem; margin: .4rem 0 1.1rem; }
+.lp-wa-who button { padding: .42rem .9rem; font: inherit; font-size: .84rem; font-weight: 800; cursor: pointer; color: var(--lp-text); background: var(--lp-bg); border: 1.5px solid var(--lp-line-strong); border-radius: 999px; transition: background .2s ease, border-color .2s ease, color .2s ease, transform .2s ease; }
+.lp-wa-who button:hover { transform: translateY(-1px); border-color: #128C7E; }
+.lp-wa-who button.is-on { color: #fff; background: #128C7E; border-color: #128C7E; }
+.lp-wa-who button:focus-visible { outline: 3px solid color-mix(in srgb, #128C7E 40%, transparent); outline-offset: 2px; }
+.lp-wa-btn { width: 100%; flex-wrap: wrap; text-decoration: none; background: linear-gradient(135deg, #25D366, #128C7E); box-shadow: 0 18px 30px -16px rgba(18, 140, 126, .85); }
+.lp-wa-btn bdi { padding: .15rem .6rem; border-radius: 999px; font-size: .82rem; background: rgba(255, 255, 255, .22); }
+.lp-wa-note { display: block; margin-top: .8rem; font-size: .84rem; font-weight: 700; text-align: center; color: var(--lp-muted); }
+
+button.lp-logo { background: none; border: 0; padding: 0; font: inherit; cursor: pointer; }
 `;

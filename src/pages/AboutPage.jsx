@@ -146,7 +146,7 @@ export default function AboutPage() {
 
       <header className="md-ab-top">
         <Link to="/student" className="md-ab-logo" aria-label="مَدَار — الرئيسية">
-          <img src="/photo/0MSCh.png" alt="مَدَار" />
+          <img src="/photo/IevsR.png" alt="مَدَار" />
         </Link>
         <button type="button" className="md-ab-back" onClick={() => navigate("/student")}>
           العودة للمنصة <span aria-hidden="true">←</span>
@@ -162,7 +162,7 @@ export default function AboutPage() {
             <circle cx="84" cy="176" r="4" fill="rgba(255,255,255,.7)" />
           </svg>
           <span className="md-ab-hero-logo">
-            <img src="/photo/0MSCh.png" alt="مَدَار" />
+            <img src="/photo/IevsR.png" alt="مَدَار" />
           </span>
           <h1>عن مَدَار</h1>
           <p>منصة تعليمية تفاعلية تقدّم الدروس بأسلوب منظّم ومرئي، يساعد الطالب على الاستيعاب خطوة بخطوة.</p>

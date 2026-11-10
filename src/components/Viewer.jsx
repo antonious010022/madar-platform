@@ -779,18 +779,6 @@ html[data-theme="dark"] .md-jr .md-jr-hero { background: linear-gradient(125deg,
 .md-jr .md-jr-item[data-state="done"] .md-jr-dot { background: var(--jr-ok-soft); border-color: var(--jr-teal); color: var(--jr-teal-deep); }
 .md-jr .md-jr-item[data-state="sequence"] .md-jr-dot { border-style: dashed; }
 .md-jr .md-jr-legend { margin: 0.7rem 0 0; padding-inline: 0.35rem; font-size: 0.72rem; line-height: 1.9; font-weight: 600; color: var(--jr-muted); }
-/* ---- العنوان الحالي واضح في القائمة الجانبية وفي الشريط (حتى لو العنوان مكتمل) ---- */
-.md-jr .md-jr-item[aria-current="step"] { background: var(--jr-btn); border-color: var(--jr-btn); color: #fff; font-weight: 900; box-shadow: 0 10px 22px -14px rgba(20, 122, 106, 0.8); }
-.md-jr .md-jr-item[aria-current="step"] .md-jr-dot { background: #fff; border-color: #fff; color: var(--jr-teal-deep); }
-.md-jr .md-jr-item[aria-current="step"]::after { content: "أنت هنا"; flex: none; margin-inline-start: auto; padding: 0.1rem 0.55rem; border-radius: 999px; background: rgba(255, 255, 255, 0.22); font-size: 0.68rem; font-weight: 900; }
-.md-jr .md-jr-list--panel .md-jr-item[aria-current="step"]::after { content: "أنت هنا"; }
-/* ---- الشريط الأفقي للعناوين (تابلت وموبايل): كلهم جنب بعض + الحالي مميّز ---- */
-.md-jr .md-jr-chips { margin-top: 0.4rem; padding: 0.2rem 0.15rem 0.3rem; gap: 0.4rem; }
-.md-jr .md-jr-chip { min-height: 40px; padding: 0.2rem 0.8rem 0.2rem 0.65rem; font-size: 0.8rem; }
-.md-jr .md-jr-chip-title { display: block; max-width: 9rem; overflow: hidden; text-overflow: ellipsis; }
-.md-jr .md-jr-chip[aria-current="step"] { background: var(--jr-btn); border-color: var(--jr-btn); color: #fff; box-shadow: 0 0 0 3px var(--jr-teal-soft), 0 8px 16px -10px rgba(20, 122, 106, 0.8); }
-.md-jr .md-jr-chip[aria-current="step"] .md-jr-chip-title { max-width: 15rem; }
-.md-jr .md-jr-chip[aria-current="step"] .md-jr-chip-mark { background: rgba(255, 255, 255, 0.25); }
 
 /* ---- cards & sections ---- */
 .md-jr .md-jr-card { background: var(--jr-surface); border: 1px solid var(--jr-line); border-radius: 1.3rem; box-shadow: var(--jr-shadow); padding: clamp(1rem, 3.4vw, 1.7rem); margin-bottom: 1rem; overflow: visible; }
@@ -1006,11 +994,17 @@ html[data-theme="dark"] .md-jr .ts-richtext-content .ts-hotword-highlight::after
 .md-jr [id^="md-jr-sec-"] { scroll-margin-top: 9.5rem; }
 .md-jr .md-jr-recall-head strong { display: inline-flex; align-items: center; gap: 0.5rem; }
 @media (max-width: 1023.98px) {
-  .md-jr .md-jr-bar { margin-inline: calc(var(--jr-pad) * -1); padding: 0.55rem var(--jr-pad) calc(0.55rem + env(safe-area-inset-bottom, 0px)); background: color-mix(in srgb, var(--jr-bg) 94%, transparent); -webkit-backdrop-filter: blur(12px); backdrop-filter: blur(12px); border-top: 1px solid var(--jr-line); pointer-events: auto; }
-  .md-jr .md-jr-bar .md-jr-btn { min-height: 44px; font-size: 0.92rem; box-shadow: none; }
-  .md-jr .md-jr-bar .md-jr-btn--primary { flex: 1 1 auto; }
-  .md-jr .md-jr-bar .md-jr-btn--ghost { flex: 0 0 auto; background: var(--jr-surface); }
+  /* زرارين بس (من غير شريط كامل): الحاوية شفافة ومش بتمنع الضغط على اللي تحتها */
+  .md-jr .md-jr-bar { margin-inline: 0; padding: 0.4rem 0 calc(0.4rem + env(safe-area-inset-bottom, 0px)); background: transparent; border: 0; -webkit-backdrop-filter: none; backdrop-filter: none; pointer-events: none; }
+  .md-jr .md-jr-bar .md-jr-btn { pointer-events: auto; min-height: 40px; padding: 0.3rem 1rem; font-size: 0.86rem; box-shadow: 0 8px 18px -8px rgba(0, 0, 0, 0.5), 0 0 0 1px color-mix(in srgb, var(--jr-line) 80%, transparent); }
+  .md-jr .md-jr-bar .md-jr-btn svg { width: 16px; height: 16px; }
+  .md-jr .md-jr-bar .md-jr-btn--primary, .md-jr .md-jr-bar .md-jr-btn--ghost { flex: 0 0 auto; }
+  .md-jr .md-jr-bar .md-jr-btn--ghost { background: var(--jr-surface); -webkit-backdrop-filter: none; backdrop-filter: none; }
+  /* يختفي أثناء القراءة، ويظهر مع الطلوع أو في آخر المحتوى */
+  .md-jr .md-jr-bar { transition: transform 0.25s ease, visibility 0s linear 0s; }
+  .md-jr .md-jr-bar[data-hidden="true"] { transform: translateY(115%); visibility: hidden; transition: transform 0.25s ease, visibility 0s linear 0.25s; }
 }
+.md-jr .md-jr-end { height: 0; }
 @media (prefers-reduced-motion: reduce) {
   .md-jr *, .md-jr *::before, .md-jr *::after { transition: none !important; animation: none !important; scroll-behavior: auto !important; }
 }
@@ -1152,6 +1146,50 @@ function jrRemaining(n) {
   if (n === 2) return "تبقّى سؤالان";
   if (n >= 3 && n <= 10) return `تبقّى ${n} أسئلة`;
   return `تبقّى ${n} سؤالًا`;
+}
+
+/**
+ * شريط التنقل السفلي (موبايل/تابلت): مخفي أثناء القراءة عشان المحتوى ياخد أكبر مساحة،
+ * ويظهر لما الطالب يطلع لفوق، أو يوصل لآخر المحتوى (مكان زرار «أكمل العنوان»)، أو يضغط Tab عليه.
+ * endRef = عنصر وهمي في آخر المحتوى (مكان الشريط الطبيعي).
+ */
+function useAutoHideDock(endRef) {
+  const [hidden, setHidden] = useState(true);
+  useEffect(() => {
+    let lastY = window.scrollY || 0;
+    let raf = 0;
+    const compute = (fromScroll) => {
+      raf = 0;
+      const y = Math.max(0, window.scrollY || 0);
+      const dy = y - lastY;
+      const end = endRef.current;
+      const nearEnd = !!end && end.getBoundingClientRect().top < window.innerHeight + 60;
+      if (nearEnd) { setHidden(false); lastY = y; return; }
+      if (y < 80) { setHidden(true); lastY = y; return; }
+      if (fromScroll && dy < -10) { setHidden(false); lastY = y; return; }
+      if (dy > 10) { setHidden(true); lastY = y; }
+    };
+    const schedule = (fromScroll) => { if (!raf) raf = window.requestAnimationFrame(() => compute(fromScroll)); };
+    const onScroll = () => schedule(true);
+    const onOther = () => schedule(false);
+    window.addEventListener("scroll", onScroll, { passive: true });
+    window.addEventListener("resize", onOther);
+    let ro = null;
+    if (typeof ResizeObserver !== "undefined") { ro = new ResizeObserver(onOther); ro.observe(document.body); }
+    compute(false);
+    return () => {
+      window.removeEventListener("scroll", onScroll);
+      window.removeEventListener("resize", onOther);
+      if (ro) ro.disconnect();
+      if (raf) window.cancelAnimationFrame(raf);
+    };
+  }, [endRef]);
+  // للـCSS (مثلًا بانر الضيف يتحرك مع الشريط)
+  useEffect(() => {
+    document.documentElement.dataset.mdDock = hidden ? "hidden" : "shown";
+  }, [hidden]);
+  useEffect(() => () => { delete document.documentElement.dataset.mdDock; }, []);
+  return [hidden, setHidden];
 }
 
 function jrScrollTo(el, block = "center") {
@@ -1395,8 +1433,6 @@ function JourneyLesson({ ctx }) {
 
   const rootRef = useRef(null);
   const navRef = useRef(null);
-  const chipsRef = useRef(null);
-  const sideListRef = useRef(null);
   const mainRef = useRef(null);
   const [tool, setTool] = useState(null); // null | "mindmap" | "timeline"
   const [answered, setAnswered] = useState({}); // { "<sceneKey>|<qk>": { graded, correct } } — إجابات العنوان الحالي
@@ -1412,6 +1448,8 @@ function JourneyLesson({ ctx }) {
   const finalScoreRef = useRef(null);
   const recordedRef = useRef(new Set());
   const nudgeTimer = useRef(null);
+  const dockEndRef = useRef(null);
+  const [dockHidden, setDockHidden] = useAutoHideDock(dockEndRef);
   const [navOpen, setNavOpen] = useState(false); // قائمة العناوين المنسدلة (موبايل)
 
   const completedList = Array.isArray(journey.completedScenes) ? journey.completedScenes : [];
@@ -1662,22 +1700,6 @@ function JourneyLesson({ ctx }) {
 
   // اقفل القائمة المنسدلة عند تغيير العنوان أو الضغط على Esc
   useEffect(() => { setNavOpen(false); }, [sceneIndex]);
-  // العنوان الحالي دايمًا باين: نوسّطه في الشريط الأفقي وفي القائمة الجانبية لما يتغيّر
-  useEffect(() => {
-    const reduce = typeof window.matchMedia === "function" && window.matchMedia("(prefers-reduced-motion: reduce)").matches;
-    const center = (box, axis) => {
-      const cur = box && box.querySelector('[aria-current="step"]');
-      if (!cur || !box.clientWidth) return;
-      const a = cur.getBoundingClientRect();
-      const b = box.getBoundingClientRect();
-      const behavior = reduce ? "auto" : "smooth";
-      if (axis === "x") box.scrollBy({ left: (a.left + a.width / 2) - (b.left + b.width / 2), behavior });
-      else box.scrollBy({ top: (a.top + a.height / 2) - (b.top + b.height / 2), behavior });
-    };
-    const t = setTimeout(() => { center(chipsRef.current, "x"); center(sideListRef.current, "y"); }, 60);
-    return () => clearTimeout(t);
-  }, [sceneIndex, isFinalReview, isCompletionStep, sceneCount]);
-
   useEffect(() => {
     if (!navOpen) return undefined;
     const onKey = (e) => { if (e.key === "Escape") setNavOpen(false); };
@@ -1710,17 +1732,38 @@ function JourneyLesson({ ctx }) {
           <div className="md-jr-track" role="progressbar" aria-label="تقدّم الدرس" aria-valuemin={0} aria-valuemax={100} aria-valuenow={pct}>
             <div className="md-jr-fill" style={{ width: `${pct}%` }} />
           </div>
-          <ol className="md-jr-chips" aria-label="عناوين الدرس" ref={chipsRef}>
-            {items.map((it) => <li key={it.s.id || `jr-chip-${it.i}`}>{renderNavButton(it, "chip")}</li>)}
-            {reviewItem ? <li>{renderNavButton(reviewItem, "chip")}</li> : null}
-          </ol>
+          <button
+            type="button"
+            className="md-jr-navtoggle"
+            aria-expanded={navOpen}
+            aria-controls="md-jr-navpanel"
+            onClick={() => setNavOpen((v) => !v)}
+          >
+            <span className="md-jr-navtoggle-title">
+              {!isFinalReview && !isCompletionStep && scene && scene.title ? scene.title : navLabel}
+            </span>
+            <span className="md-jr-navtoggle-cta">
+              {navOpen ? "إغلاق" : "كل العناوين"}
+              <svg viewBox="0 0 20 20" width="14" height="14" aria-hidden="true" style={{ transform: navOpen ? "rotate(180deg)" : "none", transition: "transform .2s" }}>
+                <path d="M5 7.5l5 5 5-5" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round" />
+              </svg>
+            </span>
+          </button>
+          {navOpen ? (
+            <div className="md-jr-navpanel" id="md-jr-navpanel">
+              <ol className="md-jr-list md-jr-list--panel">
+                {items.map((it) => <li key={it.s.id || `jr-pan-${it.i}`}>{renderNavButton(it, "item")}</li>)}
+                {reviewItem ? <li>{renderNavButton(reviewItem, "item")}</li> : null}
+              </ol>
+            </div>
+          ) : null}
         </nav>
 
         <div className="md-jr-grid">
           <aside className="md-jr-side" aria-label="قائمة عناوين الدرس">
             <div className="md-jr-sidecard">
               <p className="md-jr-sidehead">عناوين الدرس</p>
-              <ol className="md-jr-list" ref={sideListRef}>
+              <ol className="md-jr-list">
                 {items.map((it) => <li key={it.s.id || `jr-side-${it.i}`}>{renderNavButton(it, "item")}</li>)}
                 {reviewItem ? <li>{renderNavButton(reviewItem, "item")}</li> : null}
               </ol>
@@ -1936,7 +1979,7 @@ function JourneyLesson({ ctx }) {
 
             {/* شريط الإجراءات */}
             {!isFinalReview && !isCompletionStep && scene && !sceneContentLocked && (
-              <div className="md-jr-bar" role="group" aria-label="التنقل بين العناوين">
+              <div className="md-jr-bar" role="group" aria-label="التنقل بين العناوين" data-hidden={dockHidden ? "true" : undefined} onFocusCapture={() => setDockHidden(false)}>
                 <button type="button" className="md-jr-btn md-jr-btn--ghost" onClick={() => tryOpenScene(sceneIndex - 1)} disabled={sceneIndex <= 0}>
                   <JrIcon name="prev" /> السابق
                 </button>
@@ -1959,7 +2002,7 @@ function JourneyLesson({ ctx }) {
               </div>
             )}
             {isFinalReview && !sceneContentLocked && (
-              <div className="md-jr-bar" role="group" aria-label="إجراءات المراجعة النهائية">
+              <div className="md-jr-bar" role="group" aria-label="إجراءات المراجعة النهائية" data-hidden={dockHidden ? "true" : undefined} onFocusCapture={() => setDockHidden(false)}>
                 <button type="button" className="md-jr-btn md-jr-btn--ghost" onClick={() => tryOpenScene(Math.max(0, sceneCount - 1))}>
                   <JrIcon name="prev" /> آخر عنوان
                 </button>
@@ -1970,6 +2013,7 @@ function JourneyLesson({ ctx }) {
                 )}
               </div>
             )}
+            <div ref={dockEndRef} className="md-jr-end" aria-hidden="true" />
           </main>
         </div>
       </div>

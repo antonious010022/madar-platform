@@ -150,8 +150,15 @@ create policy "owner write own scenes"
 
 -- ---------------------------------------------------------------------------
 -- STORAGE — bucket for scene / hotword / timeline images
--- Public read (so students/anon can view images), authenticated write only.
--- Run this part too — Supabase Storage policies live in the same SQL editor.
+-- Public read (so students/anon can view images).
+-- WRITE (upload / update / delete) is STAFF ONLY and is defined in
+-- supabase/migration_teacher_lockdown.sql (needs public.is_staff()).
+-- Run that migration right after this file.
+--
+-- SECURITY NOTE: older versions of this file created "authenticated ..."
+-- policies that let ANY signed-in user (including students) overwrite or
+-- delete lesson images. They are dropped below so re-running this file can
+-- never bring that hole back.
 -- ---------------------------------------------------------------------------
 insert into storage.buckets (id, name, public)
 values ('lesson-images', 'lesson-images', true)
@@ -163,24 +170,15 @@ create policy "public read lesson images"
   using (bucket_id = 'lesson-images');
 
 drop policy if exists "authenticated upload lesson images" on storage.objects;
-create policy "authenticated upload lesson images"
-  on storage.objects for insert
-  with check (bucket_id = 'lesson-images' and auth.role() = 'authenticated');
-
 drop policy if exists "authenticated update own lesson images" on storage.objects;
-create policy "authenticated update own lesson images"
-  on storage.objects for update
-  using (bucket_id = 'lesson-images' and auth.role() = 'authenticated');
-
 drop policy if exists "authenticated delete own lesson images" on storage.objects;
-create policy "authenticated delete own lesson images"
-  on storage.objects for delete
-  using (bucket_id = 'lesson-images' and auth.role() = 'authenticated');
 
 -- ============================================================================
--- Done. Next steps:
--- 1) Supabase Dashboard → Authentication → Providers → make sure Email is on.
--- 2) Create your teacher account (Dashboard → Authentication → Users → Add
---    user), or let the app's login screen sign one up.
--- 3) Copy your Project URL + anon public key into .env (see .env.example).
+-- Done. Next steps (ORDER MATTERS):
+-- 1) Run supabase/migration_teacher_lockdown.sql  (roles, is_staff(), staff-only
+--    write policies for lessons, scenes and lesson-images storage).
+-- 2) Promote your teacher account (see the comment at the top of that file).
+-- 3) Run the remaining migration_*.sql files.
+-- 4) Dashboard → Authentication → Providers → make sure Email is on.
+-- 5) Copy your Project URL + anon public key into .env.
 -- ============================================================================
